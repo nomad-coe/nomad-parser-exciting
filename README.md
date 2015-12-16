@@ -1,6 +1,8 @@
 # Exciting Parser
 
-This is the parser for the [exciting](http://exciting-code.org/) part of the [NOMAD Laboratory](http://nomad-lab.eu). The official version lives at
+This is the parser for [exciting](http://exciting-code.org/).
+It is part of the [NOMAD Laboratory](http://nomad-lab.eu).
+The official version lives at
 
     git@gitlab.mpcdf.mpg.de:nomad-lab/parser-exciting.git
 
