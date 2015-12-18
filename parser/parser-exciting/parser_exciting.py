@@ -30,7 +30,7 @@ parserInfo = {
   "version": "1.0"
 }
 
-class GaussianParserContext(object):
+class ExcitingParserContext(object):
     """main place to keep the parser status, open ancillary files,..."""
     def __init__(self):
         self.scfIterNr = 0
@@ -54,5 +54,4 @@ cachingLevelForMetaName = {}
 if __name__ == "__main__":
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo,
                  cachingLevelForMetaName = cachingLevelForMetaName,
-                 superContext = GaussianParserContext(),
-    )
+                 superContext = ExcitingParserContext())
