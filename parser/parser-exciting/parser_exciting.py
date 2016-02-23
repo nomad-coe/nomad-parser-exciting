@@ -3,7 +3,7 @@ import numpy as np
 from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
-import os, sys, json
+import os, sys, json, exciting_parser_dos
 
 class ExcitingParserContext(object):
 
@@ -14,18 +14,20 @@ class ExcitingParserContext(object):
     latticeX = section["exciting_geometry_lattice_vector_x"]
     latticeY = section["exciting_geometry_lattice_vector_y"]
     latticeZ = section["exciting_geometry_lattice_vector_z"]
-#    print "section", section.simpleValues
-#   print "latticeX",latticeX
-#   print "latticeY",latticeY
-#    print "latticeZ",latticeZ 
     cell = [[latticeX[0],latticeY[0],latticeZ[0]],
             [latticeX[1],latticeY[1],latticeZ[1]],
             [latticeX[2],latticeY[2],latticeZ[2]]]
     backend.addValue("simulation_cell", cell)
 
+  def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+    dirPath = os.path.dirname(self.parser.fIn.name)
+    dosFile = os.path.join(dirPath, "dos.xml")
+    if os.path.exists(dosFile):
+      with open(dosFile) as f:
+        exciting_parser_dos.parseDos(f, backend)
+
+
 # description of the input
-
-
 
 
 mainFileDescription = \
@@ -49,8 +51,8 @@ mainFileDescription = \
 
     SM(startReStr = r"\s*(?P<exciting_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<exciting_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<exciting_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True)
                 ]),
-    SM(r"\s*Unit cell volume\s*:\s*(?P<exciting_unit_cell_volume__bohr>[-0-9.]+)"),
-    SM(r"\s*Brillouin zone volume\s*:\s*(?P<exciting_brillouin_zone_volume__bohr>[-0-9.]+)")
+    SM(r"\s*Unit cell volume\s*:\s*(?P<exciting_unit_cell_volume__bohr3>[-0-9.]+)"),
+    SM(r"\s*Brillouin zone volume\s*:\s*(?P<exciting_brillouin_zone_volume__bohr_3>[-0-9.]+)")
               ]),
             SM(name = "single configuration iteration",
               startReStr = r"\|\s*Self-consistent loop started\s*\+",

@@ -15,6 +15,7 @@ object ExcitingParser extends SimpleExternalParserGenerator(
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   resList = Seq(
     "parser-exciting/parser_exciting.py",
+    "parser-exciting/exciting_parser_dos.py",
     "parser-exciting/setup_paths.py",
     "nomad_meta_info/common.nomadmetainfo.json",
     "nomad_meta_info/meta_types.nomadmetainfo.json",
