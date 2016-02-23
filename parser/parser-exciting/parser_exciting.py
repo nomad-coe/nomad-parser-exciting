@@ -43,11 +43,14 @@ mainFileDescription = \
               sections = ['section_system_description'],
               subMatchers = [
                 SM(startReStr = r"\sLattice vectors \(cartesian\) :",
+                   endReStr = r"\sReciprocal lattice vectors \(cartesian\) :",
                 sections = ["exciting_section_lattice_vectors"],
                 subMatchers = [
 
     SM(startReStr = r"\s*(?P<exciting_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<exciting_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<exciting_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True)
-                ])
+                ]),
+    SM(r"\s*Unit cell volume\s*:\s*(?P<exciting_unit_cell_volume__bohr>[-0-9.]+)"),
+    SM(r"\s*Brillouin zone volume\s*:\s*(?P<exciting_brillouin_zone_volume__bohr>[-0-9.]+)")
               ]),
             SM(name = "single configuration iteration",
               startReStr = r"\|\s*Self-consistent loop started\s*\+",
@@ -59,13 +62,42 @@ mainFileDescription = \
                   sections = ["section_scf_iteration"],
                   repeats = True,
                   subMatchers = [
-                   SM(r"\s*Total energy\s*:\s*(?P<energy_total_scf_iteration__hartree>[-0-9.]+)")
+                   SM(r"\s*Total energy\s*:\s*(?P<energy_total_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Fermi energy\s*:\s*(?P<exciting_fermi_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Kinetic energy\s*:\s*(?P<electronic_kinetic_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Coulomb energy\s*:\s*(?P<exciting_coulomb_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Exchange energy\s*:\s*(?P<exciting_exchange_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Correlation energy\s*:\s*(?P<exciting_correlation_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Sum of eigenvalues\s*:\s*(?P<energy_sum_eigenvalues_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Effective potential energy\s*:\s*(?P<exciting_effective_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Coulomb potential energy\s*:\s*(?P<exciting_coulomb_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*xc potential energy\s*:\s*(?P<energy_XC_potential_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Hartree energy\s*:\s*(?P<exciting_hartree_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Electron-nuclear energy\s*:\s*(?P<exciting_electron_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<exciting_nuclear_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Madelung energy\s*:\s*(?P<exciting_madelung_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<exciting_core_electron_kinetic_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Absolute change in total energy   (target)\s*:\s*(?P<energy_change_scf_iteration__hartree>[-0-9.]+)")
                   ]),
-                SM(name="final_energy",
+                SM(name="final_quantities",
                   startReStr = r"\| Convergence targets achieved. Performing final SCF iteration\s*\+",
                   endReStr = r"\| Self-consistent loop stopped\s*\+",
                    subMatchers = [
-                     SM(r"\s*Total energy\s*:\s*(?P<energy_total__hartree>[-0-9.]+)")
+                     SM(r"\s*Total energy\s*:\s*(?P<energy_total__hartree>[-0-9.]+)"),
+                     SM(r"\s*Fermi energy\s*:\s*(?P<exciting_fermi_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Kinetic energy\s*:\s*(?P<electronic_kinetic_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Coulomb energy\s*:\s*(?P<exciting_coulomb_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Exchange energy\s*:\s*(?P<exciting_exchange_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Correlation energy\s*:\s*(?P<exciting_correlation_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Sum of eigenvalues\s*:\s*(?P<energy_sum_eigenvalues__hartree>[-0-9.]+)"),
+                     SM(r"\s*Effective potential energy\s*:\s*(?P<exciting_effective_potential_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Coulomb potential energy\s*:\s*(?P<exciting_coulomb_potential_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*xc potential energy\s*:\s*(?P<energy_XC_potential__hartree>[-0-9.]+)"),
+                     SM(r"\s*Hartree energy\s*:\s*(?P<exciting_hartree_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Electron-nuclear energy\s*:\s*(?P<exciting_electron_nuclear_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<exciting_nuclear_nuclear_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Madelung energy\s*:\s*(?P<exciting_madelung_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<exciting_core_electron_kinetic_energy__hartree>[-0-9.]+)")
                    ])
                ]
             )
