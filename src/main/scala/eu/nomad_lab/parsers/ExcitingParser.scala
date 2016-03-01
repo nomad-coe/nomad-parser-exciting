@@ -1,12 +1,23 @@
 package eu.nomad_lab.parsers
+
+import eu.{nomad_lab=>lab}
 import eu.nomad_lab.DefaultPythonInterpreter
 import org.{json4s => jn}
+import scala.collection.breakOut
+
 
 object ExcitingParser extends SimpleExternalParserGenerator(
   name = "ExcitingParser",
   parserInfo = jn.JObject(
     ("name" -> jn.JString("ExcitingParser")) ::
-      ("version" -> jn.JString("1.0")) :: Nil),
+      ("parserId" -> jn.JString("ExcitingParser" + lab.ExcitingVersionInfo.version)) ::
+      ("versionInfo" -> jn.JObject(
+        ("nomadCoreVersion" -> jn.JString(lab.NomadCoreVersionInfo.version)) ::
+          (lab.ExcitingVersionInfo.toMap.map{ case (key, value) =>
+            (key -> jn.JString(value.toString))
+          }(breakOut): List[(String, jn.JString)])
+      )) :: Nil
+  ),
   mainFileTypes = Seq("text/.*"),
   mainFileRe = """\s*=================================================+\s*
 \s*\|\s*EXCITING\s(?<version>\S*) started\s*=
