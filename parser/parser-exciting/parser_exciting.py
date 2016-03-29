@@ -37,6 +37,7 @@ mainFileDescription = \
        subMatchers = [
          SM(name = "header",
          startReStr = r"\s*\|\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)\s*started\s*=",
+         fixedStartValues={'program_name': 'exciting', 'program_basis_set_type': '(L)APW+lo' },
          sections = ["section_run"],
          subMatchers = [
 	   SM(name = 'input',
