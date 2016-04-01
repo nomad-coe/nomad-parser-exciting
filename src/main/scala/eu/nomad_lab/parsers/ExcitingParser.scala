@@ -1,10 +1,9 @@
 package eu.nomad_lab.parsers
 
-import eu.{nomad_lab=>lab}
+import eu.{ nomad_lab => lab }
 import eu.nomad_lab.DefaultPythonInterpreter
-import org.{json4s => jn}
+import org.{ json4s => jn }
 import scala.collection.breakOut
-
 
 object ExcitingParser extends SimpleExternalParserGenerator(
   name = "ExcitingParser",
@@ -13,8 +12,9 @@ object ExcitingParser extends SimpleExternalParserGenerator(
       ("parserId" -> jn.JString("ExcitingParser" + lab.ExcitingVersionInfo.version)) ::
       ("versionInfo" -> jn.JObject(
         ("nomadCoreVersion" -> jn.JString(lab.NomadCoreVersionInfo.version)) ::
-          (lab.ExcitingVersionInfo.toMap.map{ case (key, value) =>
-            (key -> jn.JString(value.toString))
+          (lab.ExcitingVersionInfo.toMap.map {
+            case (key, value) =>
+              (key -> jn.JString(value.toString))
           }(breakOut): List[(String, jn.JString)])
       )) :: Nil
   ),
@@ -35,5 +35,6 @@ object ExcitingParser extends SimpleExternalParserGenerator(
   dirMap = Map(
     "parser-exciting" -> "parsers/exciting/parser/parser-exciting/",
     "nomad_meta_info" -> "nomad-meta-info/meta_info/nomad_meta_info",
-    "python" -> "python-common/common/python/nomadcore") ++ DefaultPythonInterpreter.commonDirMapping()
+    "python" -> "python-common/common/python/nomadcore"
+  ) ++ DefaultPythonInterpreter.commonDirMapping()
 )
