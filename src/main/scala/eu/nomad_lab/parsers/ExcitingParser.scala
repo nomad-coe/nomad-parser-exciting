@@ -28,6 +28,7 @@ object ExcitingParser extends SimpleExternalParserGenerator(
     "parser-exciting/parser_exciting.py",
     "parser-exciting/exciting_parser_dos.py",
     "parser-exciting/setup_paths.py",
+    "nomad_meta_info/public.nomadmetainfo.json",
     "nomad_meta_info/common.nomadmetainfo.json",
     "nomad_meta_info/meta_types.nomadmetainfo.json",
     "nomad_meta_info/exciting.nomadmetainfo.json"
