@@ -30,23 +30,6 @@ class ExcitingParserContext(object):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend)
 
-  xc_internal_map = {
-  2: {'LDA_C_PZ'},
-  3: {'LDA_C_PW'},
-  4: {'LDA_C_XALPHA'},
-  5: {'LDA_C_VBH'},
-  20: {'GGA_C_PBE'},
-  21: {'GGA_X_PBE_R'},
-  22: {'GGA_C_PBE_SOL'+'GGA_X_PBE_SOL'},
-  26: {'GGA_X_WC'},
-  30: {'GGA_C_AM05'+'GGA_X_AM05'},
-  300: {'GGA_C_BGCP'+'GGA_X_BGCP'},
-  406: {'HYB_GGA_C_PBEH'+'HYB_GGA_X_PBEH'},
-  }
-
-print {'GGA_C_PBE'+'+'+'GGA_X_PBE'}
-# description of the input
-
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -111,13 +94,24 @@ mainFileDescription = \
     SM(r"\s*Smearing width\s*:\s*(?P<exciting_smearing_width__hartree>[-0-9.]+)"),
     SM(r"\s*Using\s*(?P<exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
               ]),
-#    SM(name = "functionals",
-#    sections = ['section_method'],
-#    subMatchers = [
-#    SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<exciting_xc_functional>[-0-9.]+)",
-#       sections = ['section_XC_functionals'],
-#       print  exciting_xc_functional),
-#       XC_functional_name = ExcitingParserContext.xc_internal_map.get('exciting_xc_functional'))
+#    SM(name = "functionals", sections = ['section_method'],
+#      subMatchers = [
+#        SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<exciting_xc_functional>[-0-9.]+)"),
+#        sections = ['section_XC_functionals']),
+#        xc_internal_map = {
+#        2: 'LDA_C_PZ',
+#        3: 'LDA_C_PW',
+#        4: 'LDA_C_XALPHA',
+#        5: 'LDA_C_VBH',
+#        20: 'GGA_C_PBE',
+#        21: 'GGA_X_PBE_R',
+#        22: 'GGA_C_PBE_SOL',
+#        26: 'GGA_X_WC',
+#        30: 'GGA_C_AM05',
+#        300: 'GGA_C_BGCP',
+#        406: 'HYB_GGA_C_PBEH',
+#        }
+#        self.XC_functional_name = ExcitingParserContext.xc_internal_map.get('exciting_xc_functional'))
 #                  ]),
             SM(name = "single configuration iteration",
               startReStr = r"\|\s*Self-consistent loop started\s*\+",
@@ -150,7 +144,10 @@ mainFileDescription = \
                    SM(r"\s*interstitial\s*:\s*(?P<exciting_interstitial_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*total charge in muffin-tins\s*:\s*(?P<exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*Estimated fundamental gap\s*:\s*(?P<exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<exciting_time_scf_iteration>[-0-9.]+)")
+                   SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<exciting_time_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<exciting_effective_potential_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
+                   SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<exciting_energy_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
+                   SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))")
                   ]),
                 SM(name="final_quantities",
                   startReStr = r"\| Convergence targets achieved. Performing final SCF iteration\s*\+",
