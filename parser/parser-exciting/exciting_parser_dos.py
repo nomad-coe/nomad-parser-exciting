@@ -42,7 +42,6 @@ class DosHandler(xml.sax.handler.ContentHandler):
         pass
 
 def parseDos(inF, backend):
-    print("pippo")
     handler = DosHandler(backend)
     logging.error("will parse")
     xml.sax.parse(inF, handler)
