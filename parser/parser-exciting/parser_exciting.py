@@ -19,6 +19,26 @@ class ExcitingParserContext(object):
             [latticeX[2],latticeY[2],latticeZ[2]]]
     backend.addValue("simulation_cell", cell)
 
+  def onClose_exciting_section_xc(self, backend, gIndex, section):
+    xcNr = section["exciting_xc_functional"][0]
+    xc_internal_map = {
+        2: ['LDA_C_PZ', 'LDA_X_PZ'],
+        3: ['LDA_C_PW'],
+        4: ['LDA_C_XALPHA'],
+        5: ['LDA_C_VBH'],
+        20: ['GGA_C_PBE'],
+        21: ['GGA_X_PBE_R'],
+        22: ['GGA_C_PBE_SOL'],
+        26: ['GGA_X_WC'],
+        30: ['GGA_C_AM05'],
+        300: ['GGA_C_BGCP'],
+        406: ['HYB_GGA_C_PBEH']
+        }
+    for xcName in xc_internal_map[xcNr]:
+      gi = backend.openSection("section_XC_functionals")
+      backend.addValue("XC_functional_name", xcName)
+      backend.closeSection("section_XC_functionals", gi)
+
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
@@ -39,7 +59,7 @@ mainFileDescription = \
          SM(name = "header",
          startReStr = r"\s*\|\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)\s*started\s*=",
          fixedStartValues={'program_name': 'exciting', 'program_basis_set_type': '(L)APW+lo' },
-         sections = ["section_run"],
+            sections = ["section_run", "section_method"],
          subMatchers = [
 	   SM(name = 'input',
               startReStr = r"\|\sStarting initialization",
@@ -92,27 +112,10 @@ mainFileDescription = \
     SM(r"\s*Total number of local-orbitals\s*:\s*(?P<exciting_lo>[-0-9.]+)"),
     SM(r"\s*Smearing scheme\s*:\s*(?P<exciting_smearing_type>[-a-zA-Z0-9]+)"),
     SM(r"\s*Smearing width\s*:\s*(?P<exciting_smearing_width__hartree>[-0-9.]+)"),
-    SM(r"\s*Using\s*(?P<exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
-              ]),
-#    SM(name = "functionals", sections = ['section_method'],
-#      subMatchers = [
-#        SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<exciting_xc_functional>[-0-9.]+)"),
-#        sections = ['section_XC_functionals']),
-#        xc_internal_map = {
-#        2: 'LDA_C_PZ',
-#        3: 'LDA_C_PW',
-#        4: 'LDA_C_XALPHA',
-#        5: 'LDA_C_VBH',
-#        20: 'GGA_C_PBE',
-#        21: 'GGA_X_PBE_R',
-#        22: 'GGA_C_PBE_SOL',
-#        26: 'GGA_X_WC',
-#        30: 'GGA_C_AM05',
-#        300: 'GGA_C_BGCP',
-#        406: 'HYB_GGA_C_PBEH',
-#        }
-#        self.XC_functional_name = ExcitingParserContext.xc_internal_map.get('exciting_xc_functional'))
-#                  ]),
+    SM(r"\s*Using\s*(?P<exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing"),
+    SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<exciting_xc_functional>[-0-9.]+)",
+       sections = ['exciting_section_xc'])
+    ]),
             SM(name = "single configuration iteration",
               startReStr = r"\|\s*Self-consistent loop started\s*\+",
               sections = ["section_single_configuration_calculation"],
