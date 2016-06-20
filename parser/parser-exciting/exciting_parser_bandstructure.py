@@ -42,7 +42,6 @@ class BandHandler(xml.sax.handler.ContentHandler):
         pass
 
 def parseBand(inF, backend):
-    print("pippolo")
     handler = BandHandler(backend)
     logging.error("will parse")
     xml.sax.parse(inF, handler)
