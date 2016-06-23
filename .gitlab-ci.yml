@@ -10,6 +10,8 @@ testing:
     - git submodule foreach git checkout master
     - git submodule foreach git pull
     - sbt exciting/test
+    - export PYTHONEXE=/labEnv/bin/python
+    - sbt exciting/test
   only:
     - master
   tags:
