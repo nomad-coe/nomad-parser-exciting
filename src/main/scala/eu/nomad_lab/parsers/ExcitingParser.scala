@@ -24,7 +24,7 @@ object ExcitingParser extends SimpleExternalParserGenerator(
   mainFileRe = """\s*=================================================+\s*
 \s*\|\s*EXCITING\s(?<version>\S*) started\s*=
 (?:\s*\|\sversion hash id:\s*(?<hashId>\S*)\s*=)?""".r,
-  cmd = Seq(DefaultPythonInterpreter.python2Exe(), "${envDir}/parsers/exciting/parser/parser-exciting/parser_exciting.py",
+  cmd = Seq(DefaultPythonInterpreter.pythonExe(), "${envDir}/parsers/exciting/parser/parser-exciting/parser_exciting.py",
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   resList = Seq(
     "parser-exciting/parser_exciting.py",
