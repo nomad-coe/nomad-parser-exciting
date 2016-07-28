@@ -12,11 +12,11 @@ class BandHandler(xml.sax.handler.ContentHandler):
 
     def startElement(self, name, attrs):
         if name == "bandstructure":
-            self.bandSectionGIndex = self.backend.openSection("exciting_section_bandstructure")
+            self.bandSectionGIndex = self.backend.openSection("x_exciting_section_bandstructure")
             self.inBand = True
         elif name == "point" and self.inBand:
-            self.backend.addValue("exciting_band_value",float(attrs.getValue('eval')))
-            self.backend.addValue("exciting_band_k",float(attrs.getValue('distance')))
+            self.backend.addValue("x_exciting_band_value",float(attrs.getValue('eval')))
+            self.backend.addValue("x_exciting_band_k",float(attrs.getValue('distance')))
         # attrDict={}
         # for name in attrs.getNames():
         #     attrDict[name] = attrs.getValue(name)
@@ -25,7 +25,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
     def endElement(self, name):
         if name == 'bandstructure':
             self.inBand = False
-            self.backend.closeSection("exciting_section_bandstructure",self.bandSectionGIndex)
+            self.backend.closeSection("x_exciting_section_bandstructure",self.bandSectionGIndex)
             self.bandSectionGIndex = -1
         # logging.error("end element %s", name)
 

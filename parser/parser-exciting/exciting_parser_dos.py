@@ -12,11 +12,11 @@ class DosHandler(xml.sax.handler.ContentHandler):
 
     def startElement(self, name, attrs):
         if name == "dos":
-            self.dosSectionGIndex = self.backend.openSection("exciting_section_dos")
+            self.dosSectionGIndex = self.backend.openSection("x_exciting_section_dos")
             self.inDos = True
         elif name == "point" and self.inDos:
-            self.backend.addValue("exciting_dos_value",float(attrs.getValue('dos')))
-            self.backend.addValue("exciting_dos_energy",float(attrs.getValue('e')))
+            self.backend.addValue("x_exciting_dos_value",float(attrs.getValue('dos')))
+            self.backend.addValue("x_exciting_dos_energy",float(attrs.getValue('e')))
         # attrDict={}
         # for name in attrs.getNames():
         #     attrDict[name] = attrs.getValue(name)
@@ -25,7 +25,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
     def endElement(self, name):
         if name == 'dos':
             self.inDos = False
-            self.backend.closeSection("exciting_section_dos",self.dosSectionGIndex)
+            self.backend.closeSection("x_exciting_section_dos",self.dosSectionGIndex)
             self.dosSectionGIndex = -1
         # logging.error("end element %s", name)
 

@@ -11,17 +11,17 @@ class ExcitingParserContext(object):
   def startedParsing(self, path, parser):
     self.parser=parser
 
-  def onClose_exciting_section_lattice_vectors(self, backend, gIndex, section):
-    latticeX = section["exciting_geometry_lattice_vector_x"]
-    latticeY = section["exciting_geometry_lattice_vector_y"]
-    latticeZ = section["exciting_geometry_lattice_vector_z"]
+  def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
+    latticeX = section["x_exciting_geometry_lattice_vector_x"]
+    latticeY = section["x_exciting_geometry_lattice_vector_y"]
+    latticeZ = section["x_exciting_geometry_lattice_vector_z"]
     cell = [[latticeX[0],latticeY[0],latticeZ[0]],
             [latticeX[1],latticeY[1],latticeZ[1]],
             [latticeX[2],latticeY[2],latticeZ[2]]]
     backend.addValue("simulation_cell", cell)
 
-  def onClose_exciting_section_xc(self, backend, gIndex, section):
-    xcNr = section["exciting_xc_functional"][0]
+  def onClose_x_exciting_section_xc(self, backend, gIndex, section):
+    xcNr = section["x_exciting_xc_functional"][0]
     xc_internal_map = {
         2: ['LDA_C_PZ', 'LDA_X_PZ'],
         3: ['LDA_C_PW'],
@@ -68,54 +68,54 @@ mainFileDescription = \
               sections = ['section_system'],
               subMatchers = [
                 SM(startReStr = r"\sLattice vectors \(cartesian\) :",
-                sections = ["exciting_section_lattice_vectors"],
+                sections = ["x_exciting_section_lattice_vectors"],
                 subMatchers = [
 
-    SM(startReStr = r"\s*(?P<exciting_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<exciting_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<exciting_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True)
+    SM(startReStr = r"\s*(?P<x_exciting_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<x_exciting_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<x_exciting_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True)
                 ]),
                 SM(startReStr = r"\sReciprocal lattice vectors \(cartesian\) :",
-                sections = ["exciting_section_reciprocal_lattice_vectors"],
+                sections = ["x_exciting_section_reciprocal_lattice_vectors"],
                 subMatchers = [
 
-    SM(startReStr = r"\s*(?P<exciting_geometry_reciprocal_lattice_vector_x__bohr_1>[-+0-9.]+)\s+(?P<exciting_geometry_reciprocal_lattice_vector_y__bohr_1>[-+0-9.]+)\s+(?P<exciting_geometry_reciprocal_lattice_vector_z__bohr_1>[-+0-9.]+)", repeats = True)
+    SM(startReStr = r"\s*(?P<x_exciting_geometry_reciprocal_lattice_vector_x__bohr_1>[-+0-9.]+)\s+(?P<x_exciting_geometry_reciprocal_lattice_vector_y__bohr_1>[-+0-9.]+)\s+(?P<x_exciting_geometry_reciprocal_lattice_vector_z__bohr_1>[-+0-9.]+)", repeats = True)
                 ]),
-    SM(r"\s*Unit cell volume\s*:\s*(?P<exciting_unit_cell_volume__bohr3>[-0-9.]+)"),
-    SM(r"\s*Brillouin zone volume\s*:\s*(?P<exciting_brillouin_zone_volume__bohr_3>[-0-9.]+)"),
-    SM(r"\s*Species\s*:\s*[0-9]\s*\((?P<exciting_geometry_atom_labels>[-a-zA-Z0-9]+)\)", repeats = True,
+    SM(r"\s*Unit cell volume\s*:\s*(?P<x_exciting_unit_cell_volume__bohr3>[-0-9.]+)"),
+    SM(r"\s*Brillouin zone volume\s*:\s*(?P<x_exciting_brillouin_zone_volume__bohr_3>[-0-9.]+)"),
+    SM(r"\s*Species\s*:\s*[0-9]\s*\((?P<x_exciting_geometry_atom_labels>[-a-zA-Z0-9]+)\)", repeats = True,
        subMatchers = [
-    SM(r"\s*muffin-tin radius\s*:\s*(?P<exciting_muffin_tin_radius__bohr>[-0-9.]+)"),
-    SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<exciting_muffin_tin_points>[-0-9.]+)"),
+    SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)"),
+    SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)"),
     SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
       subMatchers = [
-        SM(r"\s*[0-9]\s*:\s*(?P<exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
+        SM(r"\s*[0-9]\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
       ])
     ]),
-    SM(r"\s*k-point grid\s*:\s*(?P<exciting_number_kpoint_x>[-0-9.]+)\s+(?P<exciting_number_kpoint_y>[-0-9.]+)\s+(?P<exciting_number_kpoint_z>[-0-9.]+)"),
-    SM(r"\s*k-point offset\s*:\s*(?P<exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<exciting_kpoint_offset_z>[-0-9.]+)"),
-    SM(r"\s*Total number of k-points\s*:\s*(?P<exciting_number_kpoints>[-0-9.]+)"),
-    SM(r"\s*R\^MT_min \* \|G\+k\|_max \(rgkmax\)\s*:\s*(?P<exciting_rgkmax__bohr>[-0-9.]+)"),
-    SM(r"\s*Maximum \|G\| for potential and density\s*:\s*(?P<exciting_gmaxvr__bohr_1>[-0-9.]+)"),
-    SM(r"\s*G-vector grid sizes\s*:\s*(?P<exciting_gvector_size_x>[-0-9.]+)\s+(?P<exciting_gvector_size_y>[-0-9.]+)\s+(?P<exciting_gvector_size_z>[-0-9.]+)"),
-    SM(r"\s*Total number of G-vectors\s*:\s*(?P<exciting_gvector_total>[-0-9.]+)"),
+    SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
+    SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
+    SM(r"\s*Total number of k-points\s*:\s*(?P<x_exciting_number_kpoints>[-0-9.]+)"),
+    SM(r"\s*R\^MT_min \* \|G\+k\|_max \(rgkmax\)\s*:\s*(?P<x_exciting_rgkmax__bohr>[-0-9.]+)"),
+    SM(r"\s*Maximum \|G\| for potential and density\s*:\s*(?P<x_exciting_gmaxvr__bohr_1>[-0-9.]+)"),
+    SM(r"\s*G-vector grid sizes\s*:\s*(?P<x_exciting_gvector_size_x>[-0-9.]+)\s+(?P<x_exciting_gvector_size_y>[-0-9.]+)\s+(?P<x_exciting_gvector_size_z>[-0-9.]+)"),
+    SM(r"\s*Total number of G-vectors\s*:\s*(?P<x_exciting_gvector_total>[-0-9.]+)"),
     SM(startReStr = r"\s*Maximum angular momentum used for\s*",
         subMatchers = [
-          SM(r"\s*APW functions\s*:\s*(?P<exciting_lmaxapw>[-0-9.]+)")
+          SM(r"\s*APW functions\s*:\s*(?P<x_exciting_lmaxapw>[-0-9.]+)")
         ]),
-    SM(r"\s*Total nuclear charge\s*:\s*(?P<exciting_nuclear_charge>[-0-9.]+)"),
-    SM(r"\s*Total electronic charge\s*:\s*(?P<exciting_electronic_charge>[-0-9.]+)"),
-    SM(r"\s*Total core charge\s*:\s*(?P<exciting_core_charge>[-0-9.]+)"),
-    SM(r"\s*Total valence charge\s*:\s*(?P<exciting_valence_charge>[-0-9.]+)"),
-    SM(r"\s*Effective Wigner radius, r_s\s*:\s*(?P<exciting_wigner_radius>[-0-9.]+)"),
-    SM(r"\s*Number of empty states\s*:\s*(?P<exciting_empty_states>[-0-9.]+)"),
-    SM(r"\s*Total number of valence states\s*:\s*(?P<exciting_valence_states>[-0-9.]+)"),
-    SM(r"\s*Maximum Hamiltonian size\s*:\s*(?P<exciting_hamiltonian_size>[-0-9.]+)"),
-    SM(r"\s*Maximum number of plane-waves\s*:\s*(?P<exciting_pw>[-0-9.]+)"),
-    SM(r"\s*Total number of local-orbitals\s*:\s*(?P<exciting_lo>[-0-9.]+)"),
-    SM(r"\s*Smearing scheme\s*:\s*(?P<exciting_smearing_type>[-a-zA-Z0-9]+)"),
-    SM(r"\s*Smearing width\s*:\s*(?P<exciting_smearing_width__hartree>[-0-9.]+)"),
-    SM(r"\s*Using\s*(?P<exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing"),
-    SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<exciting_xc_functional>[-0-9.]+)",
-       sections = ['exciting_section_xc'])
+    SM(r"\s*Total nuclear charge\s*:\s*(?P<x_exciting_nuclear_charge>[-0-9.]+)"),
+    SM(r"\s*Total electronic charge\s*:\s*(?P<x_exciting_electronic_charge>[-0-9.]+)"),
+    SM(r"\s*Total core charge\s*:\s*(?P<x_exciting_core_charge>[-0-9.]+)"),
+    SM(r"\s*Total valence charge\s*:\s*(?P<x_exciting_valence_charge>[-0-9.]+)"),
+    SM(r"\s*Effective Wigner radius, r_s\s*:\s*(?P<x_exciting_wigner_radius>[-0-9.]+)"),
+    SM(r"\s*Number of empty states\s*:\s*(?P<x_exciting_empty_states>[-0-9.]+)"),
+    SM(r"\s*Total number of valence states\s*:\s*(?P<x_exciting_valence_states>[-0-9.]+)"),
+    SM(r"\s*Maximum Hamiltonian size\s*:\s*(?P<x_exciting_hamiltonian_size>[-0-9.]+)"),
+    SM(r"\s*Maximum number of plane-waves\s*:\s*(?P<x_exciting_pw>[-0-9.]+)"),
+    SM(r"\s*Total number of local-orbitals\s*:\s*(?P<x_exciting_lo>[-0-9.]+)"),
+    SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
+    SM(r"\s*Smearing width\s*:\s*(?P<x_exciting_smearing_width__hartree>[-0-9.]+)"),
+    SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing"),
+    SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<x_exciting_xc_functional>[-0-9.]+)",
+       sections = ['x_exciting_section_xc'])
     ]),
             SM(name = "single configuration iteration",
               startReStr = r"\|\s*Self-consistent loop started\s*\+",
@@ -128,55 +128,55 @@ mainFileDescription = \
                   repeats = True,
                   subMatchers = [
                    SM(r"\s*Total energy\s*:\s*(?P<energy_total_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Fermi energy\s*:\s*(?P<exciting_fermi_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Fermi energy\s*:\s*(?P<x_exciting_fermi_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Kinetic energy\s*:\s*(?P<electronic_kinetic_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Coulomb energy\s*:\s*(?P<exciting_coulomb_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Exchange energy\s*:\s*(?P<exciting_exchange_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Correlation energy\s*:\s*(?P<exciting_correlation_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Coulomb energy\s*:\s*(?P<x_exciting_coulomb_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Exchange energy\s*:\s*(?P<x_exciting_exchange_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Correlation energy\s*:\s*(?P<x_exciting_correlation_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Sum of eigenvalues\s*:\s*(?P<energy_sum_eigenvalues_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Effective potential energy\s*:\s*(?P<exciting_effective_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Coulomb potential energy\s*:\s*(?P<exciting_coulomb_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Effective potential energy\s*:\s*(?P<x_exciting_effective_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Coulomb potential energy\s*:\s*(?P<x_exciting_coulomb_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*xc potential energy\s*:\s*(?P<energy_XC_potential_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Hartree energy\s*:\s*(?P<exciting_hartree_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Electron-nuclear energy\s*:\s*(?P<exciting_electron_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<exciting_nuclear_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Madelung energy\s*:\s*(?P<exciting_madelung_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<exciting_core_electron_kinetic_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Hartree energy\s*:\s*(?P<x_exciting_hartree_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Electron-nuclear energy\s*:\s*(?P<x_exciting_electron_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<x_exciting_nuclear_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Madelung energy\s*:\s*(?P<x_exciting_madelung_energy_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<x_exciting_core_electron_kinetic_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Absolute change in total energy   (target)\s*:\s*(?P<energy_change_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*(?P<exciting_dos_fermi_scf_iteration__hartree_1>[-0-9.]+)"),
-                   SM(r"\s*core leakage\s*:\s*(?P<exciting_core_leakage_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*interstitial\s*:\s*(?P<exciting_interstitial_charge_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*total charge in muffin-tins\s*:\s*(?P<exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*Estimated fundamental gap\s*:\s*(?P<exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<exciting_time_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<exciting_effective_potential_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
-                   SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<exciting_energy_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
-                   SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))")
+                   SM(r"\s*DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*(?P<x_exciting_dos_fermi_scf_iteration__hartree_1>[-0-9.]+)"),
+                   SM(r"\s*core leakage\s*:\s*(?P<x_exciting_core_leakage_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
+                   SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<x_exciting_energy_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
+                   SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))")
                   ]),
                 SM(name="final_quantities",
                   startReStr = r"\| Convergence targets achieved. Performing final SCF iteration\s*\+",
                   endReStr = r"\| Self-consistent loop stopped\s*\+",
                    subMatchers = [
                      SM(r"\s*Total energy\s*:\s*(?P<energy_total__hartree>[-0-9.]+)"),
-                     SM(r"\s*Fermi energy\s*:\s*(?P<exciting_fermi_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Fermi energy\s*:\s*(?P<x_exciting_fermi_energy__hartree>[-0-9.]+)"),
                      SM(r"\s*Kinetic energy\s*:\s*(?P<electronic_kinetic_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Coulomb energy\s*:\s*(?P<exciting_coulomb_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Exchange energy\s*:\s*(?P<exciting_exchange_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Correlation energy\s*:\s*(?P<exciting_correlation_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Coulomb energy\s*:\s*(?P<x_exciting_coulomb_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Exchange energy\s*:\s*(?P<x_exciting_exchange_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Correlation energy\s*:\s*(?P<x_exciting_correlation_energy__hartree>[-0-9.]+)"),
                      SM(r"\s*Sum of eigenvalues\s*:\s*(?P<energy_sum_eigenvalues__hartree>[-0-9.]+)"),
-                     SM(r"\s*Effective potential energy\s*:\s*(?P<exciting_effective_potential_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Coulomb potential energy\s*:\s*(?P<exciting_coulomb_potential_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Effective potential energy\s*:\s*(?P<x_exciting_effective_potential_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Coulomb potential energy\s*:\s*(?P<x_exciting_coulomb_potential_energy__hartree>[-0-9.]+)"),
                      SM(r"\s*xc potential energy\s*:\s*(?P<energy_XC_potential__hartree>[-0-9.]+)"),
-                     SM(r"\s*Hartree energy\s*:\s*(?P<exciting_hartree_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Electron-nuclear energy\s*:\s*(?P<exciting_electron_nuclear_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<exciting_nuclear_nuclear_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Madelung energy\s*:\s*(?P<exciting_madelung_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<exciting_core_electron_kinetic_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*(?P<exciting_dos_fermi__hartree_1>[-0-9.]+)"),
-                     SM(r"\s*core leakage\s*:\s*(?P<exciting_core_leakage>[-0-9.]+)"),
-                     SM(r"\s*interstitial\s*:\s*(?P<exciting_interstitial_charge>[-0-9.]+)"),
-                     SM(r"\s*total charge in muffin-tins\s*:\s*(?P<exciting_total_MT_charge>[-0-9.]+)"),
-                     SM(r"\s*Estimated fundamental gap\s*:\s*(?P<exciting_gap__hartree>[-0-9.]+)")
+                     SM(r"\s*Hartree energy\s*:\s*(?P<x_exciting_hartree_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Electron-nuclear energy\s*:\s*(?P<x_exciting_electron_nuclear_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<x_exciting_nuclear_nuclear_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Madelung energy\s*:\s*(?P<x_exciting_madelung_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<x_exciting_core_electron_kinetic_energy__hartree>[-0-9.]+)"),
+                     SM(r"\s*DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*(?P<x_exciting_dos_fermi__hartree_1>[-0-9.]+)"),
+                     SM(r"\s*core leakage\s*:\s*(?P<x_exciting_core_leakage>[-0-9.]+)"),
+                     SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge>[-0-9.]+)"),
+                     SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge>[-0-9.]+)"),
+                     SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
                    ])
                ]
             )
@@ -195,10 +195,10 @@ metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__f
 metaInfoEnv, warnings = loadJsonFile(filePath = metaInfoPath, dependencyLoader = None, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, uri = None)
 
 cachingLevelForMetaName = {
-                            "exciting_geometry_lattice_vector_x":CachingLevel.Cache,
-                            "exciting_geometry_lattice_vector_y":CachingLevel.Cache,
-                            "exciting_geometry_lattice_vector_z":CachingLevel.Cache,
-                            "exciting_section_lattice_vectors": CachingLevel.Ignore
+                            "x_exciting_geometry_lattice_vector_x":CachingLevel.Cache,
+                            "x_exciting_geometry_lattice_vector_y":CachingLevel.Cache,
+                            "x_exciting_geometry_lattice_vector_z":CachingLevel.Cache,
+                            "x_exciting_section_lattice_vectors": CachingLevel.Ignore
                           }
 
 if __name__ == "__main__":
