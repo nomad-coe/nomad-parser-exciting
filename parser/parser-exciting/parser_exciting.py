@@ -20,6 +20,15 @@ class ExcitingParserContext(object):
             [latticeX[2],latticeY[2],latticeZ[2]]]
     backend.addValue("simulation_cell", cell)
 
+  def onClose_x_exciting_section_reciprocal_lattice_vectors(self, backend, gIndex, section):
+    recLatticeX = section["x_exciting_geometry_reciprocal_lattice_vector_x"]
+    recLatticeY = section["x_exciting_geometry_reciprocal_lattice_vector_y"]
+    recLatticeZ = section["x_exciting_geometry_reciprocal_lattice_vector_z"]
+    recCell = [[recLatticeX[0],recLatticeY[0],recLatticeZ[0]],
+            [recLatticeX[1],recLatticeY[1],recLatticeZ[1]],
+            [recLatticeX[2],recLatticeY[2],recLatticeZ[2]]]
+    backend.addValue("simulation_reciprocal_cell", recCell)
+
   def onClose_x_exciting_section_xc(self, backend, gIndex, section):
     xcNr = section["x_exciting_xc_functional"][0]
     xc_internal_map = {
@@ -87,7 +96,7 @@ mainFileDescription = \
     SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)"),
     SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
       subMatchers = [
-        SM(r"\s*[0-9]\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
+        SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
       ])
     ]),
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
@@ -198,7 +207,11 @@ cachingLevelForMetaName = {
                             "x_exciting_geometry_lattice_vector_x":CachingLevel.Cache,
                             "x_exciting_geometry_lattice_vector_y":CachingLevel.Cache,
                             "x_exciting_geometry_lattice_vector_z":CachingLevel.Cache,
-                            "x_exciting_section_lattice_vectors": CachingLevel.Ignore
+                            "x_exciting_section_lattice_vectors": CachingLevel.Ignore,
+                            "x_exciting_geometry_reciprocal_lattice_vector_x":CachingLevel.Cache,
+                            "x_exciting_geometry_reciprocal_lattice_vector_y":CachingLevel.Cache,
+                            "x_exciting_geometry_reciprocal_lattice_vector_z":CachingLevel.Cache,
+                            "x_exciting_section_reciprocal_lattice_vectors": CachingLevel.Ignore
                           }
 
 if __name__ == "__main__":
