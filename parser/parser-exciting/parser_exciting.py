@@ -27,7 +27,7 @@ class ExcitingParserContext(object):
     recCell = [[recLatticeX[0],recLatticeY[0],recLatticeZ[0]],
             [recLatticeX[1],recLatticeY[1],recLatticeZ[1]],
             [recLatticeX[2],recLatticeY[2],recLatticeZ[2]]]
-    backend.addValue("simulation_reciprocal_cell", recCell)
+    backend.addValue("x_exciting_simulation_reciprocal_cell", recCell)
 
   def onClose_x_exciting_section_xc(self, backend, gIndex, section):
     xcNr = section["x_exciting_xc_functional"][0]
