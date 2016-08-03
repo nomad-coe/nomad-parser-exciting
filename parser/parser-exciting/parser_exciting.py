@@ -60,6 +60,8 @@ class ExcitingParserContext(object):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend)
 
+  def onClose_section_system(self, backend, gIndex, section):
+    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -77,7 +79,6 @@ mainFileDescription = \
               sections = ['section_system'],
               subMatchers = [
                 SM(startReStr = r"\sLattice vectors \(cartesian\) :",
-                   fixedStartValues={'configuration_periodic_dimensions': [True,True,True]},
                 sections = ["x_exciting_section_lattice_vectors"],
                 subMatchers = [
 
