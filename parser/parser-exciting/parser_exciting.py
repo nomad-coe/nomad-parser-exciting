@@ -77,7 +77,7 @@ mainFileDescription = \
               sections = ['section_system'],
               subMatchers = [
                 SM(startReStr = r"\sLattice vectors \(cartesian\) :",
-                   fixedStartValues={'configuration_periodic_dimensions': "[True,True,True]"},
+                   fixedStartValues={'configuration_periodic_dimensions': [True,True,True]},
                 sections = ["x_exciting_section_lattice_vectors"],
                 subMatchers = [
 
