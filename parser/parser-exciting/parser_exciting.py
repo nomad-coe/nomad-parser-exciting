@@ -66,7 +66,7 @@ class ExcitingParserContext(object):
       with open(eigvalFile) as g:
           eigvalKpoint=[]
           eigvalVal=[[],[]]
-          eigvalOcc=[]
+          eigvalOcc=[[],[]]
           fromH = unit_conversion.convert_unit_function("hartree", "J")
           while 1:
             s = g.readline()
@@ -79,6 +79,8 @@ class ExcitingParserContext(object):
             elif len(s) > 50:
               eigvalVal[0].append([])
               eigvalVal[1].append([])
+              eigvalOcc[0].append([])
+              eigvalOcc[1].append([])
               eigvalKpoint.append(list(map(float, s.split()[1:4])))
 #              print ("eigvalKpoint= ", eigvalKpoint)
             else:
@@ -89,9 +91,12 @@ class ExcitingParserContext(object):
                 n, e, occ = s.split()
                 eigvalVal[0][-1].append(int(n))
                 eigvalVal[1][-1].append(fromH(float(e)))
-#                print ("eigvalVal= ", eigvalVal)
+                eigvalOcc[0][-1].append(int(n))
+                eigvalOcc[1][-1].append(float(occ))
+                print ("eigvalOcc= ", eigvalOcc)
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
+          backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
 
   def onClose_section_system(self, backend, gIndex, section):
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
