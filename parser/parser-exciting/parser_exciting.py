@@ -55,6 +55,7 @@ class ExcitingParserContext(object):
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
+    fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend)
@@ -72,8 +73,6 @@ class ExcitingParserContext(object):
             s = g.readline()
             if not s: break
             s = s.strip()
-#            print ("s= ", s)
-#            print ("len(s)= ", len(s))
             if len(s) < 20:
               continue
             elif len(s) > 50:
@@ -82,7 +81,6 @@ class ExcitingParserContext(object):
               eigvalOcc[0].append([])
               eigvalOcc[1].append([])
               eigvalKpoint.append(list(map(float, s.split()[1:4])))
-#              print ("eigvalKpoint= ", eigvalKpoint)
             else:
               try: int(s[0])
               except ValueError:
@@ -93,10 +91,62 @@ class ExcitingParserContext(object):
                 eigvalVal[1][-1].append(fromH(float(e)))
                 eigvalOcc[0][-1].append(int(n))
                 eigvalOcc[1][-1].append(float(occ))
-                print ("eigvalOcc= ", eigvalOcc)
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
           backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
+    if os.path.exists(fermiSurfFile):
+      fermiGIndex = backend.openSection("x_exciting_section_fermi_surface")
+      with open(fermiSurfFile) as g:
+        grid = []
+        all_vectors = []
+        values = [[],[]]
+        origin = []
+        vectors = []
+        fermi = 0
+        number_of_bands = 0
+        mesh_size = 0
+        fromH = unit_conversion.convert_unit_function("hartree", "J")
+        while 1:
+          s = g.readline()
+          if not s: break
+          s = s.strip()
+          st = s.split()
+          if len(st) == 3:
+            if len(s) >= 40:
+              all_vectors.append([])
+              i = 0
+              while i < 3:
+                all_vectors[-1].append(float(st[i]))
+                i += 1
+            elif st[0] == "Fermi":
+              fermi = fromH(float(st[2]))
+            else:
+              j = 0
+              while j < 3:
+                grid.append(int(st[j]))
+                j += 1
+          elif len(st) == 2:
+            values[0].append(int(st[1]))
+            values[1].append([])
+          elif len(s) >= 13 and len(st) == 1:
+            try: float(st[0])
+            except ValueError:
+              continue
+            else:
+              values[1][-1].append(float(st[0]))
+          elif len(s) < 5 and len(st) == 1:
+            number_of_bands = st[0]  
+        mesh_size = grid[0]*grid[1]*grid[2]
+        origin.append(all_vectors[0])
+        vectors.append(all_vectors[1:])
+        backend.addArrayValues("x_exciting_fermi_energy_fermi_surface", np.asarray(fermi))
+        backend.addArrayValues("x_exciting_grid_fermi_surface", np.asarray(grid))
+        backend.addArrayValues("x_exciting_origin_fermi_surface", np.asarray(origin))
+        backend.addArrayValues("x_exciting_vectors_fermi_surface", np.asarray(vectors))
+        backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
+        backend.addArrayValues("x_exciting_number_of_bands_fermi_surface", np.asarray(number_of_bands))
+        backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
+        backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
 
   def onClose_section_system(self, backend, gIndex, section):
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
