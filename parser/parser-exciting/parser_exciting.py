@@ -148,6 +148,19 @@ class ExcitingParserContext(object):
         backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
 
+#######################TOTAL FORCES####################
+
+    f_st = section['x_exciting_store_total_forces']
+    atom_forces = [[],[]]
+    coord = []
+    for i in range (0, len(f_st)):
+      f_st[i] = f_st[i].split()
+      atom_forces[0].append(int(f_st[i][0]))
+      atom_forces[1].append([])
+      for j in range (3,6):
+       atom_forces[1][-1].append(float(f_st[i][j]))
+    backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
+
   def onClose_section_system(self, backend, gIndex, section):
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
 
@@ -187,7 +200,8 @@ mainFileDescription = \
     SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
       subMatchers = [
         SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
-      ])
+      ]),
+    SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)")
     ]),
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
     SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
@@ -277,6 +291,30 @@ mainFileDescription = \
                      SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge>[-0-9.]+)"),
                      SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge>[-0-9.]+)"),
                      SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
+                   ]),
+                SM(name="final_forces",
+                  startReStr = r"\| Writing atomic positions and forces\s*\-",
+#                  endReStr = r"\| Groundstate module stopped\s*\*",
+                  endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+                   subMatchers = [
+                     SM(name="total_forces",
+                     startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
+##                       SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)",
+                     subMatchers = [
+                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
+                          repeats = True)
+                   ] )
+#                     print ("number atoms=", x_exciting_number_of_atoms)
+#                     SM(name="force_components",
+#                     startReStr = r"\s*Atomic force components including IBS \(cartesian\)\s*:",
+#                     forwardMatch = True,
+#                     subMatchers = [
+#                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)", weak = True),
+#                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
+#                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)")
+#                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
+#                   ] 
+#                    )
                    ])
                ]
             )
