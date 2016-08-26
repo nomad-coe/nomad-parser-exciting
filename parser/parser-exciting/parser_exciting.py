@@ -94,6 +94,9 @@ class ExcitingParserContext(object):
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
           backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
+
+##########################Parsing Fermi surface##################
+
     if os.path.exists(fermiSurfFile):
       fermiGIndex = backend.openSection("x_exciting_section_fermi_surface")
       with open(fermiSurfFile) as g:
