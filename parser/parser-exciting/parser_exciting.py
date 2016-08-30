@@ -54,8 +54,8 @@ class ExcitingParserContext(object):
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
-    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
-    fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
+    eigvalFile = os.path.join(dirPath, "SEIGVAL.OUT")
+    fermiSurfFile = os.path.join(dirPath, "SFERMISURF.bxsf")
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend)
@@ -66,7 +66,7 @@ class ExcitingParserContext(object):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
           eigvalKpoint=[]
-          eigvalVal=[[],[]]
+          eigvalVal=[[],[],[]]
           eigvalOcc=[[],[]]
           fromH = unit_conversion.convert_unit_function("hartree", "J")
           while 1:
@@ -76,8 +76,8 @@ class ExcitingParserContext(object):
             if len(s) < 20:
               continue
             elif len(s) > 50:
-              eigvalVal[0].append([])
               eigvalVal[1].append([])
+              eigvalVal[2].append([])
               eigvalOcc[0].append([])
               eigvalOcc[1].append([])
               eigvalKpoint.append(list(map(float, s.split()[1:4])))
@@ -87,8 +87,8 @@ class ExcitingParserContext(object):
                 continue
               else:
                 n, e, occ = s.split()
-                eigvalVal[0][-1].append(int(n))
-                eigvalVal[1][-1].append(fromH(float(e)))
+                eigvalVal[1][-1].append(int(n))
+                eigvalVal[2][-1].append(fromH(float(e)))
                 eigvalOcc[0][-1].append(int(n))
                 eigvalOcc[1][-1].append(float(occ))
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
@@ -102,7 +102,7 @@ class ExcitingParserContext(object):
       with open(fermiSurfFile) as g:
         grid = []
         all_vectors = []
-        values = [[],[]]
+        values = []
         origin = []
         vectors = []
         fermi = 0
@@ -129,40 +129,42 @@ class ExcitingParserContext(object):
                 grid.append(int(st[j]))
                 j += 1
           elif len(st) == 2:
-            values[0].append(int(st[1]))
-            values[1].append([])
+#            values[0].append(int(st[1]))
+            values.append([])
           elif len(s) >= 13 and len(st) == 1:
             try: float(st[0])
             except ValueError:
               continue
             else:
-              values[1][-1].append(float(st[0]))
+              values[-1].append(float(st[0]))
           elif len(s) < 5 and len(st) == 1:
             number_of_bands = st[0]  
         mesh_size = grid[0]*grid[1]*grid[2]
         origin.append(all_vectors[0])
         vectors.append(all_vectors[1:])
+        backend.addArrayValues("x_exciting_number_of_bands_fermi_surface", np.asarray(number_of_bands))
+        backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
         backend.addArrayValues("x_exciting_fermi_energy_fermi_surface", np.asarray(fermi))
         backend.addArrayValues("x_exciting_grid_fermi_surface", np.asarray(grid))
         backend.addArrayValues("x_exciting_origin_fermi_surface", np.asarray(origin))
         backend.addArrayValues("x_exciting_vectors_fermi_surface", np.asarray(vectors))
         backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
-        backend.addArrayValues("x_exciting_number_of_bands_fermi_surface", np.asarray(number_of_bands))
-        backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
 
 #######################TOTAL FORCES####################
 
-    f_st = section['x_exciting_store_total_forces']
-    atom_forces = [[],[]]
-    coord = []
-    for i in range (0, len(f_st)):
-      f_st[i] = f_st[i].split()
-      atom_forces[0].append(int(f_st[i][0]))
-      atom_forces[1].append([])
-      for j in range (3,6):
-       atom_forces[1][-1].append(float(f_st[i][j]))
-    backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
+    f_st = []
+    if f_st:
+      f_st = section['x_exciting_store_total_forces']
+      atom_forces = [[],[]]
+      coord = []
+      for i in range (0, len(f_st)):
+        f_st[i] = f_st[i].split()
+        atom_forces[0].append(int(f_st[i][0]))
+        atom_forces[1].append([])
+        for j in range (3,6):
+          atom_forces[1][-1].append(float(f_st[i][j]))
+      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
 
   def onClose_section_system(self, backend, gIndex, section):
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
