@@ -54,8 +54,8 @@ class ExcitingParserContext(object):
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
-    eigvalFile = os.path.join(dirPath, "SEIGVAL.OUT")
-    fermiSurfFile = os.path.join(dirPath, "SFERMISURF.bxsf")
+    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
+    fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend)
@@ -94,6 +94,8 @@ class ExcitingParserContext(object):
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
           backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
+          print ("values= ", eigvalVal)
+          print ("kpoints= ", eigvalKpoint)
 
 ##########################Parsing Fermi surface##################
 
@@ -205,14 +207,15 @@ mainFileDescription = \
     SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
       subMatchers = [
         SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
-      ]),
-    SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)")
+      ])
     ]),
+    SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
+    SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)"),
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
     SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
     SM(r"\s*Total number of k-points\s*:\s*(?P<x_exciting_number_kpoints>[-0-9.]+)"),
     SM(r"\s*R\^MT_min \* \|G\+k\|_max \(rgkmax\)\s*:\s*(?P<x_exciting_rgkmax__bohr>[-0-9.]+)"),
-    SM(r"\s*Maximum \|G+k\| for APW functions\s*:\s*(?P<x_exciting_gkmax__bohr_1>[-0-9.]+)"),
+    SM(r"\s*Maximum \|G\+k\| for APW functions\s*:\s*(?P<x_exciting_gkmax__bohr_1>[-0-9.]+)"),
     SM(r"\s*Maximum \|G\| for potential and density\s*:\s*(?P<x_exciting_gmaxvr__bohr_1>[-0-9.]+)"),
     SM(r"\s*G-vector grid sizes\s*:\s*(?P<x_exciting_gvector_size_x>[-0-9.]+)\s+(?P<x_exciting_gvector_size_y>[-0-9.]+)\s+(?P<x_exciting_gvector_size_z>[-0-9.]+)"),
     SM(r"\s*Total number of G-vectors\s*:\s*(?P<x_exciting_gvector_total>[-0-9.]+)"),
@@ -230,11 +233,11 @@ mainFileDescription = \
     SM(r"\s*Maximum Hamiltonian size\s*:\s*(?P<x_exciting_hamiltonian_size>[-0-9.]+)"),
     SM(r"\s*Maximum number of plane-waves\s*:\s*(?P<x_exciting_pw>[-0-9.]+)"),
     SM(r"\s*Total number of local-orbitals\s*:\s*(?P<x_exciting_lo>[-0-9.]+)"),
+    SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<x_exciting_xc_functional>[-0-9.]+)",
+       sections = ['x_exciting_section_xc']),
     SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
     SM(r"\s*Smearing width\s*:\s*(?P<x_exciting_smearing_width__hartree>[-0-9.]+)"),
-    SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing"),
-    SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<x_exciting_xc_functional>[-0-9.]+)",
-       sections = ['x_exciting_section_xc'])
+    SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
             SM(name = "single configuration iteration",
               startReStr = r"\|\s*Self-consistent loop started\s*\+",
