@@ -34,16 +34,16 @@ class ExcitingParserContext(object):
     xcNr = section["x_exciting_xc_functional"][0]
     xc_internal_map = {
         2: ['LDA_C_PZ', 'LDA_X_PZ'],
-        3: ['LDA_C_PW'],
+        3: ['LDA_C_PW', 'LDA_X_PZ'],
         4: ['LDA_C_XALPHA'],
         5: ['LDA_C_VBH'],
-        20: ['GGA_C_PBE'],
-        21: ['GGA_X_PBE_R'],
-        22: ['GGA_C_PBE_SOL'],
-        26: ['GGA_X_WC'],
-        30: ['GGA_C_AM05'],
-        300: ['GGA_C_BGCP'],
-        406: ['HYB_GGA_C_PBEH']
+        20: ['GGA_C_PBE', 'GGA_X_PBE'],
+        21: ['GGA_C_PBE', 'GGA_X_PBE_R'],
+        22: ['GGA_C_PBE_SOL', 'GGA_X_PBE_SOL'],
+        26: ['GGA_C_PBE', 'GGA_X_WC'],
+        30: ['GGA_C_AM05', 'GGA_C_AM05'],
+        300: ['GGA_C_BGCP', 'GGA_X_PBE'],
+        406: ['HYB_GGA_XC_PBEH']
         }
     for xcName in xc_internal_map[xcNr]:
       gi = backend.openSection("section_XC_functionals")
