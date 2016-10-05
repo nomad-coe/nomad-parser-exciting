@@ -16,7 +16,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.inInput = True
         elif name == "atom" and self.inInput:
             g = attrs.getValue('coord')
-            print ("coord=", g)
+#            print ("coord=", g)
 #            self.backend.addValue("atom_positions",float(attrs.getValue('coord')))
 #            self.backend.addValue("x_exciting_dos_energy",float(attrs.getValue('e')))
         # attrDict={}

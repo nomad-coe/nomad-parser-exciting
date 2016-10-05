@@ -99,8 +99,8 @@ class ExcitingParserContext(object):
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
           backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
-          print ("values= ", eigvalVal)
-          print ("kpoints= ", eigvalKpoint)
+#          print ("values= ", eigvalVal)
+#          print ("kpoints= ", eigvalKpoint)
 
 ##########################Parsing Fermi surface##################
 
