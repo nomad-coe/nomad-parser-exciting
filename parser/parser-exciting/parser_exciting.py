@@ -71,8 +71,10 @@ class ExcitingParserContext(object):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
           eigvalKpoint=[]
-          eigvalVal=[[],[],[]]
-          eigvalOcc=[[],[]]
+#          eigvalVal=[[],[],[]]
+#          eigvalOcc=[[],[]]
+          eigvalVal=[]
+          eigvalOcc=[]
           fromH = unit_conversion.convert_unit_function("hartree", "J")
           while 1:
             s = g.readline()
@@ -81,10 +83,12 @@ class ExcitingParserContext(object):
             if len(s) < 20:
               continue
             elif len(s) > 50:
-              eigvalVal[1].append([])
-              eigvalVal[2].append([])
-              eigvalOcc[0].append([])
-              eigvalOcc[1].append([])
+              eigvalVal.append([])
+              eigvalOcc.append([])
+#              eigvalVal[1].append([])
+#              eigvalVal[2].append([])
+#              eigvalOcc[0].append([])
+#              eigvalOcc[1].append([])
               eigvalKpoint.append(list(map(float, s.split()[1:4])))
             else:
               try: int(s[0])
@@ -92,10 +96,12 @@ class ExcitingParserContext(object):
                 continue
               else:
                 n, e, occ = s.split()
-                eigvalVal[1][-1].append(int(n))
-                eigvalVal[2][-1].append(fromH(float(e)))
-                eigvalOcc[0][-1].append(int(n))
-                eigvalOcc[1][-1].append(float(occ))
+                eigvalVal[-1].append(fromH(float(e)))
+                eigvalOcc[-1].append(float(occ))
+#                eigvalVal[1][-1].append(int(n))
+#                eigvalVal[2][-1].append(fromH(float(e)))
+#                eigvalOcc[0][-1].append(int(n))
+#                eigvalOcc[1][-1].append(float(occ))
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
           backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
