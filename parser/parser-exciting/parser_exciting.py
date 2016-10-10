@@ -5,7 +5,7 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_input
 
 class ExcitingParserContext(object):
 
@@ -56,11 +56,11 @@ class ExcitingParserContext(object):
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
-#    inputFile = os.path.join(dirPath, "input.xml")
+    inputFile = os.path.join(dirPath, "input.xml")
 ############# reading input file for atom positions##############
-#    if os.path.exists(inputFile):
-#      with open(inputFile) as f:
-#        exciting_parser_input.parseInput(f, backend)
+    if os.path.exists(inputFile):
+      with open(inputFile) as f:
+        exciting_parser_input.parseInput(f, backend)
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend)
