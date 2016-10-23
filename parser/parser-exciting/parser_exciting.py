@@ -102,9 +102,9 @@ class ExcitingParserContext(object):
 #                eigvalVal[2][-1].append(fromH(float(e)))
 #                eigvalOcc[0][-1].append(int(n))
 #                eigvalOcc[1][-1].append(float(occ))
-          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
-          backend.addArrayValues("eigenvalues_values", np.asarray(eigvalVal))
-          backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOcc))
+          backend.addArrayValues("eigenvalues_kpoints", np.asarray([eigvalKpoint]))
+          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
+          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
 #          print ("values= ", eigvalVal)
 #          print ("kpoints= ", eigvalKpoint)
 
