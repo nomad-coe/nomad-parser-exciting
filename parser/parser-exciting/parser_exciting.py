@@ -11,6 +11,8 @@ class ExcitingParserContext(object):
 
   def startedParsing(self, path, parser):
     self.parser=parser
+    self.atom_pos = []
+    self.atom_labels = []
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -189,17 +191,23 @@ class ExcitingParserContext(object):
 #        exciting_parser_input.parseInput(f, backend)
     self.secSystemDescriptionIndex = gIndex
 
-    atom_pos = []
-    for i in ['x', 'y', 'z']:
-       api = section['x_exciting_geometry_atom_positions_' + i]
-       if api is not None:
-          atom_pos.append(api)
-    if atom_pos:
-       backend.addArrayValues('atom_positions', np.transpose(np.asarray(atom_pos)))
-#       print("atom_positions==",atom_pos)
-    atom_labels = section['x_exciting_geometry_atom_labels']
-    if atom_labels is not None:
-       backend.addArrayValues('atom_labels', np.asarray(atom_labels))
+    if self.atom_pos:
+       backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
+    self.atom_pos = []
+    if self.atom_labels is not None:
+       backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
+    self.atom_labels = []
+    
+
+  def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
+    pos = [('x_exciting_geometry_atom_positions_' + i) for i in ['x', 'y', 'z']]
+    pl = map(len, pos)
+    natom = pl[0]
+    if pl[1] != natom or pl[2] != natom:
+      raise Exception("invalid number of atoms in various components %s" % pl)
+    for i in range(natom):
+      self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
+    self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -231,13 +239,14 @@ mainFileDescription = \
     SM(r"\s*Unit cell volume\s*:\s*(?P<x_exciting_unit_cell_volume__bohr3>[-0-9.]+)"),
     SM(r"\s*Brillouin zone volume\s*:\s*(?P<x_exciting_brillouin_zone_volume__bohr_3>[-0-9.]+)"),
     SM(r"\s*Species\s*:\s*[0-9]\s*\((?P<x_exciting_geometry_atom_labels>[-a-zA-Z0-9]+)\)", repeats = True,
+      sections = ["x_exciting_section_atoms_group"],
        subMatchers = [
-    SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)"),
-    SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)"),
-    SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
-      subMatchers = [
-        SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
-      ])
+        SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)"),
+        SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)"),
+        SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
+           subMatchers = [
+                    SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
+         ])
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
     SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)"),
