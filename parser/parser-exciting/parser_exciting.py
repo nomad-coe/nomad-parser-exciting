@@ -91,7 +91,7 @@ class ExcitingParserContext(object):
 #              eigvalVal[2].append([])
 #              eigvalOcc[0].append([])
 #              eigvalOcc[1].append([])
-              eigvalKpoint.append(list(map(float, s.split()[1:4])))
+              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
             else:
               try: int(s[0])
               except ValueError:
@@ -200,8 +200,8 @@ class ExcitingParserContext(object):
     
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
-    pos = [('x_exciting_geometry_atom_positions_' + i) for i in ['x', 'y', 'z']]
-    pl = map(len, pos)
+    pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
+    pl = [len(comp) for comp in pos]
     natom = pl[0]
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
