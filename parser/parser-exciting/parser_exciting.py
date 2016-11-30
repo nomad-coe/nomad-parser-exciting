@@ -396,13 +396,13 @@ if __name__ == "__main__":
 #        print 'nameo', name
 
     # Production
-    # mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
+    mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
 
     # Debug
-    local_backend = LocalBackend(metaInfoEnv)
-    mainFunction(mainFileDescription, metaInfoEnv, parserInfo, outF=local_backend.fileOut, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext(), superBackend=local_backend)
-    results = local_backend.results
-    program_name = results["program_name"]
-    atom_labels = results["atom_labels"]
-    print(program_name)
-    print(atom_labels)
+    # local_backend = LocalBackend(metaInfoEnv)
+    # mainFunction(mainFileDescription, metaInfoEnv, parserInfo, outF=local_backend.fileOut, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext(), superBackend=local_backend)
+    # results = local_backend.results
+    # program_name = results["program_name"]
+    # atom_labels = results["atom_labels"]
+    # print(program_name)
+    # print(atom_labels)
