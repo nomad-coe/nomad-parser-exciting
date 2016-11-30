@@ -14,9 +14,9 @@ class BandHandler(xml.sax.handler.ContentHandler):
         if name == "bandstructure":
             self.bandSectionGIndex = self.backend.openSection("x_exciting_section_bandstructure")
             self.inBand = True
-        elif name == "point" and self.inBand:
-            self.backend.addValue("x_exciting_band_value",float(attrs.getValue('eval')))
-            self.backend.addValue("x_exciting_band_k",float(attrs.getValue('distance')))
+        # elif name == "point" and self.inBand:
+            # self.backend.addValue("x_exciting_band_value",float(attrs.getValue('eval')))
+            # self.backend.addValue("x_exciting_band_k",float(attrs.getValue('distance')))
         # attrDict={}
         # for name in attrs.getNames():
         #     attrDict[name] = attrs.getValue(name)
