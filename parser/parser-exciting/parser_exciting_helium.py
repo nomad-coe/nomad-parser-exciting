@@ -9,26 +9,12 @@ import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, excitin
 
 class ExcitingHeliumParserContext(object):
 
-  print("berva")
-
-#  def __init__(self, backend):
-#    self.backend = backend
-
   def startedParsing(self, backend, parser):
     self.parser=parser
     self.atom_pos = []
     self.atom_labels = []
     self.enTot = []
     self.backend = backend
-#    f = open(self.parser.fIn.name,"r")
-#    while 1:
-#      s = f.readline()
-#      s = s.strip()
-#      s = s.split()
-#      print("esse=",s)
-#      if "helium" in s:
-#        print("esse=",s)
-#        break
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -69,7 +55,6 @@ class ExcitingHeliumParserContext(object):
       backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-    print ('wwwwww', self.parser.fIn.name)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
@@ -90,8 +75,6 @@ class ExcitingHeliumParserContext(object):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
           eigvalKpoint=[]
-#          eigvalVal=[[],[],[]]
-#          eigvalOcc=[[],[]]
           eigvalVal=[]
           eigvalOcc=[]
           fromH = unit_conversion.convert_unit_function("hartree", "J")
@@ -104,10 +87,6 @@ class ExcitingHeliumParserContext(object):
             elif len(s) > 50:
               eigvalVal.append([])
               eigvalOcc.append([])
-#              eigvalVal[1].append([])
-#              eigvalVal[2].append([])
-#              eigvalOcc[0].append([])
-#              eigvalOcc[1].append([])
               eigvalKpoint.append([float(x) for x in s.split()[1:4]])
             else:
               try: int(s[0])
@@ -117,15 +96,9 @@ class ExcitingHeliumParserContext(object):
                 n, e, occ = s.split()
                 eigvalVal[-1].append(fromH(float(e)))
                 eigvalOcc[-1].append(float(occ))
-#                eigvalVal[1][-1].append(int(n))
-#                eigvalVal[2][-1].append(fromH(float(e)))
-#                eigvalOcc[0][-1].append(int(n))
-#                eigvalOcc[1][-1].append(float(occ))
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
           backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
-          print ("values= ", eigvalVal)
-#          print ("kpoints= ", eigvalKpoint)
 
 ##########################Parsing Fermi surface##################
 
@@ -199,22 +172,9 @@ class ExcitingHeliumParserContext(object):
       backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
 
     backend.addValue("energy_total", self.enTot[-1])
-    print("enTot=", self.enTot[-1])
-
-   
-#    def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-#      Etot = section["energy_total_scf_iteration"]
-#      backend.addValue("energy_total", Etot[-1])
-#      print("Etotta=", Etot)
 
   def onClose_section_system(self, backend, gIndex, section):
-#    dirPath = os.path.dirname(self.parser.fIn.name)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
-#    inputFile = os.path.join(dirPath, "input.xml")
-############# reading input file ##############
-#    if os.path.exists(inputFile):
-#      with open(inputFile) as f:
-#        exciting_parser_input.parseInput(f, backend)
     self.secSystemDescriptionIndex = gIndex
 
     if self.atom_pos:
@@ -238,8 +198,6 @@ class ExcitingHeliumParserContext(object):
   def onClose_section_scf_iteration(self, backend, gIndex, section):
     Etot = section["energy_total_scf_iteration"]
     self.enTot.append(Etot[0])
-#    backend.addValue("energy_total", Etot[-1])
-    print("Etotta=", self.enTot)
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -382,13 +340,5 @@ cachingLevelForMetaName = {
                             "x_exciting_section_reciprocal_lattice_vectors": CachingLevel.Ignore
                           }
 
-print("mmmmmmmmm",__name__)
-if __name__ == "parser_exciting_helium":
-#    for name in metaInfoEnv.infoKinds:
-#        print 'nameo', name
-    print("fffffffff")
-    mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingHeliumParserContext())
+mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingHeliumParserContext())
 
-def parseHelium(inF, backend):
-    print("porcoddio")
-    handler = ExcitingHeliumParserContext()
