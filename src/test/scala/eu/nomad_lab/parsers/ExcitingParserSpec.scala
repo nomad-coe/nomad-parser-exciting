@@ -5,12 +5,21 @@ import org.specs2.mutable.Specification
 object ExcitingParserSpec extends Specification {
   "ExcitingParserTest" >> {
     "test with json-events" >> {
-      //No test file present at the moment; Replace the README when test file is present
-      ParserRun.parse(ExcitingParser, "parsers/castep/test/examples/README.md", "json-events") must_== ParseResult.ParseSuccess
+      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/TiO2/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
     }
   }
 
   "test with json" >> {
-    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/README.md", "json") must_== ParseResult.ParseSuccess
+    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/TiO2/INFO.OUT", "json") must_== ParseResult.ParseSuccess
+  }
+
+  "ExcitingParserHeliumTest" >> {
+    "test with json-events" >> {
+      ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/helium/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
+    }
+  }
+
+  "test with json" >> {
+    ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/helium/INFO.OUT", "json") must_== ParseResult.ParseSuccess
   }
 }
