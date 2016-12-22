@@ -5,7 +5,6 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-from nomadcore.local_backend import LocalBackend
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_input
 
 class ExcitingParserContext(object):
@@ -19,19 +18,19 @@ class ExcitingParserContext(object):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
     latticeY = section["x_exciting_geometry_lattice_vector_y"]
     latticeZ = section["x_exciting_geometry_lattice_vector_z"]
-    cell = np.array([[latticeX[0],latticeY[0],latticeZ[0]],
+    cell = [[latticeX[0],latticeY[0],latticeZ[0]],
             [latticeX[1],latticeY[1],latticeZ[1]],
-            [latticeX[2],latticeY[2],latticeZ[2]]])
-    backend.addArrayValues("simulation_cell", cell)
+            [latticeX[2],latticeY[2],latticeZ[2]]]
+    backend.addValue("simulation_cell", cell)
 
   def onClose_x_exciting_section_reciprocal_lattice_vectors(self, backend, gIndex, section):
     recLatticeX = section["x_exciting_geometry_reciprocal_lattice_vector_x"]
     recLatticeY = section["x_exciting_geometry_reciprocal_lattice_vector_y"]
     recLatticeZ = section["x_exciting_geometry_reciprocal_lattice_vector_z"]
-    recCell = np.array([[recLatticeX[0],recLatticeY[0],recLatticeZ[0]],
+    recCell = [[recLatticeX[0],recLatticeY[0],recLatticeZ[0]],
             [recLatticeX[1],recLatticeY[1],recLatticeZ[1]],
-            [recLatticeX[2],recLatticeY[2],recLatticeZ[2]]])
-    backend.addArrayValues("x_exciting_simulation_reciprocal_cell", recCell)
+            [recLatticeX[2],recLatticeY[2],recLatticeZ[2]]]
+    backend.addValue("x_exciting_simulation_reciprocal_cell", recCell)
 
   def onClose_x_exciting_section_xc(self, backend, gIndex, section):
     xcNr = section["x_exciting_xc_functional"][0]
@@ -108,7 +107,7 @@ class ExcitingParserContext(object):
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
           backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
-          backend.closeSection("section_eigenvalues", eigvalGIndex)
+          backend.closeSection("section_eigenvalues",eigvalGIndex)
 #          print ("values= ", eigvalVal)
 #          print ("kpoints= ", eigvalKpoint)
 
@@ -155,7 +154,7 @@ class ExcitingParserContext(object):
             else:
               values[-1].append(float(st[0]))
           elif len(s) < 5 and len(st) == 1:
-            number_of_bands = st[0]
+            number_of_bands = st[0]  
         mesh_size = grid[0]*grid[1]*grid[2]
         origin.append(all_vectors[0])
         vectors.append(all_vectors[1:])
@@ -170,18 +169,18 @@ class ExcitingParserContext(object):
 
 #######################TOTAL FORCES####################
 
-    f_st = []
-    if f_st:
-      f_st = section['x_exciting_store_total_forces']
-      atom_forces = [[],[]]
-      coord = []
-      for i in range (0, len(f_st)):
-        f_st[i] = f_st[i].split()
-        atom_forces[0].append(int(f_st[i][0]))
-        atom_forces[1].append([])
-        for j in range (3,6):
-          atom_forces[1][-1].append(float(f_st[i][j]))
-      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))
+#####    f_st = []
+#####    if f_st:
+#####      f_st = section['x_exciting_store_total_forces']
+#####      atom_forces = [[],[]]
+#####      coord = []
+#####      for i in range (0, len(f_st)):
+#####        f_st[i] = f_st[i].split()
+#####        atom_forces[0].append(int(f_st[i][0]))
+#####        atom_forces[1].append([])
+#####        for j in range (3,6):
+#####          atom_forces[1][-1].append(float(f_st[i][j]))
+#      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
 
   def onClose_section_system(self, backend, gIndex, section):
 #    dirPath = os.path.dirname(self.parser.fIn.name)
@@ -197,9 +196,9 @@ class ExcitingParserContext(object):
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
     self.atom_pos = []
     if self.atom_labels is not None:
-        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels, dtype=np.str))
+       backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
-
+    
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
@@ -243,8 +242,8 @@ mainFileDescription = \
     SM(r"\s*Species\s*:\s*[0-9]\s*\((?P<x_exciting_geometry_atom_labels>[-a-zA-Z0-9]+)\)", repeats = True,
       sections = ["x_exciting_section_atoms_group"],
        subMatchers = [
-        SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)", repeats = True),
-        SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)", repeats = True),
+#        SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)", repeats = True),
+#        SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)", repeats = True),
         SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
            subMatchers = [
                     SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
@@ -349,10 +348,11 @@ mainFileDescription = \
                      SM(name="total_forces",
                      startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
 ##                       SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)",
-                     subMatchers = [
-                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
-                          repeats = True)
-                   ] )
+#####                     subMatchers = [
+#####                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
+#####                          repeats = True)
+#####                   ] )
+)
 #                     print ("number atoms=", x_exciting_number_of_atoms)
 #                     SM(name="force_components",
 #                     startReStr = r"\s*Atomic force components including IBS \(cartesian\)\s*:",
@@ -362,7 +362,7 @@ mainFileDescription = \
 #                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
 #                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)")
 #                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
-#                   ]
+#                   ] 
 #                    )
                    ])
                ]
@@ -395,15 +395,4 @@ cachingLevelForMetaName = {
 if __name__ == "__main__":
 #    for name in metaInfoEnv.infoKinds:
 #        print 'nameo', name
-
-    # Production
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
-
-    # Debug
-    # local_backend = LocalBackend(metaInfoEnv)
-    # mainFunction(mainFileDescription, metaInfoEnv, parserInfo, outF=local_backend.fileOut, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext(), superBackend=local_backend)
-    # results = local_backend.results
-    # program_name = results["program_name"]
-    # atom_labels = results["atom_labels"]
-    # print(program_name)
-    # print(atom_labels)
