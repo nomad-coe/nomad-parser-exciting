@@ -108,6 +108,7 @@ class ExcitingParserContext(object):
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
           backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+          backend.closeSection("section_eigenvalues", eigvalGIndex)
 #          print ("values= ", eigvalVal)
 #          print ("kpoints= ", eigvalKpoint)
 
@@ -209,6 +210,7 @@ class ExcitingParserContext(object):
     for i in range(natom):
       self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
+    print("labelli=",self.atom_labels)
 
 mainFileDescription = \
     SM(name = "root matcher",
