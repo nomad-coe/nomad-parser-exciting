@@ -132,11 +132,14 @@ class ExcitingParserContext(object):
           st = s.split()
           if len(st) == 3:
             if len(s) >= 40:
+#              print("all_vectors=",all_vectors)
               all_vectors.append([])
+#              print("all_vectors_dopo=",all_vectors)
               i = 0
               while i < 3:
                 all_vectors[-1].append(float(st[i]))
                 i += 1
+#                print("all_vectors_fine=",all_vectors)
             elif st[0] == "Fermi":
               fermi = fromH(float(st[2]))
             else:
@@ -145,26 +148,45 @@ class ExcitingParserContext(object):
                 grid.append(int(st[j]))
                 j += 1
           elif len(st) == 2:
+#            print("len(st)=",len(st))
+#            print("st=",st)
 #            values[0].append(int(st[1]))
             values.append([])
-          elif len(s) >= 13 and len(st) == 1:
+          elif len(s) >= 12 and len(st) == 1:
             try: float(st[0])
             except ValueError:
               continue
             else:
               values[-1].append(float(st[0]))
+#              print("aaaaa=",values)
           elif len(s) < 5 and len(st) == 1:
-            number_of_bands = st[0]  
+            number_of_bands = st[0] 
+#        print("rigriglia=", grid) 
         mesh_size = grid[0]*grid[1]*grid[2]
-        origin.append(all_vectors[0])
-        vectors.append(all_vectors[1:])
-        backend.addArrayValues("x_exciting_number_of_bands_fermi_surface", np.asarray(number_of_bands))
-        backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
-        backend.addArrayValues("x_exciting_fermi_energy_fermi_surface", np.asarray(fermi))
+#        print("mesh_size=",mesh_size)
+        origin = all_vectors[0]
+        vectors = all_vectors[1:]
+#        origin.append(all_vectors[0])
+#        vectors.append(all_vectors[1:])
+#        backend.addArrayValues("x_exciting_number_of_bands_fermi_surface", np.asarray(number_of_bands))
+        backend.addValue("x_exciting_number_of_bands_fermi_surface", int(number_of_bands))
+#        print("ebbene=",number_of_bands)
+#        print("ebbene2=",int(number_of_bands))
+#        backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
+        backend.addValue("x_exciting_number_of_mesh_points_fermi_surface", int(mesh_size))
+#        print("meshe=", mesh_size)
+#        backend.addArrayValues("x_exciting_fermi_energy_fermi_surface", np.asarray(fermi))
+        backend.addValue("x_exciting_fermi_energy_fermi_surface", float(fermi))
         backend.addArrayValues("x_exciting_grid_fermi_surface", np.asarray(grid))
+#        print("griglia=", grid)
+#        backend.addArrayValues("x_exciting_origin_fermi_surface", origin)
         backend.addArrayValues("x_exciting_origin_fermi_surface", np.asarray(origin))
+#        print("origine=", origin)
         backend.addArrayValues("x_exciting_vectors_fermi_surface", np.asarray(vectors))
+#        backend.addArrayValues("x_exciting_vectors_fermi_surface", vectors)
+#        print("vettori=", vectors)
         backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
+#        print("valori=", values)
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
 
 #######################TOTAL FORCES####################
