@@ -56,9 +56,9 @@ class ExcitingParserContext(object):
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
-    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     inputFile = os.path.join(dirPath, "input.xml")
+    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
 ############# reading input file for atom positions##############
     if os.path.exists(inputFile):
       with open(inputFile) as f:
@@ -69,47 +69,10 @@ class ExcitingParserContext(object):
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend)
-    if os.path.exists(eigvalFile):
-      eigvalGIndex = backend.openSection("section_eigenvalues")
-      with open(eigvalFile) as g:
-          eigvalKpoint=[]
-#          eigvalVal=[[],[],[]]
-#          eigvalOcc=[[],[]]
-          eigvalVal=[]
-          eigvalOcc=[]
-          fromH = unit_conversion.convert_unit_function("hartree", "J")
-          while 1:
-            s = g.readline()
-            if not s: break
-            s = s.strip()
-            if len(s) < 20:
-              continue
-            elif len(s) > 50:
-              eigvalVal.append([])
-              eigvalOcc.append([])
-#              eigvalVal[1].append([])
-#              eigvalVal[2].append([])
-#              eigvalOcc[0].append([])
-#              eigvalOcc[1].append([])
-              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
-            else:
-              try: int(s[0])
-              except ValueError:
-                continue
-              else:
-                n, e, occ = s.split()
-                eigvalVal[-1].append(fromH(float(e)))
-                eigvalOcc[-1].append(float(occ))
-#                eigvalVal[1][-1].append(int(n))
-#                eigvalVal[2][-1].append(fromH(float(e)))
-#                eigvalOcc[0][-1].append(int(n))
-#                eigvalOcc[1][-1].append(float(occ))
-          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
-          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
-          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
-          backend.closeSection("section_eigenvalues",eigvalGIndex)
-#          print ("values= ", eigvalVal)
-#          print ("kpoints= ", eigvalKpoint)
+    if os.path.exists(gwFile):
+        backend.addValue('electronic_structure_method', "G0W0")
+    else:
+        backend.addValue('electronic_structure_method', "DFT")
 
 ##########################Parsing Fermi surface##################
 
@@ -205,8 +168,65 @@ class ExcitingParserContext(object):
 #      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
 
   def onClose_section_system(self, backend, gIndex, section):
-#    dirPath = os.path.dirname(self.parser.fIn.name)
+    dirPath = os.path.dirname(self.parser.fIn.name)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
+#    spin = section["x_exciting_spin_treatment"][0]
+#    print("spin=",spin, type(spin))
+#    print ("aqui?",spin[0])
+#    spinTreat = spin
+#    print("spinTreat=",spinTreat)
+#    spinTreat=spin[0].strip()
+#    print("rispin=",spin)
+#    if "unpolarised" in spin:
+#      number_of_spin_channels = 1
+#    else:
+#      number_of_spin_channels = 2
+#    print("number_of_spin_channels=",number_of_spin_channels)
+#    print("x_exciting_spin_treatment=",section["x_exciting_spin_treatment"])
+    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
+    if os.path.exists(eigvalFile):
+      eigvalGIndex = backend.openSection("section_eigenvalues")
+      with open(eigvalFile) as g:
+          eigvalKpoint=[]
+#          eigvalVal=[[],[],[]]
+#          eigvalOcc=[[],[]]
+          eigvalVal=[]
+          eigvalOcc=[]
+#          print("x_exciting_spin_treatment=",section["x_exciting_spin_treatment"])
+          fromH = unit_conversion.convert_unit_function("hartree", "J")
+          while 1:
+            s = g.readline()
+            if not s: break
+            s = s.strip()
+            if len(s) < 20:
+              continue
+            elif len(s) > 50:
+              eigvalVal.append([])
+              eigvalOcc.append([])
+#              eigvalVal[1].append([])
+#              eigvalVal[2].append([])
+#              eigvalOcc[0].append([])
+#              eigvalOcc[1].append([])
+              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
+            else:
+              try: int(s[0])
+              except ValueError:
+                continue
+              else:
+                n, e, occ = s.split()
+                eigvalVal[-1].append(fromH(float(e)))
+                eigvalOcc[-1].append(float(occ))
+#                eigvalVal[1][-1].append(int(n))
+#                eigvalVal[2][-1].append(fromH(float(e)))
+#                eigvalOcc[0][-1].append(int(n))
+#                eigvalOcc[1][-1].append(float(occ))
+          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
+          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
+          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+          backend.closeSection("section_eigenvalues",eigvalGIndex)
+#          print ("values= ", eigvalVal)
+
+
 #    inputFile = os.path.join(dirPath, "input.xml")
 ############# reading input file ##############
 #    if os.path.exists(inputFile):
@@ -231,6 +251,9 @@ class ExcitingParserContext(object):
     for i in range(natom):
       self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
+
+#  def onClose_section_run(self, backend, gIndex, section):
+#    print("x_exciting_spin_treatment_run=",section["x_exciting_spin_treatment"])
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -273,6 +296,7 @@ mainFileDescription = \
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
     SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)"),
+#    SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z+]\s*)"),
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
     SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
     SM(r"\s*Total number of k-points\s*:\s*(?P<x_exciting_number_kpoints>[-0-9.]+)"),
