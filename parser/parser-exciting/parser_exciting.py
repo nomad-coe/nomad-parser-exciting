@@ -13,6 +13,14 @@ class ExcitingParserContext(object):
     self.parser=parser
     self.atom_pos = []
     self.atom_labels = []
+    self.secMethodIndex = None     #LOLLO
+    self.secSystemIndex = None     #LOLLO
+
+  def onOpen_section_system(self, backend, gIndex, section):
+    self.secSystemIndex = gIndex
+
+  def onOpen_section_method(self, backend, gIndex, section):
+    self.secMethodIndex = gIndex
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -53,6 +61,8 @@ class ExcitingParserContext(object):
       backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+    backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+    backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
@@ -151,7 +161,8 @@ class ExcitingParserContext(object):
         backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
 #        print("valori=", values)
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
-
+        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+        backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
 #######################TOTAL FORCES####################
 
 #####    f_st = []
