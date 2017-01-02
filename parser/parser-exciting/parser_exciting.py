@@ -6,6 +6,7 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_input
+#import demjson
 
 class ExcitingParserContext(object):
 
@@ -161,8 +162,10 @@ class ExcitingParserContext(object):
         backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
 #        print("valori=", values)
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
-        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
-        backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
+#        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+#        backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
+#        print("refeProb=",self.secSystemIndex)
+#        print("refe2=",self.secMethodIndex)
 #######################TOTAL FORCES####################
 
 #####    f_st = []
