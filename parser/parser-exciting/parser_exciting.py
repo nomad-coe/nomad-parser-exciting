@@ -16,6 +16,7 @@ class ExcitingParserContext(object):
     self.atom_labels = []
     self.secMethodIndex = None     #LOLLO
     self.secSystemIndex = None     #LOLLO
+    self.spinTreat = None
 
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
@@ -70,6 +71,7 @@ class ExcitingParserContext(object):
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     inputFile = os.path.join(dirPath, "input.xml")
     gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+    eigvalFile = os.path.join(dirPath, "SEIGVAL.OUT")    
 ############# reading input file for atom positions##############
     if os.path.exists(inputFile):
       with open(inputFile) as f:
@@ -84,6 +86,71 @@ class ExcitingParserContext(object):
         backend.addValue('electronic_structure_method', "G0W0")
     else:
         backend.addValue('electronic_structure_method', "DFT")
+    if os.path.exists(eigvalFile):
+      eigvalGIndex = backend.openSection("section_eigenvalues")
+#      print("spinno=",self.spinTreat)
+      with open(eigvalFile) as g:
+          eigvalKpoint=[]
+#          eigvalVal=[[],[],[]]
+#          eigvalOcc=[[],[]]
+          eigvalVal=[]
+          eigvalOcc=[]
+          eigvalValSpin = [[],[]]
+          eigvalOccSpin = [[],[]]
+#          print("x_exciting_spin_treatment=",section["x_exciting_spin_treatment"])
+          fromH = unit_conversion.convert_unit_function("hartree", "J")
+          while 1:
+            s = g.readline()
+            if not s: break
+            s = s.strip()              
+            if len(s) < 20:
+              if "nstsv" in s.split():
+                 nstsv = int(s.split()[0])
+                 nstsv2=int(nstsv/2)
+#                 print("nstsv=",nstsv, type(nstsv))
+#                 print("nstsv2=",nstsv2, type(nstsv2))
+              elif "nkpt" in s.split():
+                 nkpt = int(s.split()[0])
+#                print("nstsv=", s.split())
+#              print("nstsv=", nstsv)
+#              print("nkpt=", nkpt)
+              continue
+            elif len(s) > 50:
+              eigvalVal.append([])
+              eigvalOcc.append([])
+              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
+            else:
+              try: int(s[0])
+              except ValueError:
+                continue
+              else:
+                n, e, occ = s.split()
+                eigvalVal[-1].append(fromH(float(e)))
+#                eigvalVal[-1].append(float(e))
+                eigvalOcc[-1].append(float(occ))
+#          print("self.spinTreat=",self.spinTreat)
+          if not self.spinTreat:
+            backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
+            backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+          else:
+#            print("nkpt-1=", nkpt-1)
+            for i in range(0,nkpt):
+#              print("i=",i)
+              eigvalValSpin[0].append(eigvalVal[i][0:nstsv2])
+#              print("eigvalValSpin=",eigvalValSpin)
+              eigvalOccSpin[0].append(eigvalOcc[i][0:nstsv2])
+              eigvalValSpin[1].append(eigvalVal[i][nstsv2:nstsv])
+              eigvalOccSpin[1].append(eigvalOcc[i][nstsv2:nstsv])
+#          print("eigvalValSpin=",eigvalValSpin)
+#            eigvalS
+            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
+            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
+          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
+#          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
+#          print("autovalori=",eigvalVal)
+#          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+#          print("occupazioni=",eigvalOcc)
+          backend.closeSection("section_eigenvalues",eigvalGIndex)
 
 ##########################Parsing Fermi surface##################
 
@@ -106,14 +173,11 @@ class ExcitingParserContext(object):
           st = s.split()
           if len(st) == 3:
             if len(s) >= 40:
-#              print("all_vectors=",all_vectors)
               all_vectors.append([])
-#              print("all_vectors_dopo=",all_vectors)
               i = 0
               while i < 3:
                 all_vectors[-1].append(float(st[i]))
                 i += 1
-#                print("all_vectors_fine=",all_vectors)
             elif st[0] == "Fermi":
               fermi = fromH(float(st[2]))
             else:
@@ -122,9 +186,6 @@ class ExcitingParserContext(object):
                 grid.append(int(st[j]))
                 j += 1
           elif len(st) == 2:
-#            print("len(st)=",len(st))
-#            print("st=",st)
-#            values[0].append(int(st[1]))
             values.append([])
           elif len(s) >= 12 and len(st) == 1:
             try: float(st[0])
@@ -132,120 +193,57 @@ class ExcitingParserContext(object):
               continue
             else:
               values[-1].append(float(st[0]))
-#              print("aaaaa=",values)
           elif len(s) < 5 and len(st) == 1:
             number_of_bands = st[0] 
-#        print("rigriglia=", grid) 
         mesh_size = grid[0]*grid[1]*grid[2]
-#        print("mesh_size=",mesh_size)
         origin = all_vectors[0]
         vectors = all_vectors[1:]
-#        origin.append(all_vectors[0])
-#        vectors.append(all_vectors[1:])
-#        backend.addArrayValues("x_exciting_number_of_bands_fermi_surface", np.asarray(number_of_bands))
         backend.addValue("x_exciting_number_of_bands_fermi_surface", int(number_of_bands))
-#        print("ebbene=",number_of_bands)
-#        print("ebbene2=",int(number_of_bands))
-#        backend.addArrayValues("x_exciting_number_of_mesh_points_fermi_surface", np.asarray(mesh_size))
         backend.addValue("x_exciting_number_of_mesh_points_fermi_surface", int(mesh_size))
-#        print("meshe=", mesh_size)
-#        backend.addArrayValues("x_exciting_fermi_energy_fermi_surface", np.asarray(fermi))
         backend.addValue("x_exciting_fermi_energy_fermi_surface", float(fermi))
         backend.addArrayValues("x_exciting_grid_fermi_surface", np.asarray(grid))
-#        print("griglia=", grid)
-#        backend.addArrayValues("x_exciting_origin_fermi_surface", origin)
         backend.addArrayValues("x_exciting_origin_fermi_surface", np.asarray(origin))
-#        print("origine=", origin)
         backend.addArrayValues("x_exciting_vectors_fermi_surface", np.asarray(vectors))
-#        backend.addArrayValues("x_exciting_vectors_fermi_surface", vectors)
-#        print("vettori=", vectors)
         backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
-#        print("valori=", values)
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
-#        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
-#        backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
-#        print("refeProb=",self.secSystemIndex)
-#        print("refe2=",self.secMethodIndex)
-#######################TOTAL FORCES####################
 
-#####    f_st = []
-#####    if f_st:
-#####      f_st = section['x_exciting_store_total_forces']
-#####      atom_forces = [[],[]]
-#####      coord = []
-#####      for i in range (0, len(f_st)):
-#####        f_st[i] = f_st[i].split()
-#####        atom_forces[0].append(int(f_st[i][0]))
-#####        atom_forces[1].append([])
-#####        for j in range (3,6):
-#####          atom_forces[1][-1].append(float(f_st[i][j]))
-#      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
+#    dirPath = os.path.dirname(self.parser.fIn.name)
+#    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
+#    spin = section["x_exciting_spin_treatment"]
+#    print("spino=",spin, type(spin))
+#    spinTreat = spin
+#    print("spinoTreat=",spinTreat)
+
+  def onClose_x_exciting_section_spin(self, backend, gIndex, section):
+#    pass
+    spin = section["x_exciting_spin_treatment"][0]
+#    print("prima",len(spin))
+    spin = spin.strip()
+#    print("dopo",len(spin))
+#    print("spin=",spin,"spin", type(spin))
+    if spin == "spin-polarised":
+#      print("Vero")
+      self.spinTreat = True
+    else:
+#      print("Falso")
+      self.spinTreat = False
+#    self.spinTreat = spin[0]
+#    print("spinoTreat=",self.spinTreat)
+
+#    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))   
 
   def onClose_section_system(self, backend, gIndex, section):
-    dirPath = os.path.dirname(self.parser.fIn.name)
+
+#    dirPath = os.path.dirname(self.parser.fIn.name)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
-#    spin = section["x_exciting_spin_treatment"][0]
-#    print("spin=",spin, type(spin))
-#    print ("aqui?",spin[0])
+#    print("quante?")
+#    dirPath = os.path.dirname(self.parser.fIn.name)
+#    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
+#    spin = section["x_exciting_spin_treatment"]
+#    print("spino=",spin, type(spin))
 #    spinTreat = spin
-#    print("spinTreat=",spinTreat)
-#    spinTreat=spin[0].strip()
-#    print("rispin=",spin)
-#    if "unpolarised" in spin:
-#      number_of_spin_channels = 1
-#    else:
-#      number_of_spin_channels = 2
-#    print("number_of_spin_channels=",number_of_spin_channels)
-#    print("x_exciting_spin_treatment=",section["x_exciting_spin_treatment"])
-    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
-    if os.path.exists(eigvalFile):
-      eigvalGIndex = backend.openSection("section_eigenvalues")
-      with open(eigvalFile) as g:
-          eigvalKpoint=[]
-#          eigvalVal=[[],[],[]]
-#          eigvalOcc=[[],[]]
-          eigvalVal=[]
-          eigvalOcc=[]
-#          print("x_exciting_spin_treatment=",section["x_exciting_spin_treatment"])
-          fromH = unit_conversion.convert_unit_function("hartree", "J")
-          while 1:
-            s = g.readline()
-            if not s: break
-            s = s.strip()
-            if len(s) < 20:
-              continue
-            elif len(s) > 50:
-              eigvalVal.append([])
-              eigvalOcc.append([])
-#              eigvalVal[1].append([])
-#              eigvalVal[2].append([])
-#              eigvalOcc[0].append([])
-#              eigvalOcc[1].append([])
-              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
-            else:
-              try: int(s[0])
-              except ValueError:
-                continue
-              else:
-                n, e, occ = s.split()
-                eigvalVal[-1].append(fromH(float(e)))
-                eigvalOcc[-1].append(float(occ))
-#                eigvalVal[1][-1].append(int(n))
-#                eigvalVal[2][-1].append(fromH(float(e)))
-#                eigvalOcc[0][-1].append(int(n))
-#                eigvalOcc[1][-1].append(float(occ))
-          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
-          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
-          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
-          backend.closeSection("section_eigenvalues",eigvalGIndex)
-#          print ("values= ", eigvalVal)
+#    print("spinoTreat=",spinTreat)
 
-
-#    inputFile = os.path.join(dirPath, "input.xml")
-############# reading input file ##############
-#    if os.path.exists(inputFile):
-#      with open(inputFile) as f:
-#        exciting_parser_input.parseInput(f, backend)
     self.secSystemDescriptionIndex = gIndex
 
     if self.atom_pos:
@@ -265,9 +263,6 @@ class ExcitingParserContext(object):
     for i in range(natom):
       self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
-
-#  def onClose_section_run(self, backend, gIndex, section):
-#    print("x_exciting_spin_treatment_run=",section["x_exciting_spin_treatment"])
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -309,7 +304,8 @@ mainFileDescription = \
          ])
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
-    SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)"),
+    SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)",
+       sections = ["x_exciting_section_spin"]),
 #    SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z+]\s*)"),
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
     SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
