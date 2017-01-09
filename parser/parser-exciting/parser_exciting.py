@@ -5,8 +5,7 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_input
-#import demjson
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
 
 class ExcitingParserContext(object):
 
@@ -14,8 +13,8 @@ class ExcitingParserContext(object):
     self.parser=parser
     self.atom_pos = []
     self.atom_labels = []
-    self.secMethodIndex = None     #LOLLO
-    self.secSystemIndex = None     #LOLLO
+    self.secMethodIndex = None  
+    self.secSystemIndex = None 
     self.spinTreat = None
 
   def onOpen_section_system(self, backend, gIndex, section):
@@ -69,13 +68,13 @@ class ExcitingParserContext(object):
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
-    inputFile = os.path.join(dirPath, "input.xml")
+#    inputFile = os.path.join(dirPath, "input.xml")
     gwFile = os.path.join(dirPath, "GW_INFO.OUT")
-    eigvalFile = os.path.join(dirPath, "SEIGVAL.OUT")    
-############# reading input file for atom positions##############
-    if os.path.exists(inputFile):
-      with open(inputFile) as f:
-        exciting_parser_input.parseInput(f, backend)
+    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
+
+#    if os.path.exists(inputFile):
+#      with open(inputFile) as f:
+#        exciting_parser_input.parseInput(f, backend)
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend)
@@ -88,16 +87,12 @@ class ExcitingParserContext(object):
         backend.addValue('electronic_structure_method', "DFT")
     if os.path.exists(eigvalFile):
       eigvalGIndex = backend.openSection("section_eigenvalues")
-#      print("spinno=",self.spinTreat)
       with open(eigvalFile) as g:
           eigvalKpoint=[]
-#          eigvalVal=[[],[],[]]
-#          eigvalOcc=[[],[]]
           eigvalVal=[]
           eigvalOcc=[]
           eigvalValSpin = [[],[]]
           eigvalOccSpin = [[],[]]
-#          print("x_exciting_spin_treatment=",section["x_exciting_spin_treatment"])
           fromH = unit_conversion.convert_unit_function("hartree", "J")
           while 1:
             s = g.readline()
@@ -107,13 +102,8 @@ class ExcitingParserContext(object):
               if "nstsv" in s.split():
                  nstsv = int(s.split()[0])
                  nstsv2=int(nstsv/2)
-#                 print("nstsv=",nstsv, type(nstsv))
-#                 print("nstsv2=",nstsv2, type(nstsv2))
               elif "nkpt" in s.split():
                  nkpt = int(s.split()[0])
-#                print("nstsv=", s.split())
-#              print("nstsv=", nstsv)
-#              print("nkpt=", nkpt)
               continue
             elif len(s) > 50:
               eigvalVal.append([])
@@ -126,30 +116,19 @@ class ExcitingParserContext(object):
               else:
                 n, e, occ = s.split()
                 eigvalVal[-1].append(fromH(float(e)))
-#                eigvalVal[-1].append(float(e))
                 eigvalOcc[-1].append(float(occ))
-#          print("self.spinTreat=",self.spinTreat)
           if not self.spinTreat:
             backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
             backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
           else:
-#            print("nkpt-1=", nkpt-1)
             for i in range(0,nkpt):
-#              print("i=",i)
               eigvalValSpin[0].append(eigvalVal[i][0:nstsv2])
-#              print("eigvalValSpin=",eigvalValSpin)
               eigvalOccSpin[0].append(eigvalOcc[i][0:nstsv2])
               eigvalValSpin[1].append(eigvalVal[i][nstsv2:nstsv])
               eigvalOccSpin[1].append(eigvalOcc[i][nstsv2:nstsv])
-#          print("eigvalValSpin=",eigvalValSpin)
-#            eigvalS
             backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
             backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
-#          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
-#          print("autovalori=",eigvalVal)
-#          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
-#          print("occupazioni=",eigvalOcc)
           backend.closeSection("section_eigenvalues",eigvalGIndex)
 
 ##########################Parsing Fermi surface##################
@@ -207,42 +186,18 @@ class ExcitingParserContext(object):
         backend.addArrayValues("x_exciting_values_fermi_surface", np.asarray(values))
         backend.closeSection("x_exciting_section_fermi_surface",fermiGIndex)
 
-#    dirPath = os.path.dirname(self.parser.fIn.name)
-#    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
-#    spin = section["x_exciting_spin_treatment"]
-#    print("spino=",spin, type(spin))
-#    spinTreat = spin
-#    print("spinoTreat=",spinTreat)
-
   def onClose_x_exciting_section_spin(self, backend, gIndex, section):
-#    pass
+
     spin = section["x_exciting_spin_treatment"][0]
-#    print("prima",len(spin))
     spin = spin.strip()
-#    print("dopo",len(spin))
-#    print("spin=",spin,"spin", type(spin))
     if spin == "spin-polarised":
-#      print("Vero")
       self.spinTreat = True
     else:
-#      print("Falso")
       self.spinTreat = False
-#    self.spinTreat = spin[0]
-#    print("spinoTreat=",self.spinTreat)
-
-#    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))   
 
   def onClose_section_system(self, backend, gIndex, section):
 
-#    dirPath = os.path.dirname(self.parser.fIn.name)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
-#    print("quante?")
-#    dirPath = os.path.dirname(self.parser.fIn.name)
-#    backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
-#    spin = section["x_exciting_spin_treatment"]
-#    print("spino=",spin, type(spin))
-#    spinTreat = spin
-#    print("spinoTreat=",spinTreat)
 
     self.secSystemDescriptionIndex = gIndex
 
@@ -306,7 +261,6 @@ mainFileDescription = \
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
     SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)",
        sections = ["x_exciting_section_spin"]),
-#    SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z+]\s*)"),
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
     SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
     SM(r"\s*Total number of k-points\s*:\s*(?P<x_exciting_number_kpoints>[-0-9.]+)"),
@@ -398,7 +352,6 @@ mainFileDescription = \
                    ]),
                 SM(name="final_forces",
                   startReStr = r"\| Writing atomic positions and forces\s*\-",
-#                  endReStr = r"\| Groundstate module stopped\s*\*",
                   endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
                    subMatchers = [
                      SM(name="total_forces",
@@ -449,6 +402,4 @@ cachingLevelForMetaName = {
                           }
 
 if __name__ == "__main__":
-#    for name in metaInfoEnv.infoKinds:
-#        print 'nameo', name
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())

@@ -5,16 +5,24 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_input
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
 
 class ExcitingHeliumParserContext(object):
 
-  def startedParsing(self, backend, parser):
+  def startedParsing(self, path, parser):
     self.parser=parser
     self.atom_pos = []
     self.atom_labels = []
     self.enTot = []
-    self.backend = backend
+    self.secMethodIndex = None
+    self.secSystemIndex = None
+    self.spinTreat = None
+
+  def onOpen_section_system(self, backend, gIndex, section):
+    self.secSystemIndex = gIndex
+
+  def onOpen_section_method(self, backend, gIndex, section):
+    self.secMethodIndex = gIndex
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -55,16 +63,18 @@ class ExcitingHeliumParserContext(object):
       backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+    backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+    backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
-    inputFile = os.path.join(dirPath, "input.xml")
-############# reading input file for atom positions##############
-    if os.path.exists(inputFile):
-      with open(inputFile) as f:
-        exciting_parser_input.parseInput(f, backend)
+#    inputFile = os.path.join(dirPath, "input.xml")
+
+#    if os.path.exists(inputFile):
+#      with open(inputFile) as f:
+#        exciting_parser_input.parseInput(f, backend)
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend)
@@ -77,12 +87,19 @@ class ExcitingHeliumParserContext(object):
           eigvalKpoint=[]
           eigvalVal=[]
           eigvalOcc=[]
+          eigvalValSpin = [[],[]]
+          eigvalOccSpin = [[],[]]
           fromH = unit_conversion.convert_unit_function("hartree", "J")
           while 1:
             s = g.readline()
             if not s: break
             s = s.strip()
             if len(s) < 20:
+              if "nstsv" in s.split():
+                 nstsv = int(s.split()[0])
+                 nstsv2=int(nstsv/2)
+              elif "nkpt" in s.split():
+                 nkpt = int(s.split()[0])
               continue
             elif len(s) > 50:
               eigvalVal.append([])
@@ -96,9 +113,19 @@ class ExcitingHeliumParserContext(object):
                 n, e, occ = s.split()
                 eigvalVal[-1].append(fromH(float(e)))
                 eigvalOcc[-1].append(float(occ))
+          if not self.spinTreat:
+            backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
+            backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+          else:
+            for i in range(0,nkpt):
+              eigvalValSpin[0].append(eigvalVal[i][0:nstsv2])
+              eigvalOccSpin[0].append(eigvalOcc[i][0:nstsv2])
+              eigvalValSpin[1].append(eigvalVal[i][nstsv2:nstsv])
+              eigvalOccSpin[1].append(eigvalOcc[i][nstsv2:nstsv])
+            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
+            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
           backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
-          backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
-          backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+          backend.closeSection("section_eigenvalues",eigvalGIndex)
 
 ##########################Parsing Fermi surface##################
 
@@ -134,7 +161,6 @@ class ExcitingHeliumParserContext(object):
                 grid.append(int(st[j]))
                 j += 1
           elif len(st) == 2:
-#            values[0].append(int(st[1]))
             values.append([])
           elif len(s) >= 13 and len(st) == 1:
             try: float(st[0])
