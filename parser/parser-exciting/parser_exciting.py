@@ -7,9 +7,27 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
 
+#def elasticCheck(path):
+#  print("path=", path)
+#  pat = path.split("/")
+#  if pat[-1] == "INFO.OUT":
+#    print("NO", pat)
+#  else:
+#    print("YES", pat)
+#
+#elasticCheck(self.path)    
+#      continue
+
 class ExcitingParserContext(object):
 
   def startedParsing(self, path, parser):
+#    print("path=", path)
+#    pat = path.split("/")
+#    print("pat=", pat)
+#    if pat[-1] == "INFO.OUT":
+#      pass
+#    else:
+#      pass
     self.parser=parser
     self.atom_pos = []
     self.atom_labels = []
@@ -80,7 +98,7 @@ class ExcitingParserContext(object):
         exciting_parser_dos.parseDos(f, backend)
     if os.path.exists(bandFile):
       with open(bandFile) as g:
-        exciting_parser_bandstructure.parseBand(g, backend)
+        exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
     if os.path.exists(gwFile):
         backend.addValue('electronic_structure_method', "G0W0")
     else:
@@ -285,8 +303,10 @@ mainFileDescription = \
     SM(r"\s*Total number of local-orbitals\s*:\s*(?P<x_exciting_lo>[-0-9.]+)"),
     SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<x_exciting_xc_functional>[-0-9.]+)",
        sections = ['x_exciting_section_xc']),
-    SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
-    SM(r"\s*Smearing width\s*:\s*(?P<x_exciting_smearing_width__hartree>[-0-9.]+)"),
+#    SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
+#    SM(r"\s*Smearing width\s*:\s*(?P<x_exciting_smearing_width__hartree>[-0-9.]+)"),
+    SM(r"\s*Smearing scheme\s*:\s*(?P<smearing_kind>[-a-zA-Z0-9]+)"),
+    SM(r"\s*Smearing width\s*:\s*(?P<smearing_width__hartree>[-0-9.]+)"),
     SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
             SM(name = "single configuration iteration",
@@ -400,6 +420,5 @@ cachingLevelForMetaName = {
                             "x_exciting_geometry_reciprocal_lattice_vector_z":CachingLevel.Cache,
                             "x_exciting_section_reciprocal_lattice_vectors": CachingLevel.Ignore
                           }
-
 if __name__ == "__main__":
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
