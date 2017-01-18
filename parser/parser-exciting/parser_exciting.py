@@ -95,7 +95,7 @@ class ExcitingParserContext(object):
 #        exciting_parser_input.parseInput(f, backend)
     if os.path.exists(dosFile):
       with open(dosFile) as f:
-        exciting_parser_dos.parseDos(f, backend)
+        exciting_parser_dos.parseDos(f, backend, self.spinTreat)
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
@@ -136,17 +136,27 @@ class ExcitingParserContext(object):
                 eigvalVal[-1].append(fromH(float(e)))
                 eigvalOcc[-1].append(float(occ))
           if not self.spinTreat:
-            backend.addArrayValues("eigenvalues_values", np.asarray([eigvalVal]))
-            backend.addArrayValues("eigenvalues_occupation", np.asarray([eigvalOcc]))
+            for i in range(0,nkpt):
+              eigvalValSpin[0].append(eigvalVal[i][0:nstsv])
+              eigvalOccSpin[0].append(eigvalOcc[i][0:nstsv])
+              eigvalValSpin[1].append(eigvalVal[i][0:nstsv])
+              eigvalOccSpin[1].append(eigvalOcc[i][0:nstsv])
+#            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
+#            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
+            backend.addValue("eigenvalues_values", eigvalValSpin)
+            backend.addValue("eigenvalues_occupation", eigvalOccSpin)
           else:
             for i in range(0,nkpt):
               eigvalValSpin[0].append(eigvalVal[i][0:nstsv2])
               eigvalOccSpin[0].append(eigvalOcc[i][0:nstsv2])
               eigvalValSpin[1].append(eigvalVal[i][nstsv2:nstsv])
               eigvalOccSpin[1].append(eigvalOcc[i][nstsv2:nstsv])
-            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
-            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
-          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
+            backend.addValue("eigenvalues_values", eigvalValSpin)
+            backend.addValue("eigenvalues_occupation", eigvalOccSpin)
+          backend.addValue("eigenvalues_kpoints", eigvalKpoint)
+#            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
+#            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
+#          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.closeSection("section_eigenvalues",eigvalGIndex)
 
 ##########################Parsing Fermi surface##################

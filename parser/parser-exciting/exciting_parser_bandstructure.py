@@ -52,14 +52,17 @@ class BandHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("x_exciting_band_vertex_coordinates", self.vertexCoord)
             self.backend.addValue("x_exciting_band_k_points",self.distance[-1])
             if not self.spinTreat:
+                self.energySpin[0] = self.energy[0:bands]
+                self.energySpin[1] = self.energy[0:bands]
                 self.backend.addValue("x_exciting_band_number_of_eigenvalues",bands)
-                self.backend.addArrayValues("x_exciting_band_energies",np.asarray([self.energy]))
+                self.backend.addValue("x_exciting_band_energies",self.energySpin)
+#                print("self.energySpin=",self.energySpin)
             else:
                 self.energySpin[0] = self.energy[0:bands2]
                 self.energySpin[1] = self.energy[bands2:bands]
                 self.backend.addValue("x_exciting_band_number_of_eigenvalues",bands2)
-                self.backend.addArrayValues("x_exciting_band_energies",np.asarray(self.energy))
-
+                self.backend.addValue("x_exciting_band_energies",self.energySpin)
+                
     def startElementNS(self, name, qname, attrs):
         attrDict={}
         for name in attrs.getNames():
