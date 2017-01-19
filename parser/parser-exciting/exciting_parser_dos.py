@@ -1,34 +1,139 @@
 import xml.sax
 import logging
+import numpy as np
 
 class DosHandler(xml.sax.handler.ContentHandler):
-    def __init__(self, backend):
+    def __init__(self, backend, spinTreat):
         self.backend = backend
         self.dosSectionGIndex = -1
         self.inDos = False
+        self.dosProjSectionGIndex = -1
+        self.inDosProj = False
+        self.spinTreat = spinTreat
+        self.totDos = []
+        self.totDosSpin = [[],[]]
+        self.dosProj = []
+        self.dosProjSpin = []
+        self.energy = []
+        self.energySpin = []
+        self.speciesrn = []       
+        self.atom = []           
+        self.numDosVal = 0
+        self.dosProjDummy = []
+        self.dosProjDummy2 = []
 
     def endDocument(self):
-        pass
+#        self.inDos = False
+        self.inDosProj = False
+        self.backend.closeSection("section_dos",self.dosSectionGIndex)
+#        self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
+        self.dosSectionGIndex = -1
+#        self.dosProjSectionGIndex = -1
 
     def startElement(self, name, attrs):
-        if name == "dos":
-            self.dosSectionGIndex = self.backend.openSection("x_exciting_section_dos")
+        if name == "totaldos":
+            self.dosSectionGIndex = self.backend.openSection("section_dos")
             self.inDos = True
-        elif name == "point" and self.inDos:
-            self.backend.addValue("x_exciting_dos_value",float(attrs.getValue('dos')))
-            self.backend.addValue("x_exciting_dos_energy",float(attrs.getValue('e')))
-        # attrDict={}
-        # for name in attrs.getNames():
-        #     attrDict[name] = attrs.getValue(name)
-        # logging.error("start element %s attr %s", name, attrDict)
-
+        elif name == "partialdos":
+            self.speciesrn.append(int(attrs.getValue('speciesrn'))) 
+            self.atom.append(int(attrs.getValue('atom')))         
+            self.dosProjDummy.append([])
+            self.dosProjDummy2.append([])
+            if self.speciesrn [-1] == 1 and self.atom[-1] == 1:
+                self.dosProjSectionGIndex = self.backend.openSection("section_atom_projected_dos")
+                self.inDosProj = True
+        elif name == "point":
+            if self.inDos:
+                self.totDos.append(float(attrs.getValue('dos')))
+                self.energy.append(float(attrs.getValue('e')))
+            elif self.inDosProj:
+                self.dosProj.append(float(attrs.getValue('dos')))
+                self.energy.append(float(attrs.getValue('e')))
+        elif name == "diagram": 
+            if not self.speciesrn: pass
+            elif self.speciesrn [-1] == 1 and self.atom[-1] == 1:
+                if not self.spinTreat:
+                    self.dosProjSpin.append([])
+                else:
+                    nspin = int(attrs.getValue("nspin"))
+                    if nspin == 1:
+                        self.dosProjSpin.append([])
+        elif name == "limrep":
+            for i in range(0,len(self.dosProjSpin)):
+                for j in range(0,2):
+                    self.dosProjSpin[i].append([])          
+                    for k in range(0,len(self.speciesrn)):
+                        self.dosProjDummy2[k].append([])
+                        self.dosProjSpin[i][j].append([])
+#            print("self.dosProjSpinPrima=",self.dosProjSpin)
+            for i in range (0,len(self.speciesrn)):
+                if not self.spinTreat:
+                    self.dosProjDummy[i] = self.dosProj[i*len(self.dosProjSpin)*self.numDosVal:(i+1)*len(self.dosProjSpin)*self.numDosVal]
+                else:
+                    self.dosProjDummy[i] = self.dosProj[i*int(2*len(self.dosProjSpin))*self.numDosVal:(i+1)*int(2*len(self.dosProjSpin))*self.numDosVal]
+            for j in range(0,int(2*len(self.dosProjSpin))):       
+                for i in range (0,len(self.speciesrn)):                       
+                    self.dosProjDummy2[i][j] = self.dosProjDummy[i][j*self.numDosVal:(j+1)*self.numDosVal] 
+            if not self.spinTreat:
+                for i in range(0,len(self.dosProjSpin)):
+                    for j in range(0,len(self.speciesrn)):
+                        self.dosProjSpin[i][0][j] = self.dosProjDummy2[j][i]               
+                        self.dosProjSpin[i][1][j] = self.dosProjDummy2[j][i]
+#                        print("self.dosProjSpin=",self.dosProjSpin)
+            else:
+                for j in range(0,len(self.speciesrn)):
+                    for i in range(0,int(2*len(self.dosProjSpin))):
+                        if i < len(self.dosProjSpin):
+#                            print("i=",i)
+#                            pass
+                            self.dosProjSpin[i][0][j] = self.dosProjDummy2[j][i]
+                        else:
+                            k = int(i - len(self.dosProjSpin))
+#                            print("i=",i,"j=",j,"k=",k)
+                            self.dosProjSpin[k][1][j] = self.dosProjDummy2[j][i]
+#        print("self.dosProjSpin=",len(self.dosProjSpin))
+#        print("self.dosProjSpin=",len(self.dosProjSpin))
+#        print("self.dosProjDummy2=",len(self.dosProjDummy2))
     def endElement(self, name):
-        if name == 'dos':
+        if name == 'totaldos':
             self.inDos = False
-            self.backend.closeSection("x_exciting_section_dos",self.dosSectionGIndex)
-            self.dosSectionGIndex = -1
-        # logging.error("end element %s", name)
-
+            if not self.spinTreat:
+                self.numDosVal = len(self.energy)
+                self.totDosSpin[0] = self.totDos[0:self.numDosVal]
+                self.totDosSpin[1] = self.totDos[0:self.numDosVal]
+                self.energySpin = self.energy[0:self.numDosVal]
+                self.backend.addValue("dos_values", self.totDosSpin)
+                self.backend.addValue("dos_energies",self.energySpin)
+                self.backend.addValue("number_of_dos_values", self.numDosVal)
+                self.backend.addValue("dos_kind","electronic")
+#                print("self.totDosSpin=",self.totDosSpin)
+            else:
+                self.numDosVal = int(len(self.energy)/2)
+                self.totDosSpin[0] = self.totDos[0:self.numDosVal]
+                self.totDosSpin[1] = self.totDos[self.numDosVal:int(2*(self.numDosVal))]
+                self.energySpin = self.energy[0:self.numDosVal]
+                self.backend.addValue("dos_values", self.totDosSpin)
+#            self.backend.addValue("dos_energies",self.energySpin)
+#            self.backend.addValue("number_of_dos_values", self.numDosVal)
+        elif name == 'partialdos':
+            pass
+#            self.inDosProj = False
+#            print("self.dosProjSpin=",self.dosProjSpin)
+#            self.backend.addArrayValues("atom_projected_dos_values_lm",np.asarray(self.dosProjSpin))
+#            self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
+#            self.dosProjSectionGIndex = -1
+        elif name == 'interstitialdos':
+#            print("self.energy=",len(self.energy))
+#            print("self.dosProjSpinFine=",self.dosProjSpin)
+            self.backend.addValue("atom_projected_dos_values_lm",self.dosProjSpin)
+            self.backend.addValue("number_of_lm_atom_projected_dos",len(self.dosProjSpin))
+            self.backend.addValue("number_of_atom_projected_dos_values",self.numDosVal)
+            self.backend.addValue("atom_projected_dos_energies",self.energy[0:self.numDosVal])
+            self.backend.addValue("atom_projected_dos_m_kind","spherical")
+            self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
+            self.dosProjSectionGIndex = -1
+            self.inDosProj = False
+#        backend.addValue()
     def startElementNS(self, name, qname, attrs):
         attrDict={}
         for name in attrs.getNames():
@@ -41,8 +146,8 @@ class DosHandler(xml.sax.handler.ContentHandler):
     def characters(self, content):
         pass
 
-def parseDos(inF, backend):
-    handler = DosHandler(backend)
+def parseDos(inF, backend, spinTreat):
+    handler = DosHandler(backend, spinTreat)
     logging.error("will parse")
     xml.sax.parse(inF, handler)
     logging.error("did parse")

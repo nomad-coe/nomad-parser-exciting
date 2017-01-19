@@ -51,6 +51,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("x_exciting_band_vertex_labels",self.vertexLabels)
             self.backend.addValue("x_exciting_band_vertex_coordinates", self.vertexCoord)
             self.backend.addValue("x_exciting_band_k_points",self.distance[-1])
+            self.backend.addValue("x_exciting_band_structure_kind","electronic")
             if not self.spinTreat:
                 self.energySpin[0] = self.energy[0:bands]
                 self.energySpin[1] = self.energy[0:bands]
