@@ -257,8 +257,8 @@ mainFileDescription = \
     SM(r"\s*Species\s*:\s*[0-9]\s*\((?P<x_exciting_geometry_atom_labels>[-a-zA-Z0-9]+)\)", repeats = True,
       sections = ["x_exciting_section_atoms_group"],
        subMatchers = [
-        SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)"),
-        SM(r"\s*.+\s*radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)"),
+        SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)", repeats = True),
+        SM(r"\s*.+\s*radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)", repeats = True),
         SM(startReStr = r"\s*atomic positions\s*\(lattice\)",
            subMatchers = [
                     SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
