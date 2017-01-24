@@ -6,6 +6,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, spinTreat):
         self.backend = backend
         self.bandSectionGIndex = -1
+        self.normBandSectionGIndex = -1
         self.inBand = False
         self.energy=[]
         self.energySpin = [[],[]]
@@ -18,11 +19,14 @@ class BandHandler(xml.sax.handler.ContentHandler):
     def endDocument(self):
             self.inBand = False
             self.backend.closeSection("x_exciting_section_bandstructure",self.bandSectionGIndex)
+            self.backend.closeSection("section_k_band_normalized",self.normBandSectionGIndex)
             self.bandSectionGIndex = -1
+            self.normBandSectionGIndex = -1
 
     def startElement(self, name, attrs):
         if name == "bandstructure":
             self.bandSectionGIndex = self.backend.openSection("x_exciting_section_bandstructure")
+            self.normBandSectionGIndex = self.backend.openSection("section_k_band_normalized")
             self.inBand = True
         elif name == "band":
             self.energy.append([])
@@ -52,6 +56,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("x_exciting_band_vertex_coordinates", self.vertexCoord)
             self.backend.addValue("x_exciting_band_k_points",self.distance[-1])
             self.backend.addValue("x_exciting_band_structure_kind","electronic")
+            self.backend.addValue("k_band_path_normalized_is_standard",False)
             if not self.spinTreat:
                 self.energySpin[0] = self.energy[0:bands]
                 self.energySpin[1] = self.energy[0:bands]
