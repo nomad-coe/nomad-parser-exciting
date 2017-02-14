@@ -6,6 +6,7 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
+from ase import Atoms
 
 #def elasticCheck(path):
 #  print("path=", path)
@@ -34,6 +35,8 @@ class ExcitingParserContext(object):
     self.secMethodIndex = None  
     self.secSystemIndex = None 
     self.spinTreat = None
+    self.sim_cell = []
+    self.cell_format = ''
 
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
@@ -48,6 +51,8 @@ class ExcitingParserContext(object):
     cell = [[latticeX[0],latticeY[0],latticeZ[0]],
             [latticeX[1],latticeY[1],latticeZ[1]],
             [latticeX[2],latticeY[2],latticeZ[2]]]
+    self.sim_cell = cell
+#    print("self.sim_cell=",self.sim_cell)
     backend.addValue("simulation_cell", cell)
 
   def onClose_x_exciting_section_reciprocal_lattice_vectors(self, backend, gIndex, section):
@@ -229,23 +234,61 @@ class ExcitingParserContext(object):
 
     self.secSystemDescriptionIndex = gIndex
 
-    if self.atom_pos:
+#    atoms = Atoms()
+
+    if self.atom_pos and self.cell_format[0] == 'cartesian':
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
-    self.atom_pos = []
+#       print("self.atom_pos=",np.asarray(self.atom_pos))
+    elif self.atom_pos and self.cell_format[0] == 'lattice':
+#       i = 1
+       atoms = Atoms(self.atom_labels, self.atom_pos, cell=[(1, 0, 0),(0, 1, 0),(0, 0, 1)])
+       atoms.set_cell(self.sim_cell, scale_atoms=True)
+#       print(atoms.get_positions()[1])
+#       while i < len(self.atom_labels):
+#          
+#          atoms = Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
+#       print("attomi=",atoms)
+       self.atom_pos = atoms.get_positions()
+       backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
+#       i = 0
+#       while i < len(self.atom_labels):
+#       print("self.atom_pos=",np.asarray(self.atom_pos))       
+#      pass
+#    s##sarrayelf.atom_pos = []
     if self.atom_labels is not None:
        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
-    
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
+    fromB = unit_conversion.convert_unit_function("bohr", "m")
+    formt = section['x_exciting_atom_position_format']
+    self.cell_format = formt
+#    print("formt=",formt)
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
+#    print("ddd",pos)
     pl = [len(comp) for comp in pos]
+#    print("pelle=",pl)
     natom = pl[0]
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
     for i in range(natom):
-      self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
+      if formt[0] == 'cartesian':
+#        print("cartesian?")
+        self.atom_pos.append([fromB(pos[0][i]), fromB(pos[1][i]), fromB(pos[2][i])])
+#        print("self.atom_pos=",self.atom_pos)
+      else:
+#        atoms = ase.Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
+#        print("atoms.get_positions()=",atoms.get_positions())
+#        print("self.sim_cell=",self.sim_cell)
+#        print("lattice")
+        self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
+#    if formt[0] == 'lattice':
+#        
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
+#    if formt[0] == 'lattice':
+#      atoms = ase.Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
+#      print("atoms.get_positions()=",atoms.get_positions())
+#      print("self.atom_labels=", self.atom_labels)
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -281,9 +324,10 @@ mainFileDescription = \
        subMatchers = [
         SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)", repeats = True),
         SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)", repeats = True),
-        SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
+#        SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
+        SM(startReStr = r"\s*atomic positions\s*\((?P<x_exciting_atom_position_format>[-a-zA-Z]+)\)\s*:\s*",
            subMatchers = [
-                    SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y__bohr>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z__bohr>[-+0-9.]+)", repeats = True)
+                    SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z>[-+0-9.]+)", repeats = True)
          ])
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
