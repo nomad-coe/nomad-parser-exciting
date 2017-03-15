@@ -89,7 +89,7 @@ class ExcitingParserContext(object):
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
-    bandFile = os.path.join(dirPath, "bandstructure.xml")
+    bandFile = os.path.join(dirPath, "sbandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
 #    inputFile = os.path.join(dirPath, "input.xml")
     gwFile = os.path.join(dirPath, "GW_INFO.OUT")
@@ -259,6 +259,19 @@ class ExcitingParserContext(object):
        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
 
+    excSmearingKind = section["x_exciting_smearing_type"]
+ 
+    smearing_internal_map = {
+        "Gaussian": ['gaussian'],
+        "Methfessel-Paxton 1": ['methfessel-paxton'],
+        "Methfessel-Paxton 2": ['methfessel-paxton'],
+        "Fermi Dirac": ['fermi'],
+        "libbzint": ['tetrahedra']
+        }
+
+    for smName in smearing_internal_map[excSmearingKind[0]]:
+      backend.addValue("smearing_kind", smName)
+
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
     fromB = unit_conversion.convert_unit_function("bohr", "m")
     formt = section['x_exciting_atom_position_format']
@@ -357,9 +370,9 @@ mainFileDescription = \
     SM(r"\s*Total number of local-orbitals\s*:\s*(?P<x_exciting_lo>[-0-9.]+)"),
     SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<x_exciting_xc_functional>[-0-9.]+)",
        sections = ['x_exciting_section_xc']),
-#    SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
+    SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
 #    SM(r"\s*Smearing width\s*:\s*(?P<x_exciting_smearing_width__hartree>[-0-9.]+)"),
-    SM(r"\s*Smearing scheme\s*:\s*(?P<smearing_kind>[-a-zA-Z0-9]+)"),
+#    SM(r"\s*Smearing scheme\s*:\s*(?P<smearing_kind>[-a-zA-Z0-9]+)"),
     SM(r"\s*Smearing width\s*:\s*(?P<smearing_width__hartree>[-0-9.]+)"),
     SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
