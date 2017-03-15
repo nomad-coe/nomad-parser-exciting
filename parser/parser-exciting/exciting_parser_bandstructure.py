@@ -10,6 +10,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
         self.inBand = False
         self.energy=[]
         self.energySpin = [[],[]]
+        self.bandEnergies = [[],[]]
         self.distance = []
         self.vertexCoord = []
         self.vertexLabels = []
@@ -18,15 +19,16 @@ class BandHandler(xml.sax.handler.ContentHandler):
 
     def endDocument(self):
             self.inBand = False
-            self.backend.closeSection("x_exciting_section_bandstructure",self.bandSectionGIndex)
-            self.backend.closeSection("section_k_band_normalized",self.normBandSectionGIndex)
+            self.backend.closeSection("section_k_band",self.bandSectionGIndex)
+            self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
             self.bandSectionGIndex = -1
             self.normBandSectionGIndex = -1
 
     def startElement(self, name, attrs):
         if name == "bandstructure":
-            self.bandSectionGIndex = self.backend.openSection("x_exciting_section_bandstructure")
-            self.normBandSectionGIndex = self.backend.openSection("section_k_band_normalized")
+            self.bandSectionGIndex = self.backend.openSection("section_k_band")
+            self.backend.addValue("band_structure_kind","electronic")
+            self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
             self.inBand = True
         elif name == "band":
             self.energy.append([])
@@ -41,34 +43,128 @@ class BandHandler(xml.sax.handler.ContentHandler):
 
     def endElement(self, name):
         if name == 'bandstructure':
+            bandEnergiesBE = []
+            vertexDist=[]
             vertexDummy = []
+            kBandSegm = []
+            bandKpoints = []
+            bandEnergies = []
+            bandOcc = []
+            step = []
+            numkPointsPerSegmL = []
+            numkPointsPerSemIncr = []
+            coordinate = []
             vertexNum = len(self.vertexLabels)
             kmesh = len(self.energy[-1])
             bands = len(self.energy)
             bands2 = int(bands/2)
+            kpoints=self.distance[-1]
+            vertexDist.append(kpoints[0])
+
+            i=0
+            while i < vertexNum:
+                coordinate.append(self.vertexCoord[i].split())
+                i +=1
+
+            for i in kpoints:
+                if kpoints.count(i)>1:
+                    index=kpoints.index(i)
+                    vertexDist.append(kpoints[index])
+
+            vertexDist.append(kpoints[-1])
+
+            for i in vertexDist:
+                if vertexDist.count(i)>1:
+                    index=vertexDist.index(i)
+                    prova = vertexDist.pop(index)
+
+            i = 0
+            while i < vertexNum-1:
+                bandKpoints.append([])
+                bandEnergies.append([])
+                bandOcc.append([])
+                step.append([])
+                initial = kpoints.index(vertexDist[i])
+                final = kpoints.index(vertexDist[i+1])
+                kBandSegm.append(kpoints[kpoints.index(vertexDist[i]):kpoints.index(vertexDist[i+1])])
+                i +=1
+
+            j = 0
+            while j < vertexNum -2:
+                bodda = kBandSegm[j+1].pop(0) 
+                kBandSegm[j].append(bodda)   
+                j+=1
+
+            kBandSegm[-1].append(kpoints[-1])
+            numkPointsPerSemIncr.append(0)
+
+            for i in range(0,vertexNum-1):
+                numkPointsPerSegm = len(kBandSegm[i])
+                numkPointsPerSegmL.append(numkPointsPerSegm)
+                numkPointsPerSemIncr.append(numkPointsPerSemIncr[-1]+numkPointsPerSegmL[-1])
+                step[i].append((float(coordinate[i+1][0])-float(coordinate[i][0]))/numkPointsPerSegm)
+                step[i].append((float(coordinate[i+1][1])-float(coordinate[i][1]))/numkPointsPerSegm)
+                step[i].append((float(coordinate[i+1][2])-float(coordinate[i][2]))/numkPointsPerSegm)
+                for j in range(0,numkPointsPerSegm+1):
+                    bandKpoints[i].append([])
+                    for k in range(0,3):
+                        bandKpoints[i][j].append(float(coordinate[i][k])+j*step[i][k])
+
+            i=0
+            while i < vertexNum-1:
+                bandEnergiesBE.append([])
+                for j in range(0,2):
+                    bandEnergiesBE[i].append([])
+                    for k in range(0,numkPointsPerSegmL[i]):
+                        bandEnergiesBE[i][j].append([])
+                i+=1
+
             for i in range(0,vertexNum):
                 self.vertexCoord[i]=self.vertexCoord[i].split() 
                 for j in range(0,3):
                     self.vertexCoord[i][j] = float(self.vertexCoord[i][j])
-            self.backend.addValue("x_exciting_band_number_of_kpoints",kmesh)
-            self.backend.addValue("x_exciting_band_number_of_vertices",vertexNum)
-            self.backend.addValue("x_exciting_band_vertex_labels",self.vertexLabels)
-            self.backend.addValue("x_exciting_band_vertex_coordinates", self.vertexCoord)
-            self.backend.addValue("x_exciting_band_k_points",self.distance[-1])
-            self.backend.addValue("x_exciting_band_structure_kind","electronic")
-            self.backend.addValue("k_band_path_normalized_is_standard",False)
+
+
+            for i in range(0,vertexNum-1):
+                self.backend.addValue("band_k_points",bandKpoints[i])
+                self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
+                self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
+                self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
+            self.eigenSectionGIndex = self.backend.openSection("section_eigenvalues")
+            self.backend.addValue("number_of_band_segment_eigenvalues",bands)
+            self.backend.closeSection("section_eigenvalues",self.eigenSectionGIndex)
+
             if not self.spinTreat:
                 self.energySpin[0] = self.energy[0:bands]
                 self.energySpin[1] = self.energy[0:bands]
-                self.backend.addValue("x_exciting_band_number_of_eigenvalues",bands)
-                self.backend.addValue("x_exciting_band_energies",self.energySpin)
-#                print("self.energySpin=",self.energySpin)
-            else:
+                for i in range (0,bands):
+                    self.bandEnergies[0].append([])
+                    self.bandEnergies[1].append([])
+                    for j in range(0,vertexNum-1):
+                        self.bandEnergies[0][i].append(self.energySpin[0][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
+                        self.bandEnergies[1][i].append(self.energySpin[1][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
+                for i in range (0,vertexNum-1):
+                   for j in range(0,bands):
+                       for k in range(0,numkPointsPerSegmL[i]):
+                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
+                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
+                   self.backend.addValue("band_energies",bandEnergiesBE[i])
+            else: #### check for spin polarized!!!!
                 self.energySpin[0] = self.energy[0:bands2]
                 self.energySpin[1] = self.energy[bands2:bands]
-                self.backend.addValue("x_exciting_band_number_of_eigenvalues",bands2)
-                self.backend.addValue("x_exciting_band_energies",self.energySpin)
-                
+                for i in range (0,bands2):
+                    self.bandEnergies[0].append([])
+                    self.bandEnergies[1].append([])
+                    for j in range(0,vertexNum-1):
+                        self.bandEnergies[0][i].append(self.energySpin[0][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
+                        self.bandEnergies[1][i].append(self.energySpin[1][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
+                for i in range (0,vertexNum-1):
+                   for j in range(0,bands):
+                       for k in range(0,numkPointsPerSegmL[i]):
+                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
+                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
+                   self.backend.addValue("band_energies",bandEnergiesBE[i])
+
     def startElementNS(self, name, qname, attrs):
         attrDict={}
         for name in attrs.getNames():
