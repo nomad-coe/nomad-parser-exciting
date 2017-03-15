@@ -89,7 +89,7 @@ class ExcitingParserContext(object):
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
-    bandFile = os.path.join(dirPath, "sbandstructure.xml")
+    bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
 #    inputFile = os.path.join(dirPath, "input.xml")
     gwFile = os.path.join(dirPath, "GW_INFO.OUT")
