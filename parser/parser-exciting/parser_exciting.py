@@ -1,11 +1,12 @@
 from builtins import object
 import setup_paths
 import numpy as np
+from nomadcore.simple_parser import AncillaryParser, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw
 from ase import Atoms
 
 #def elasticCheck(path):
@@ -21,6 +22,12 @@ from ase import Atoms
 
 class ExcitingParserContext(object):
 
+  def __init__(self):
+    self.parser = None
+
+  def initialize_values(self):
+    self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
+
   def startedParsing(self, path, parser):
 #    print("path=", path)
 #    pat = path.split("/")
@@ -29,11 +36,16 @@ class ExcitingParserContext(object):
 #      pass
 #    else:
 #      pass
+#    self.initialize_values()
+#    self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
+#    self.initialize_values()
     self.parser=parser
+    self.initialize_values()
     self.atom_pos = []
     self.atom_labels = []
     self.secMethodIndex = None  
-    self.secSystemIndex = None 
+    self.secSystemIndex = None
+    self.secGWIndex = None 
     self.spinTreat = None
     self.sim_cell = []
     self.cell_format = ''
@@ -43,6 +55,19 @@ class ExcitingParserContext(object):
 
   def onOpen_section_method(self, backend, gIndex, section):
     self.secMethodIndex = gIndex
+
+    mainFile = self.parser.fIn.fIn.name
+    dirPath = os.path.dirname(self.parser.fIn.name)
+    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+    if os.path.exists(gwFile):
+      subSuperContext = exciting_parser_gw.GWContext()
+      subParser = AncillaryParser(
+        fileDescription = exciting_parser_gw.buildGWMatchers(),
+        parser = self.parser,
+        cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
+        superContext = subSuperContext)
+      with open(gwFile) as fIn:
+        subParser.parseFile(fIn)
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -105,7 +130,9 @@ class ExcitingParserContext(object):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
     if os.path.exists(gwFile):
-        backend.addValue('electronic_structure_method', "G0W0")
+#      with open(gwFile) as f:
+      backend.addValue('electronic_structure_method', "G0W0")
+#        exciting_parser_gw.parseGW(f, backend, self.spinTreat)
     else:
         backend.addValue('electronic_structure_method', "DFT")
     if os.path.exists(eigvalFile):
@@ -243,13 +270,14 @@ class ExcitingParserContext(object):
 #       i = 1
        atoms = Atoms(self.atom_labels, self.atom_pos, cell=[(1, 0, 0),(0, 1, 0),(0, 0, 1)])
        atoms.set_cell(self.sim_cell, scale_atoms=True)
-#       print(atoms.get_positions()[1])
+#       print("position_lattice",atoms.get_positions()[1])
 #       while i < len(self.atom_labels):
 #          
 #          atoms = Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
 #       print("attomi=",atoms)
        self.atom_pos = atoms.get_positions()
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
+#       print("self.atom_pos_lattice=",np.asarray(self.atom_pos))
 #       i = 0
 #       while i < len(self.atom_labels):
 #       print("self.atom_pos=",np.asarray(self.atom_pos))       
@@ -263,10 +291,10 @@ class ExcitingParserContext(object):
  
     smearing_internal_map = {
         "Gaussian": ['gaussian'],
-        "Methfessel-Paxton 1": ['methfessel-paxton'],
-        "Methfessel-Paxton 2": ['methfessel-paxton'],
-        "Fermi Dirac": ['fermi'],
-        "libbzint": ['tetrahedra']
+        "Methfessel-Paxton": ['methfessel-paxton'],
+#        "Methfessel-Paxton 2": ['methfessel-paxton'],
+        "Fermi-Dirac": ['fermi'],
+        "Extended": ['tetrahedra']
         }
 
     for smName in smearing_internal_map[excSmearingKind[0]]:
@@ -302,6 +330,26 @@ class ExcitingParserContext(object):
 #      atoms = ase.Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
 #      print("atoms.get_positions()=",atoms.get_positions())
 #      print("self.atom_labels=", self.atom_labels)
+
+
+#  def onClose_section_run(self, backend, gIndex, section):
+#    self.secGWIndex = gIndex
+#
+#    mainFile = self.parser.fIn.fIn.name
+#    dirPath = os.path.dirname(self.parser.fIn.name)
+#    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+#    if os.path.exists(gwFile):
+#      subSuperContext = exciting_parser_gw.GWContext()
+#      subParser = AncillaryParser(
+#        fileDescription = exciting_parser_gw.buildGWMatchers(),
+#        parser = self.parser,
+#        cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
+#        superContext = subSuperContext)
+#      with open(gwFile) as fIn:
+#        subParser.parseFile(fIn)
+
+
+
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -341,6 +389,10 @@ mainFileDescription = \
         SM(startReStr = r"\s*atomic positions\s*\((?P<x_exciting_atom_position_format>[-a-zA-Z]+)\)\s*:\s*",
            subMatchers = [
                     SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z>[-+0-9.]+)", repeats = True)
+         ]),
+        SM(startReStr = r"\s*magnetic fields\s*\((?P<x_exciting_magnetic_field_format>[-a-zA-Z]+)\)\s*:\s*",
+           subMatchers = [
+                    SM(r"\s*(?P<x_exciting_MT_external_magnetic_field_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_MT_external_magnetic_field_x>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_y>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_z>[-+0-9.]+)", repeats = True)
          ])
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),

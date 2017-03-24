@@ -5,12 +5,12 @@ import org.specs2.mutable.Specification
 object ExcitingParserSpec extends Specification {
   "ExcitingParserTest" >> {
     "test with json-events" >> {
-      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/TiO2/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
+      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/Ag/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
     }
   }
 
   "test with json" >> {
-    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/TiO2/INFO.OUT", "json") must_== ParseResult.ParseSuccess
+    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/Ag/INFO.OUT", "json") must_== ParseResult.ParseSuccess
   }
 
   "ExcitingParserHeliumTest" >> {
@@ -22,4 +22,15 @@ object ExcitingParserSpec extends Specification {
   "test with json" >> {
     ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/helium/INFO.OUT", "json") must_== ParseResult.ParseSuccess
   }
+
+  "ExcitingParserTestiGW" >> {
+    "test with json-events" >> {
+      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/GW/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
+    }
+  }
+
+  "test with json" >> {
+    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/GW/INFO.OUT", "json") must_== ParseResult.ParseSuccess
+  }
+
 }

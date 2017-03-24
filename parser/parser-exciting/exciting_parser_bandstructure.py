@@ -125,11 +125,11 @@ class BandHandler(xml.sax.handler.ContentHandler):
                     self.vertexCoord[i][j] = float(self.vertexCoord[i][j])
 
 
-            for i in range(0,vertexNum-1):
-                self.backend.addValue("band_k_points",bandKpoints[i])
-                self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
-                self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
-                self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
+#            for i in range(0,vertexNum-1):
+#                self.backend.addValue("band_k_points",bandKpoints[i])
+#                self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
+#                self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
+#                self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
             self.eigenSectionGIndex = self.backend.openSection("section_eigenvalues")
             self.backend.addValue("number_of_band_segment_eigenvalues",bands)
             self.backend.closeSection("section_eigenvalues",self.eigenSectionGIndex)
@@ -146,8 +146,14 @@ class BandHandler(xml.sax.handler.ContentHandler):
                 for i in range (0,vertexNum-1):
                    for j in range(0,bands):
                        for k in range(0,numkPointsPerSegmL[i]):
-                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
-                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
+                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][j][i][k])
+                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][j][i][k])
+#                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
+#                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
+                   self.backend.addValue("band_k_points",bandKpoints[i])
+                   self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
+                   self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
+                   self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
                    self.backend.addValue("band_energies",bandEnergiesBE[i])
             else: #### check for spin polarized!!!!
                 self.energySpin[0] = self.energy[0:bands2]
@@ -161,8 +167,14 @@ class BandHandler(xml.sax.handler.ContentHandler):
                 for i in range (0,vertexNum-1):
                    for j in range(0,bands):
                        for k in range(0,numkPointsPerSegmL[i]):
-                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
-                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
+                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][j][i][k])
+                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][j][i][k])
+#                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
+#                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
+                   self.backend.addValue("band_k_points",bandKpoints[i])
+                   self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
+                   self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
+                   self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
                    self.backend.addValue("band_energies",bandEnergiesBE[i])
 
     def startElementNS(self, name, qname, attrs):
