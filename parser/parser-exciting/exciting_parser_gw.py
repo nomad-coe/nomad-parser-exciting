@@ -33,7 +33,7 @@ class GWContext(object):
 
         dirPath = os.path.dirname(self.parser.fIn.name)
         eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
-        bandGWFile = os.path.join(dirPath, "TDOS-QP.DAT")
+        dosGWFile = os.path.join(dirPath, "TDOS-QP.OUT")
 
         if os.path.exists(eigvalGWFile):
             eigvalGWGIndex = backend.openSection("x_exciting_section_GW_qp_eigenvalues")
@@ -88,10 +88,27 @@ class GWContext(object):
         backend.closeSection("x_exciting_section_GW_self_energy",selfGWGIndex)
 
 ####################DOS######################
-#        if os.path.exists(bandGWFile):
-#            bandGWGIndex = backend.openSection("x_exciting_section_GW_dos")
-#            with open(bandGWFile) as g:
-
+        if os.path.exists(dosGWFile):
+            dosGWGIndex = backend.openSection("x_exciting_section_GW_dos")
+            with open(dosGWFile) as g:
+                dosValues = [[],[]]
+                dosEnergies = []
+                while 1:
+                    s = g.readline()
+                    if not s: break
+                    s = s.strip()
+                    s = s.split()
+                    ene, value = float(s[0]), float(s[1])
+                    dosEnergies.append(ene)
+                    if not self.spinTreat:
+                        for i in range(0,2):
+                            dosValues[i].append(value)
+                    else:
+                        pass
+            backend.addValue("x_exciting_GW_dos_energies", dosEnergies)
+            backend.addValue("x_exciting_GW_dos_values", dosValues)
+            backend.addValue("x_exciting_GW_number_of_dos_values", len(dosEnergies))
+            backend.closeSection("x_exciting_section_GW_dos",dosGWGIndex)        
 
 
 def buildGWMatchers():
