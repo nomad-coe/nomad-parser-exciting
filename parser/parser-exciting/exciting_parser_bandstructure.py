@@ -1,6 +1,7 @@
 import xml.sax
 import logging
 import numpy as np
+from nomadcore.unit_conversion import unit_conversion
 
 class BandHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, spinTreat):
@@ -34,7 +35,8 @@ class BandHandler(xml.sax.handler.ContentHandler):
             self.energy.append([])
             self.distance.append([])
         elif name == "point" and self.inBand:
-            self.energy[-1].append(float(attrs.getValue('eval')))
+            fromH = unit_conversion.convert_unit_function("hartree", "J")
+            self.energy[-1].append(fromH(float(attrs.getValue('eval'))))
             self.distance[-1].append(float(attrs.getValue('distance')))
         elif name == "vertex" and self.inBand:
             self.vertexCoord.append(attrs.getValue("coord"))
