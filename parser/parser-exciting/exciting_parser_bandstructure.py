@@ -21,7 +21,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
     def endDocument(self):
             self.inBand = False
             self.backend.closeSection("section_k_band",self.bandSectionGIndex)
-            self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
+#            self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
             self.bandSectionGIndex = -1
             self.normBandSectionGIndex = -1
 
@@ -29,7 +29,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
         if name == "bandstructure":
             self.bandSectionGIndex = self.backend.openSection("section_k_band")
             self.backend.addValue("band_structure_kind","electronic")
-            self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
+#            self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
             self.inBand = True
         elif name == "band":
             self.energy.append([])
@@ -146,6 +146,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
                         self.bandEnergies[0][i].append(self.energySpin[0][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
                         self.bandEnergies[1][i].append(self.energySpin[1][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
                 for i in range (0,vertexNum-1):
+                   self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
                    for j in range(0,bands):
                        for k in range(0,numkPointsPerSegmL[i]):
                             bandEnergiesBE[i][0][k].append(self.bandEnergies[0][j][i][k])
@@ -157,6 +158,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
                    self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
                    self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
                    self.backend.addValue("band_energies",bandEnergiesBE[i])
+                   self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
             else: #### check for spin polarized!!!!
                 self.energySpin[0] = self.energy[0:bands2]
                 self.energySpin[1] = self.energy[bands2:bands]
@@ -167,6 +169,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
                         self.bandEnergies[0][i].append(self.energySpin[0][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
                         self.bandEnergies[1][i].append(self.energySpin[1][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
                 for i in range (0,vertexNum-1):
+                   self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
                    for j in range(0,bands):
                        for k in range(0,numkPointsPerSegmL[i]):
                             bandEnergiesBE[i][0][k].append(self.bandEnergies[0][j][i][k])
@@ -178,6 +181,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
                    self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
                    self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
                    self.backend.addValue("band_energies",bandEnergiesBE[i])
+                   self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
 
     def startElementNS(self, name, qname, attrs):
         attrDict={}

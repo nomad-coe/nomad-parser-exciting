@@ -39,6 +39,7 @@ class GWContext(object):
         bandGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
         vertexGWFile = os.path.join(dirPath, "BANDLINES.OUT")
         vertexLabGWFile = os.path.join(dirPath, "bandstructure.xml")
+        selfCorGWFile = os.path.join(dirPath, "SELFC.DAT")
 
         if os.path.exists(vertexGWFile):
             with open(vertexGWFile) as g:
@@ -63,7 +64,19 @@ class GWContext(object):
                     if s[0] == "<vertex":
                         f = s[4].split("\"")
                         self.vertexLabels.append(f[1])
-            
+
+        if os.path.exists(selfCorGWFile):
+            selfGWGIndex = backend.openSection("x_exciting_section_GW_self_energy")
+            with open(selfCorGWFile) as g:
+                while 1:
+                    s = g.readline()
+                    if not s: break
+                    s = s.strip()
+
+
+
+            backend.closeSection("x_exciting_section_GW_self_energy",selfGWGIndex)
+
         if os.path.exists(eigvalGWFile):
             eigvalGWGIndex = backend.openSection("x_exciting_section_GW_qp_eigenvalues")
             with open(eigvalGWFile) as g:
@@ -144,7 +157,7 @@ class GWContext(object):
 
         if os.path.exists(bandGWFile):
             bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
-            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
+#            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
 
             with open(bandGWFile) as g:
@@ -234,9 +247,10 @@ class GWContext(object):
 
 #            print("bandGWBE=",bandGWBE)
             for i in range(0,len(Kindex)-1):
+                bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
                 backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
+                backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
-            backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
             backend.closeSection("x_exciting_section_GW_k_band",bandGWGIndex)
 #            backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
@@ -245,7 +259,7 @@ def buildGWMatchers():
     name = 'root',
     weak = True,
     startReStr = "\*\s*GW input parameters\s*\*",
-        sections = ["x_exciting_section_GW_method", "x_exciting_section_GW"],
+        sections = ["x_exciting_section_GW", "x_exciting_section_GW_method"],
     subMatchers = [
 #        SM(name = 'GWinput',
 #          startReStr = r"(?P<x_wien2k_system_nameIn>.*)"),
