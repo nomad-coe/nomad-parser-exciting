@@ -36,7 +36,9 @@ class GWContext(object):
         dirPath = os.path.dirname(self.parser.fIn.name)
         eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
         dosGWFile = os.path.join(dirPath, "TDOS-QP.OUT")
-        bandGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
+        bandCarbGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
+        bandBorGWFile = os.path.join(dirPath, "BAND-QP.OUT")
+#        bandGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
         vertexGWFile = os.path.join(dirPath, "BANDLINES.OUT")
         vertexLabGWFile = os.path.join(dirPath, "bandstructure.xml")
         selfCorGWFile = os.path.join(dirPath, "SELFC.DAT")
@@ -155,12 +157,12 @@ class GWContext(object):
 
 ##################BANDSTRUCTURE#####################
 
-        if os.path.exists(bandGWFile):
+        if os.path.exists(bandCarbGWFile):
             bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
 #            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
 
-            with open(bandGWFile) as g:
+            with open(bandCarbGWFile) as g:
                 bandEnergies = [[],[]]
                 kpoint = []
                 dist = []
@@ -197,6 +199,9 @@ class GWContext(object):
                 for i in range(0,2):
                     bandEnergies[i].pop()
 
+#                print("numBand=",numBand)
+#                print("numK=",numK)
+
                 for i in range(1,numK):
 #                    print("i=",i)
 #                    print("dist[i-1]=",dist[i-1])
@@ -232,6 +237,121 @@ class GWContext(object):
 #            print("self.vertexDist=",self.vertexDist)
 #            print("dist=",dist)
 #            print("len(dist)=",len(dist))
+#            print("segmK=",segmK)
+#            print("segmLength=",segmLength)
+#            print("bandEnergiesSegm=",bandEnergiesSegm)
+#            print("Kindex=",Kindex)
+            for i in range(0,len(Kindex)-1):
+                bandGWBE.append([])
+                for j in range(0,2):
+                    bandGWBE[i].append([])
+                    for k in range(0,segmLength[i]):
+                        bandGWBE[i][j].append([])
+                        for l in range(0,numBand):
+                            bandGWBE[i][j][-1].append(bandEnergiesSegm[j][l][i][k])
+
+#            print("bandGWBE=",bandGWBE)
+            for i in range(0,len(Kindex)-1):
+                bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
+                backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
+                backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
+
+            backend.closeSection("x_exciting_section_GW_k_band",bandGWGIndex)
+#            backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
+
+        if os.path.exists(bandBorGWFile) and not os.path.exists(bandCarbGWFile):
+            bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
+#            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
+            fromH = unit_conversion.convert_unit_function("hartree", "J")
+#            fromH = 1.0
+            with open(bandBorGWFile) as g:
+                bandEnergies = [[[]],[[]]]
+                kappa = [[[]],[[]]]
+#                kpoint = []
+                dist1 = [[]]
+                Kindex = [0]
+                segmK = []
+                segmLength = []
+                bandEnergiesSegm = []
+                bandGWBE = []
+                while 1:
+                    s = g.readline()
+                    if not s: break
+                    s = s.strip()
+                    s = s.split()
+                    if not self.spinTreat:
+                        if len(s) == 0:
+                            for i in range(0,2):
+                                bandEnergies[i].append([])
+                                kappa[i].append([])
+                            dist1.append([])
+                            print("dist1",dist1)
+#                            if not dist1:
+#                        elif s[0] == "#":
+#                            for i in range(0,2):
+#                                bandEnergies[i].append([])
+#                                numBand = int(s[2])
+#                                numK = int(s[3])
+                        elif len(s) > 0:
+                            for i in range(0,2):
+#                                ene = fromH(float(s[6]))
+                                bandEnergies[i][-1].append(float(s[1]))
+                                kappa[i][-1].append(float(s[0]))
+#                                bandEnergies[i][-1].append(fromH(float(s[1])))
+#                            if int(s[0]) == 1:
+#                            if not dist1:
+#                                print("s[0]=",s[0])
+#                                print("dist1=",dist1)
+#                                kpoint.append([])
+                            dist1[-1].append(float(s[0]))
+#                                kpoint[-1].append([float(s[2]),float(s[3]),float(s[4])])                        
+                        numK = len(kappa[0][0])
+                        for i in kappa[0][0]:
+                            if kappa[0][0].count(i) > 1:
+                                kappa[0][0].remove(i)
+                    else:
+                        pass
+                for i in range(0,2):
+                    bandEnergies[i].pop()
+                numBand = len(bandEnergies[0])
+#                numK = len(kappa[0][0])
+                print("kappa=",numK)
+                print("bandnergies=",numBand)
+                for i in range(1,numK):
+#                    print("i=",i)
+#                    print("dist1[i-1]=",dist1[i-1])
+#                    print("dist1[i]=",dist1[i])
+                    if dist1[0][i] == dist1[0][i-1]:
+#                        pass   
+                        Kindex.append(i)
+                Kindex.append(numK)
+#                        del dist1[i]
+                for i in range(0,len(Kindex)-1):
+                    segmK.append(dist1[0][Kindex[i]:Kindex[i+1]])
+
+                for i in range(0,len(segmK)):
+#                    print("i=",i)
+#                    print("segmK[i]=",segmK[i])
+                    segmLength.append(len(segmK[i]))
+#                    bandEnergiesSegm.append([])
+                for i in range(0,2):
+                    bandEnergiesSegm.append([])
+                    for j in range(0,numBand):
+                         bandEnergiesSegm[i].append([])
+                         for k in range (0,len(Kindex)-1):
+#                             print("l=",k)
+#                             print("len(Kindex)=",len(Kindex))
+#                             print("Kindex[l]=",Kindex[k])
+#                             print("bandEnergies[Kindex[k]:Kindex[k+1]]=",bandEnergies[Kindex[k]:Kindex[k+1]])
+                             bandEnergiesSegm[i][j].append(bandEnergies[i][j][Kindex[k]:Kindex[k+1]])
+#                    print("i=",i)
+#                    print("Kindex[i]=",Kindex[i])
+#                    del dist1[Kindex[i]]
+
+#            print("bandEnergies=",bandEnergies)  
+#            print("self.vertexDist=",self.vertexDist)
+#            print("dist1=",dist1)
+#            print("len(dist1)=",len(dist1))
 #            print("segmK=",segmK)
 #            print("segmLength=",segmLength)
 #            print("bandEnergiesSegm=",bandEnergiesSegm)
