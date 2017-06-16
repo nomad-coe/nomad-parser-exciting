@@ -285,7 +285,7 @@ class GWContext(object):
                                 bandEnergies[i].append([])
                                 kappa[i].append([])
                             dist1.append([])
-                            print("dist1",dist1)
+#                            print("dist1",dist1)
 #                            if not dist1:
 #                        elif s[0] == "#":
 #                            for i in range(0,2):
@@ -315,8 +315,8 @@ class GWContext(object):
                     bandEnergies[i].pop()
                 numBand = len(bandEnergies[0])
 #                numK = len(kappa[0][0])
-                print("kappa=",numK)
-                print("bandnergies=",numBand)
+#                print("kappa=",numK)
+#                print("bandnergies=",numBand)
                 for i in range(1,numK):
 #                    print("i=",i)
 #                    print("dist1[i-1]=",dist1[i-1])
@@ -384,8 +384,8 @@ def buildGWMatchers():
 #        SM(name = 'GWinput',
 #          startReStr = r"(?P<x_wien2k_system_nameIn>.*)"),
 #          startReStr = "\s*GW taskname:\s*"
-        SM(r"\s*(?P<x_exciting_GW_type>[-a-zA-Z0-9]+)\s*-\s*[-a-zA-Z0-9]+\s*run"),
-        SM(r"\s*(?P<x_exciting_GW_type>[-a-zA-Z0-9]+)\s*-\s*[-a-zA-Z0-9]+\s*run"),
+        SM(r"\s*(?P<x_exciting_GW_type>[-a-zA-Z0-9]+)\s*-\s*[-a-zA-Z0-9]+\s*run") #,
+#        SM(r"\s*(?P<x_exciting_GW_type>[-a-zA-Z0-9]+)\s*-\s*[-a-zA-Z0-9]+\s*run"),
 #        SM(r"\s*(?P<x_wien2k_in2c_switch>[A-Z]+)\s*.*"),
 #        SM(r"\s*(?P<x_wien2k_in2c_emin>[-+0-9.]+)\s*(?P<x_wien2k_in2c_ne>[-+0-9.]+)\s*(?P<x_wien2k_in2c_espermin>[-+0-9.]+)\s*(?P<x_wien2k_in2c_esper0>[-+0-9.]+)\s*.*"),
 #        SM(r"\s*(?P<x_wien2k_smearing_kind>[A-Z]+)\s*\s*(?P<x_wien2k_smearing_width__rydberg>[-+0-9.]+)\s*.*"),
