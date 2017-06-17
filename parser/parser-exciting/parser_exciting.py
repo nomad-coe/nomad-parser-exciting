@@ -387,13 +387,14 @@ mainFileDescription = \
         SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)", repeats = True),
 #        SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
         SM(startReStr = r"\s*atomic positions\s*\((?P<x_exciting_atom_position_format>[-a-zA-Z]+)\)\s*:\s*",
+           endReStr = r"\s*magnetic fields\s*",
            subMatchers = [
                     SM(r"\s*(?P<x_exciting_geometry_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_geometry_atom_positions_x>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z>[-+0-9.]+)", repeats = True)
-         ]),
-        SM(startReStr = r"\s*magnetic fields\s*\((?P<x_exciting_magnetic_field_format>[-a-zA-Z]+)\)\s*:\s*",
-           subMatchers = [
-                    SM(r"\s*(?P<x_exciting_MT_external_magnetic_field_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_MT_external_magnetic_field_x>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_y>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_z>[-+0-9.]+)", repeats = True)
-         ])
+         ]) #,
+#        SM(startReStr = r"\s*magnetic fields\s*\((?P<x_exciting_magnetic_field_format>[-a-zA-Z]+)\)\s*:\s*",
+#           subMatchers = [
+#                    SM(r"\s*(?P<x_exciting_MT_external_magnetic_field_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_MT_external_magnetic_field_x>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_y>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_z>[-+0-9.]+)", repeats = True)
+#         ])
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
     SM(r"\s*Spin treatment\s*:\s*(?P<x_exciting_spin_treatment>[-a-zA-Z\s*]+)",
