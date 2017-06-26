@@ -105,9 +105,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
             numkPointsPerSemIncr.append(0)
 
             for i in range(0,vertexNum-1):
-                print("i=",i)
                 numkPointsPerSegm = len(kBandSegm[i])
-                print("numkPointsPerSegm=",numkPointsPerSegm)
                 numkPointsPerSegmL.append(numkPointsPerSegm)
                 numkPointsPerSemIncr.append(numkPointsPerSemIncr[-1]+numkPointsPerSegmL[-1])
                 step[i].append((float(coordinate[i+1][0])-float(coordinate[i][0]))/(numkPointsPerSegm-1))
@@ -159,10 +157,6 @@ class BandHandler(xml.sax.handler.ContentHandler):
                             bandEnergiesBE[i][1][k].append(self.bandEnergies[1][j][i][k])
 #                            bandEnergiesBE[i][0][k].append(self.bandEnergies[0][i][j][k])
 #                            bandEnergiesBE[i][1][k].append(self.bandEnergies[1][i][j][k])
-                   print("i=",i)
-                   print("len(bandKpoints[i])=",len(bandKpoints[i]))
-                   print("numkPointsPerSegmL[i]=",numkPointsPerSegmL[i])
-                   print("len(bandEnergiesBE[i])=",len(bandEnergiesBE[i][0]),len(bandEnergiesBE[i][1]))
                    self.backend.addValue("band_k_points",bandKpoints[i])
                    self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
                    self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
