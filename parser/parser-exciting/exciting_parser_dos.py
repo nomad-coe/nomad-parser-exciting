@@ -1,6 +1,8 @@
 import xml.sax
 import logging
 import numpy as np
+from nomadcore.unit_conversion.unit_conversion import convert_unit_function
+from nomadcore.unit_conversion.unit_conversion import convert_unit
 
 class DosHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, spinTreat):
@@ -31,6 +33,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
 #        self.dosProjSectionGIndex = -1
 
     def startElement(self, name, attrs):
+        ev_per_joule = convert_unit(1, "eV", "J")
         if name == "totaldos":
             self.dosSectionGIndex = self.backend.openSection("section_dos")
             self.inDos = True
@@ -45,10 +48,10 @@ class DosHandler(xml.sax.handler.ContentHandler):
         elif name == "point":
             if self.inDos:
                 self.totDos.append(float(attrs.getValue('dos')))
-                self.energy.append(float(attrs.getValue('e')))
+                self.energy.append(ev_per_joule*float(attrs.getValue('e')))
             elif self.inDosProj:
                 self.dosProj.append(float(attrs.getValue('dos')))
-                self.energy.append(float(attrs.getValue('e')))
+                self.energy.append(ev_per_joule*float(attrs.getValue('e')))
         elif name == "diagram": 
             if not self.speciesrn: pass
             elif self.speciesrn [-1] == 1 and self.atom[-1] == 1:
@@ -95,6 +98,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
 #        print("self.dosProjSpin=",len(self.dosProjSpin))
 #        print("self.dosProjDummy2=",len(self.dosProjDummy2))
     def endElement(self, name):
+        ev_per_joule = convert_unit(1, "eV", "J")
         if name == 'totaldos':
             self.inDos = False
             if not self.spinTreat:
