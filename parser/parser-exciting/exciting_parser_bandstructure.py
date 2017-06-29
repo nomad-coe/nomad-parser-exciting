@@ -161,6 +161,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
                    self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
                    self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
                    self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
+#                   print("bandEnergiesBE[i]=",len(bandEnergiesBE[i][0]))
                    self.backend.addValue("band_energies",bandEnergiesBE[i])
                    self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
             else: #### check for spin polarized!!!!

@@ -20,6 +20,7 @@ class GWContext(object):
         self.spinTreat = None
         self.vertexDist = []
         self.vertexLabels = []
+        self.vertexNum = 0
 
     def initialize_values(self):
         """allows to reset values if the same superContext is used to parse different files"""
@@ -61,7 +62,10 @@ class GWContext(object):
                             self.vertexDist.append(float(s[0]))
                         elif float(s[0]) != self.vertexDist[-1]:
                             self.vertexDist.append(float(s[0]))
-                          
+#                print("vertexDist",self.vertexDist)     
+                self.vertexNum = len(self.vertexDist)-1
+#                print("vertexNum",self.vertexNum)
+     
         if os.path.exists(vertexLabGWFile):
             with open(vertexLabGWFile) as g:
                 while 1:
@@ -262,6 +266,7 @@ class GWContext(object):
 #                print("i=",i)
 #                print("len(bandGWBE[i])=",len(bandGWBE[i][0]))
                 bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
+#                print("bandGWBE[i]=",len(bandGWBE[i][0]))
                 backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
                 backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
@@ -316,6 +321,7 @@ class GWContext(object):
                             dist1[-1].append(float(s[0]))
 #                                kpoint[-1].append([float(s[2]),float(s[3]),float(s[4])])                        
                         numK = len(kappa[0][0])
+#                        print("numK=",numK)
                         for i in kappa[0][0]:
                             if kappa[0][0].count(i) > 1:
                                 kappa[0][0].remove(i)
@@ -327,14 +333,18 @@ class GWContext(object):
 #                numK = len(kappa[0][0])
 #                print("kappa=",numK)
 #                print("bandnergies=",numBand)
-                for i in range(1,numK):
+#                vertex = 0
+                for i in range(1,numK + self.vertexNum-1):
 #                    print("i=",i)
-#                    print("dist1[i-1]=",dist1[i-1])
-#                    print("dist1[i]=",dist1[i])
+#                    print("dist1[i-1]=",dist1[0][i-1])
+#                    print("dist1[i]=",dist1[0][i])
                     if dist1[0][i] == dist1[0][i-1]:
+#                        vertex +=1
+#                        print("vertex=",vertex)
 #                        pass   
                         Kindex.append(i)
-                Kindex.append(numK)
+#                print("vertex=",vertex)
+                Kindex.append(numK + self.vertexNum-1)
 #                        del dist1[i]
                 for i in range(0,len(Kindex)-1):
                     segmK.append(dist1[0][Kindex[i]:Kindex[i+1]])
@@ -342,6 +352,7 @@ class GWContext(object):
                 for i in range(0,len(segmK)):
 #                    print("i=",i)
 #                    print("segmK[i]=",segmK[i])
+#                    print("len(segmK)=",len(segmK))
                     segmLength.append(len(segmK[i]))
 #                    bandEnergiesSegm.append([])
                 for i in range(0,2):
@@ -349,6 +360,7 @@ class GWContext(object):
                     for j in range(0,numBand):
                          bandEnergiesSegm[i].append([])
                          for k in range (0,len(Kindex)-1):
+#                         for k in range (0,len(Kindex)):
 #                             print("l=",k)
 #                             print("len(Kindex)=",len(Kindex))
 #                             print("Kindex[l]=",Kindex[k])
@@ -378,6 +390,8 @@ class GWContext(object):
 #            print("bandGWBE=",bandGWBE)
             for i in range(0,len(Kindex)-1):
                 bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
+#                print("diomerda")
+#                print("bandGWBE[i]=",len(bandGWBE[i][0]))
                 backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
                 backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
