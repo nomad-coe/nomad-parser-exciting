@@ -56,8 +56,10 @@ class ExcitingParserContext(object):
   def onOpen_section_method(self, backend, gIndex, section):
     self.secMethodIndex = gIndex
 
+#    gwFile = os.path.join(dirPath,None)
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
+#    gwFile = os.path.join(dirPath,"GW_INFO.OUT")
 #    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
 ###
     if os.access(os.path.join(dirPath, "GW_INFO.OUT"), os.F_OK):
@@ -65,7 +67,7 @@ class ExcitingParserContext(object):
     elif os.access(os.path.join(dirPath, "GWINFO.OUT"), os.F_OK):
         gwFile = os.path.join(dirPath, "GWINFO.OUT")
     else:
-        pass
+        gwFile = os.path.join(dirPath,"GW_INFO.OUT")
 ###
     if os.path.exists(gwFile):
       subSuperContext = exciting_parser_gw.GWContext()
