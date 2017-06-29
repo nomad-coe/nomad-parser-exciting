@@ -58,7 +58,15 @@ class ExcitingParserContext(object):
 
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
-    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+#    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+###
+    if os.access(os.path.join(dirPath, "GW_INFO.OUT"), os.F_OK):
+        gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+    elif os.access(os.path.join(dirPath, "GWINFO.OUT"), os.F_OK):
+        gwFile = os.path.join(dirPath, "GWINFO.OUT")
+    else:
+        pass
+###
     if os.path.exists(gwFile):
       subSuperContext = exciting_parser_gw.GWContext()
       subParser = AncillaryParser(

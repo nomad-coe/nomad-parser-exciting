@@ -34,7 +34,13 @@ class GWContext(object):
     def onClose_x_exciting_section_GW_method(self, backend, gIndex, section):
 
         dirPath = os.path.dirname(self.parser.fIn.name)
-        eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
+        if os.access(os.path.join(dirPath, "EVALQP.DAT"), os.F_OK):
+            eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
+        elif os.access(os.path.join(dirPath, "EVALQP.TXT"), os.F_OK):
+            eigvalGWFile = os.path.join(dirPath, "EVALQP.TXT")
+        else:
+            pass
+#        eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
         dosGWFile = os.path.join(dirPath, "TDOS-QP.OUT")
         bandCarbGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
         bandBorGWFile = os.path.join(dirPath, "BAND-QP.OUT")
@@ -82,6 +88,7 @@ class GWContext(object):
         if os.path.exists(eigvalGWFile):
             eigvalGWGIndex = backend.openSection("x_exciting_section_GW_qp_eigenvalues")
             with open(eigvalGWFile) as g:
+#                print("ggggggggggg=",g)
                 qpGWKpoint=[]
                 Sx = [[],[]]
                 Sc = [[],[]]
@@ -252,6 +259,8 @@ class GWContext(object):
 
 #            print("bandGWBE=",bandGWBE)
             for i in range(0,len(Kindex)-1):
+#                print("i=",i)
+#                print("len(bandGWBE[i])=",len(bandGWBE[i][0]))
                 bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
                 backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
                 backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
@@ -260,6 +269,7 @@ class GWContext(object):
 #            backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
         if os.path.exists(bandBorGWFile) and not os.path.exists(bandCarbGWFile):
+#            print("QUI???")
             bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
 #            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
@@ -285,7 +295,7 @@ class GWContext(object):
                                 bandEnergies[i].append([])
                                 kappa[i].append([])
                             dist1.append([])
-#                            print("dist1",dist1)
+#                            print("bandEnergies[0]=",bandEnergies[0])
 #                            if not dist1:
 #                        elif s[0] == "#":
 #                            for i in range(0,2):
