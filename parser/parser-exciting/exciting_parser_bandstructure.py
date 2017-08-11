@@ -41,7 +41,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
         elif name == "vertex" and self.inBand:
             self.vertexCoord.append(attrs.getValue("coord"))
             label = attrs.getValue("label")
-            if label == "GAMMA":
+            if label == "Gamma":
                 self.vertexLabels.append('\u0393')
             else:
                 self.vertexLabels.append(label)
