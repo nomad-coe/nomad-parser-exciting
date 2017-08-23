@@ -127,7 +127,8 @@ class ExcitingParserContext(object):
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
 #    inputFile = os.path.join(dirPath, "input.xml")
-    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
+    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
+    gwFile = os.path.join(dirPath, "GWINFO.OUT")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
 
 #    if os.path.exists(inputFile):
@@ -139,7 +140,7 @@ class ExcitingParserContext(object):
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
-    if os.path.exists(gwFile):
+    if os.path.exists(gwFile) or os.path.exists(gw_File):
 #      with open(gwFile) as f:
       backend.addValue('electronic_structure_method', "G0W0")
 #        exciting_parser_gw.parseGW(f, backend, self.spinTreat)
