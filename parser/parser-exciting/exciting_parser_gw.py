@@ -8,7 +8,7 @@ from nomadcore.unit_conversion import unit_conversion
 import os, sys, json
 
 ################################################################
-# This is the subparser for the WIEN2k input file (.in2)
+# This is the subparser for the exciting GW output
 ################################################################
 
 
@@ -127,9 +127,9 @@ class GWContext(object):
                                 pass
                             else:
                                 for i in range(0,2):
-                                    Sx[i][-1].append(float(s[4]))
-                                    Sc[i][-1].append(float(s[5]))
-                                    qpE[i][-1].append(float(s[3]))
+                                    Sx[i][-1].append(fromH(float(s[4])))
+                                    Sc[i][-1].append(fromH(float(s[5])))
+                                    qpE[i][-1].append(fromH(float(s[3])))
                                     Znk[i][-1].append(float(s[9]))
         backend.addValue("x_exciting_GW_qp_eigenvalues_kpoints", qpGWKpoint)
         backend.addValue("x_exciting_GW_qp_number_of_eigenvalues", len(qpE[0]))
@@ -311,7 +311,7 @@ class GWContext(object):
                         elif len(s) > 0:
                             for i in range(0,2):
 #                                ene = fromH(float(s[6]))
-                                bandEnergies[i][-1].append(float(s[1]))
+                                bandEnergies[i][-1].append(fromH(float(s[1])))
                                 kappa[i][-1].append(float(s[0]))
 #                                bandEnergies[i][-1].append(fromH(float(s[1])))
 #                            if int(s[0]) == 1:
