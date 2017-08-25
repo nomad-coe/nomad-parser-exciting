@@ -359,7 +359,20 @@ class ExcitingParserContext(object):
 #      with open(gwFile) as fIn:
 #        subParser.parseFile(fIn)
 
+  def onClose_section_method(self, backend, gIndex, value):
+      if value["electronic_structure_method"][-1] == "G0W0":
+          gi = backend.openSection("section_method_to_method_refs")
+          backend.addValue("method_to_method_ref", (gIndex - 1))
+          backend.addValue("method_to_method_kind", 'starting_point')
+          backend.closeSection("section_method_to_method_refs", gi)
 
+          gi = backend.openSection("section_calculation_to_calculation_refs")
+          backend.addValue("calculation_to_calculation_ref", (self.CalculationGIndex - 1))
+          backend.addValue("calculation_to_calculation_kind", 'starting_point')
+          backend.closeSection("section_calculation_to_calculation_refs", gi)
+
+  def onOpen_section_single_configuration_calculation(self, backend, gIndex, value):
+      self.CalculationGIndex = gIndex
 
 
 mainFileDescription = \
