@@ -147,6 +147,7 @@ class GWContext(object):
 
         if os.path.exists(dosGWFile):
             dosGWGIndex = backend.openSection("x_exciting_section_GW_dos")
+            fromH = unit_conversion.convert_unit_function("hartree", "J")
             with open(dosGWFile) as g:
                 dosValues = [[],[]]
                 dosEnergies = []
@@ -155,7 +156,8 @@ class GWContext(object):
                     if not s: break
                     s = s.strip()
                     s = s.split()
-                    ene, value = float(s[0]), float(s[1])
+                    ene, value = fromH(float(s[0])), float(s[1])
+#                    ene, value = float(s[0]), float(s[1])
                     dosEnergies.append(ene)
                     if not self.spinTreat:
                         for i in range(0,2):
