@@ -32,7 +32,7 @@ class GWContext(object):
         self.parser = parser
         self.initialize_values()
 
-    def onClose_x_exciting_section_GW_method(self, backend, gIndex, section):
+    def onClose_x_exciting_section_GW(self, backend, gIndex, section):
 
         dirPath = os.path.dirname(self.parser.fIn.name)
         if os.access(os.path.join(dirPath, "EVALQP.DAT"), os.F_OK):
@@ -41,14 +41,39 @@ class GWContext(object):
             eigvalGWFile = os.path.join(dirPath, "EVALQP.TXT")
         else:
             pass
-#        eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
         dosGWFile = os.path.join(dirPath, "TDOS-QP.OUT")
         bandCarbGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
         bandBorGWFile = os.path.join(dirPath, "BAND-QP.OUT")
-#        bandGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
         vertexGWFile = os.path.join(dirPath, "BANDLINES.OUT")
         vertexLabGWFile = os.path.join(dirPath, "bandstructure.xml")
         selfCorGWFile = os.path.join(dirPath, "SELFC.DAT")
+        inputFile = os.path.join(dirPath, "input.xml")
+
+        if os.path.exists(inputFile):
+            selfGWSetGIndex = backend.openSection("x_exciting_section_GW_settings")
+            singularity = 'mpd'
+            actype = 'pade'
+            npol = 0
+            scrtype = "rpa"
+            with open(inputFile) as g:
+                while 1:
+                    s = g.readline()
+                    if not s: break
+                    s = s.strip()
+                    s = s.split('=')
+                    if s[0] == "singularity":
+                        freq_conv = s[1][1:-1]
+                    if s[0] == "actype":
+                        actype = s[1][1:-1]
+                    if s[0] == "npol":
+                        npol = s[1][1:-1]
+                    if s[0] == "scrtype":
+                        scrtype = s[1][1:-1]
+            backend.addValue("x_exciting_GW_self_energy_singularity_treatment", singularity)
+            backend.addValue("x_exciting_GW_self_energy_c_analytical_continuation", actype)
+            backend.addValue("x_exciting_GW_self_energy_c_number_of_poles", npol)
+            backend.addValue("x_exciting_GW_screened_Coulomb", scrtype)
+            backend.closeSection("x_exciting_section_GW_settings",selfGWSetGIndex)
 
         if os.path.exists(vertexGWFile):
             with open(vertexGWFile) as g:
@@ -62,9 +87,7 @@ class GWContext(object):
                             self.vertexDist.append(float(s[0]))
                         elif float(s[0]) != self.vertexDist[-1]:
                             self.vertexDist.append(float(s[0]))
-#                print("vertexDist",self.vertexDist)     
                 self.vertexNum = len(self.vertexDist)-1
-#                print("vertexNum",self.vertexNum)
      
         if os.path.exists(vertexLabGWFile):
             with open(vertexLabGWFile) as g:
@@ -77,22 +100,10 @@ class GWContext(object):
                         f = s[4].split("\"")
                         self.vertexLabels.append(f[1])
 
-        if os.path.exists(selfCorGWFile):
-            selfGWGIndex = backend.openSection("x_exciting_section_GW_self_energy")
-            with open(selfCorGWFile) as g:
-                while 1:
-                    s = g.readline()
-                    if not s: break
-                    s = s.strip()
-
-
-
-            backend.closeSection("x_exciting_section_GW_self_energy",selfGWGIndex)
-
         if os.path.exists(eigvalGWFile):
+            eigvalGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
             eigvalGWGIndex = backend.openSection("x_exciting_section_GW_qp_eigenvalues")
             with open(eigvalGWFile) as g:
-#                print("ggggggggggg=",g)
                 qpGWKpoint=[]
                 Sx = [[],[]]
                 Sc = [[],[]]
@@ -110,7 +121,6 @@ class GWContext(object):
                             Sc[i].append([])
                             qpE[i].append([])
                             Znk[i].append([])
-#                        x,y,z,weight = float(s.split()[3]),float(s.split()[4]),float(s.split()[5]),float(s.split()[6])
                         x,y,z = float(s.split()[3]),float(s.split()[4]),float(s.split()[5])
                         qpGWKpoint[-1].append(x)
                         qpGWKpoint[-1].append(y)
@@ -142,10 +152,11 @@ class GWContext(object):
         backend.addValue("x_exciting_GW_self_energy_x", Sx)
         backend.addValue("x_exciting_GW_self_energy_c", Sc)
         backend.closeSection("x_exciting_section_GW_self_energy",selfGWGIndex)
-
+        backend.closeSection("x_exciting_section_GW_output",eigvalGWOutGIndex)
 ####################DOS######################
 
         if os.path.exists(dosGWFile):
+            dosGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
             dosGWGIndex = backend.openSection("x_exciting_section_GW_dos")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
             with open(dosGWFile) as g:
@@ -157,7 +168,6 @@ class GWContext(object):
                     s = s.strip()
                     s = s.split()
                     ene, value = fromH(float(s[0])), float(s[1])
-#                    ene, value = float(s[0]), float(s[1])
                     dosEnergies.append(ene)
                     if not self.spinTreat:
                         for i in range(0,2):
@@ -168,12 +178,12 @@ class GWContext(object):
             backend.addValue("x_exciting_GW_dos_values", dosValues)
             backend.addValue("x_exciting_GW_number_of_dos_values", len(dosEnergies))
             backend.closeSection("x_exciting_section_GW_dos",dosGWGIndex)        
-
+            backend.closeSection("x_exciting_section_GW_output",dosGWOutGIndex)
 ##################BANDSTRUCTURE#####################
 
         if os.path.exists(bandCarbGWFile):
+            bandGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
             bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
-#            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
 
             with open(bandCarbGWFile) as g:
@@ -201,7 +211,6 @@ class GWContext(object):
                                 numK = int(s[3])          
                         elif len(s) > 0:
                             for i in range(0,2):
-#                                ene = fromH(float(s[6]))
                                 bandEnergies[i][-1].append(fromH(float(s[6])))
                             if int(s[0]) == 1:
                                 kpoint.append([])
@@ -213,48 +222,21 @@ class GWContext(object):
                 for i in range(0,2):
                     bandEnergies[i].pop()
 
-#                print("numBand=",numBand)
-#                print("numK=",numK)
-
                 for i in range(1,numK):
-#                    print("i=",i)
-#                    print("dist[i-1]=",dist[i-1])
-#                    print("dist[i]=",dist[i])
                     if dist[i] == dist[i-1]:
-#                        pass
                         Kindex.append(i)
                 Kindex.append(numK)
-#                        del dist[i]
                 for i in range(0,len(Kindex)-1): 
                     segmK.append(dist[Kindex[i]:Kindex[i+1]])
 
                 for i in range(0,len(segmK)):
-#                    print("i=",i)
-#                    print("segmK[i]=",segmK[i])
                     segmLength.append(len(segmK[i]))
-#                    bandEnergiesSegm.append([])
                 for i in range(0,2):
                     bandEnergiesSegm.append([])
                     for j in range(0,numBand):
                          bandEnergiesSegm[i].append([])
                          for k in range (0,len(Kindex)-1):
-#                             print("l=",k)
-#                             print("len(Kindex)=",len(Kindex))
-#                             print("Kindex[l]=",Kindex[k])
-#                             print("bandEnergies[Kindex[k]:Kindex[k+1]]=",bandEnergies[Kindex[k]:Kindex[k+1]])
                              bandEnergiesSegm[i][j].append(bandEnergies[i][j][Kindex[k]:Kindex[k+1]])
-#                    print("i=",i)
-#                    print("Kindex[i]=",Kindex[i])
-#                    del dist[Kindex[i]]
-
-#            print("bandEnergies=",bandEnergies)  
-#            print("self.vertexDist=",self.vertexDist)
-#            print("dist=",dist)
-#            print("len(dist)=",len(dist))
-#            print("segmK=",segmK)
-#            print("segmLength=",segmLength)
-#            print("bandEnergiesSegm=",bandEnergiesSegm)
-#            print("Kindex=",Kindex)
             for i in range(0,len(Kindex)-1):
                 bandGWBE.append([])
                 for j in range(0,2):
@@ -264,28 +246,21 @@ class GWContext(object):
                         for l in range(0,numBand):
                             bandGWBE[i][j][-1].append(bandEnergiesSegm[j][l][i][k])
 
-#            print("bandGWBE=",bandGWBE)
             for i in range(0,len(Kindex)-1):
-#                print("i=",i)
-#                print("len(bandGWBE[i])=",len(bandGWBE[i][0]))
                 bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
-#                print("bandGWBE[i]=",len(bandGWBE[i][0]))
                 backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
                 backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
             backend.closeSection("x_exciting_section_GW_k_band",bandGWGIndex)
-#            backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
+            backend.closeSection("x_exciting_section_GW_output",bandGWOutGIndex)
 
         if os.path.exists(bandBorGWFile) and not os.path.exists(bandCarbGWFile):
-#            print("QUI???")
+            bandGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
             bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
-#            bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
-#            fromH = 1.0
             with open(bandBorGWFile) as g:
                 bandEnergies = [[[]],[[]]]
                 kappa = [[[]],[[]]]
-#                kpoint = []
                 dist1 = [[]]
                 Kindex = [0]
                 segmK = []
@@ -303,28 +278,12 @@ class GWContext(object):
                                 bandEnergies[i].append([])
                                 kappa[i].append([])
                             dist1.append([])
-#                            print("bandEnergies[0]=",bandEnergies[0])
-#                            if not dist1:
-#                        elif s[0] == "#":
-#                            for i in range(0,2):
-#                                bandEnergies[i].append([])
-#                                numBand = int(s[2])
-#                                numK = int(s[3])
                         elif len(s) > 0:
                             for i in range(0,2):
-#                                ene = fromH(float(s[6]))
                                 bandEnergies[i][-1].append(fromH(float(s[1])))
                                 kappa[i][-1].append(float(s[0]))
-#                                bandEnergies[i][-1].append(fromH(float(s[1])))
-#                            if int(s[0]) == 1:
-#                            if not dist1:
-#                                print("s[0]=",s[0])
-#                                print("dist1=",dist1)
-#                                kpoint.append([])
                             dist1[-1].append(float(s[0]))
-#                                kpoint[-1].append([float(s[2]),float(s[3]),float(s[4])])                        
                         numK = len(kappa[0][0])
-#                        print("numK=",numK)
                         for i in kappa[0][0]:
                             if kappa[0][0].count(i) > 1:
                                 kappa[0][0].remove(i)
@@ -333,54 +292,21 @@ class GWContext(object):
                 for i in range(0,2):
                     bandEnergies[i].pop()
                 numBand = len(bandEnergies[0])
-#                numK = len(kappa[0][0])
-#                print("kappa=",numK)
-#                print("bandnergies=",numBand)
-#                vertex = 0
                 for i in range(1,numK + self.vertexNum-1):
-#                    print("i=",i)
-#                    print("dist1[i-1]=",dist1[0][i-1])
-#                    print("dist1[i]=",dist1[0][i])
                     if dist1[0][i] == dist1[0][i-1]:
-#                        vertex +=1
-#                        print("vertex=",vertex)
-#                        pass   
                         Kindex.append(i)
-#                print("vertex=",vertex)
                 Kindex.append(numK + self.vertexNum-1)
-#                        del dist1[i]
                 for i in range(0,len(Kindex)-1):
                     segmK.append(dist1[0][Kindex[i]:Kindex[i+1]])
 
                 for i in range(0,len(segmK)):
-#                    print("i=",i)
-#                    print("segmK[i]=",segmK[i])
-#                    print("len(segmK)=",len(segmK))
                     segmLength.append(len(segmK[i]))
-#                    bandEnergiesSegm.append([])
                 for i in range(0,2):
                     bandEnergiesSegm.append([])
                     for j in range(0,numBand):
                          bandEnergiesSegm[i].append([])
                          for k in range (0,len(Kindex)-1):
-#                         for k in range (0,len(Kindex)):
-#                             print("l=",k)
-#                             print("len(Kindex)=",len(Kindex))
-#                             print("Kindex[l]=",Kindex[k])
-#                             print("bandEnergies[Kindex[k]:Kindex[k+1]]=",bandEnergies[Kindex[k]:Kindex[k+1]])
                              bandEnergiesSegm[i][j].append(bandEnergies[i][j][Kindex[k]:Kindex[k+1]])
-#                    print("i=",i)
-#                    print("Kindex[i]=",Kindex[i])
-#                    del dist1[Kindex[i]]
-
-#            print("bandEnergies=",bandEnergies)  
-#            print("self.vertexDist=",self.vertexDist)
-#            print("dist1=",dist1)
-#            print("len(dist1)=",len(dist1))
-#            print("segmK=",segmK)
-#            print("segmLength=",segmLength)
-#            print("bandEnergiesSegm=",bandEnergiesSegm)
-#            print("Kindex=",Kindex)
             for i in range(0,len(Kindex)-1):
                 bandGWBE.append([])
                 for j in range(0,2):
@@ -390,37 +316,23 @@ class GWContext(object):
                         for l in range(0,numBand):
                             bandGWBE[i][j][-1].append(bandEnergiesSegm[j][l][i][k])
 
-#            print("bandGWBE=",bandGWBE)
             for i in range(0,len(Kindex)-1):
                 bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
-#                print("diomerda")
-#                print("bandGWBE[i]=",len(bandGWBE[i][0]))
                 backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
                 backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
 
             backend.closeSection("x_exciting_section_GW_k_band",bandGWGIndex)
-#            backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
+            backend.closeSection("x_exciting_section_GW_output",bandGWOutGIndex)
 
 def buildGWMatchers():
     return SM(
     name = 'root',
     weak = True,
     startReStr = "\*\s*GW input parameters\s*\*",
-        sections = ["x_exciting_section_GW", "x_exciting_section_GW_method"],
+        sections = ["x_exciting_section_GW","x_exciting_section_GW_settings"],
     subMatchers = [
-#        SM(name = 'GWinput',
-#          startReStr = r"(?P<x_wien2k_system_nameIn>.*)"),
-#          startReStr = "\s*GW taskname:\s*"
-        SM(r"\s*(?P<x_exciting_GW_type>[-a-zA-Z0-9]+)\s*-\s*[-a-zA-Z0-9]+\s*run") #,
-#        SM(r"\s*(?P<x_exciting_GW_type>[-a-zA-Z0-9]+)\s*-\s*[-a-zA-Z0-9]+\s*run"),
-#        SM(r"\s*(?P<x_wien2k_in2c_switch>[A-Z]+)\s*.*"),
-#        SM(r"\s*(?P<x_wien2k_in2c_emin>[-+0-9.]+)\s*(?P<x_wien2k_in2c_ne>[-+0-9.]+)\s*(?P<x_wien2k_in2c_espermin>[-+0-9.]+)\s*(?P<x_wien2k_in2c_esper0>[-+0-9.]+)\s*.*"),
-#        SM(r"\s*(?P<x_wien2k_smearing_kind>[A-Z]+)\s*\s*(?P<x_wien2k_smearing_width__rydberg>[-+0-9.]+)\s*.*"),
-#        SM(r"\s*(?P<x_wien2k_in2c_gmax>[-+0-9.]+)\s*GMAX")
-#        SM(r"\s*GW taskname\:\s*")
-     
+        SM(r"\s*Number of empty states \(GW\):\s*(?P<x_exciting_GW_polarizability_empty_states>[0-9]+)\s*")
     ])
-
 
 def get_cachingLevelForMetaName(metaInfoEnv, CachingLvl):
     """Sets the caching level for the metadata.

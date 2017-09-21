@@ -6,19 +6,8 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw #, exciting_parser_gw_bor
 from ase import Atoms
-
-#def elasticCheck(path):
-#  print("path=", path)
-#  pat = path.split("/")
-#  if pat[-1] == "INFO.OUT":
-#    print("NO", pat)
-#  else:
-#    print("YES", pat)
-#
-#elasticCheck(self.path)    
-#      continue
 
 class ExcitingParserContext(object):
 
@@ -29,16 +18,6 @@ class ExcitingParserContext(object):
     self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
 
   def startedParsing(self, path, parser):
-#    print("path=", path)
-#    pat = path.split("/")
-#    print("pat=", pat)
-#    if pat[-1] == "INFO.OUT":
-#      pass
-#    else:
-#      pass
-#    self.initialize_values()
-#    self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
-#    self.initialize_values()
     self.parser=parser
     self.initialize_values()
     self.atom_pos = []
@@ -56,20 +35,21 @@ class ExcitingParserContext(object):
   def onOpen_section_method(self, backend, gIndex, section):
     self.secMethodIndex = gIndex
 
-#    gwFile = os.path.join(dirPath,None)
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
-#    gwFile = os.path.join(dirPath,"GW_INFO.OUT")
-#    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
-###
-    if os.access(os.path.join(dirPath, "GW_INFO.OUT"), os.F_OK):
-        gwFile = os.path.join(dirPath, "GW_INFO.OUT")
-    elif os.access(os.path.join(dirPath, "GWINFO.OUT"), os.F_OK):
-        gwFile = os.path.join(dirPath, "GWINFO.OUT")
-    else:
-        gwFile = os.path.join(dirPath,"GW_INFO.OUT")
-###
-    if os.path.exists(gwFile):
+    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
+    gwFile = os.path.join(dirPath, "GWINFO.OUT")
+
+    if os.path.exists(gw_File):
+      subSuperContext = exciting_parser_gw.GWContext()
+      subParser = AncillaryParser(
+        fileDescription = exciting_parser_gw.buildGWMatchers(),
+        parser = self.parser,
+        cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
+        superContext = subSuperContext)
+      with open(gw_File) as fIn:
+        subParser.parseFile(fIn)
+    elif os.path.exists(gwFile):
       subSuperContext = exciting_parser_gw.GWContext()
       subParser = AncillaryParser(
         fileDescription = exciting_parser_gw.buildGWMatchers(),
@@ -87,7 +67,6 @@ class ExcitingParserContext(object):
             [latticeX[1],latticeY[1],latticeZ[1]],
             [latticeX[2],latticeY[2],latticeZ[2]]]
     self.sim_cell = cell
-#    print("self.sim_cell=",self.sim_cell)
     backend.addValue("simulation_cell", cell)
 
   def onClose_x_exciting_section_reciprocal_lattice_vectors(self, backend, gIndex, section):
@@ -126,14 +105,10 @@ class ExcitingParserContext(object):
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
-#    inputFile = os.path.join(dirPath, "input.xml")
     gw_File = os.path.join(dirPath, "GW_INFO.OUT")
     gwFile = os.path.join(dirPath, "GWINFO.OUT")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
 
-#    if os.path.exists(inputFile):
-#      with open(inputFile) as f:
-#        exciting_parser_input.parseInput(f, backend)
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend, self.spinTreat)
@@ -141,9 +116,7 @@ class ExcitingParserContext(object):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
     if os.path.exists(gwFile) or os.path.exists(gw_File):
-#      with open(gwFile) as f:
       backend.addValue('electronic_structure_method', "G0W0")
-#        exciting_parser_gw.parseGW(f, backend, self.spinTreat)
     else:
         backend.addValue('electronic_structure_method', "DFT")
     if os.path.exists(eigvalFile):
@@ -184,8 +157,6 @@ class ExcitingParserContext(object):
               eigvalOccSpin[0].append(eigvalOcc[i][0:nstsv])
               eigvalValSpin[1].append(eigvalVal[i][0:nstsv])
               eigvalOccSpin[1].append(eigvalOcc[i][0:nstsv])
-#            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
-#            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
             backend.addValue("eigenvalues_values", eigvalValSpin)
             backend.addValue("eigenvalues_occupation", eigvalOccSpin)
           else:
@@ -197,9 +168,6 @@ class ExcitingParserContext(object):
             backend.addValue("eigenvalues_values", eigvalValSpin)
             backend.addValue("eigenvalues_occupation", eigvalOccSpin)
           backend.addValue("eigenvalues_kpoints", eigvalKpoint)
-#            backend.addArrayValues("eigenvalues_values", np.asarray(eigvalValSpin))
-#            backend.addArrayValues("eigenvalues_occupation", np.asarray(eigvalOccSpin))
-#          backend.addArrayValues("eigenvalues_kpoints", np.asarray(eigvalKpoint))
           backend.closeSection("section_eigenvalues",eigvalGIndex)
 
 ##########################Parsing Fermi surface##################
@@ -272,28 +240,13 @@ class ExcitingParserContext(object):
 
     self.secSystemDescriptionIndex = gIndex
 
-#    atoms = Atoms()
-
     if self.atom_pos and self.cell_format[0] == 'cartesian':
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
-#       print("self.atom_pos=",np.asarray(self.atom_pos))
     elif self.atom_pos and self.cell_format[0] == 'lattice':
-#       i = 1
        atoms = Atoms(self.atom_labels, self.atom_pos, cell=[(1, 0, 0),(0, 1, 0),(0, 0, 1)])
        atoms.set_cell(self.sim_cell, scale_atoms=True)
-#       print("position_lattice",atoms.get_positions()[1])
-#       while i < len(self.atom_labels):
-#          
-#          atoms = Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
-#       print("attomi=",atoms)
        self.atom_pos = atoms.get_positions()
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
-#       print("self.atom_pos_lattice=",np.asarray(self.atom_pos))
-#       i = 0
-#       while i < len(self.atom_labels):
-#       print("self.atom_pos=",np.asarray(self.atom_pos))       
-#      pass
-#    s##sarrayelf.atom_pos = []
     if self.atom_labels is not None:
        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
@@ -303,7 +256,6 @@ class ExcitingParserContext(object):
     smearing_internal_map = {
         "Gaussian": ['gaussian'],
         "Methfessel-Paxton": ['methfessel-paxton'],
-#        "Methfessel-Paxton 2": ['methfessel-paxton'],
         "Fermi-Dirac": ['fermi'],
         "Extended": ['tetrahedra']
         }
@@ -315,49 +267,17 @@ class ExcitingParserContext(object):
     fromB = unit_conversion.convert_unit_function("bohr", "m")
     formt = section['x_exciting_atom_position_format']
     self.cell_format = formt
-#    print("formt=",formt)
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
-#    print("ddd",pos)
     pl = [len(comp) for comp in pos]
-#    print("pelle=",pl)
     natom = pl[0]
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
     for i in range(natom):
       if formt[0] == 'cartesian':
-#        print("cartesian?")
         self.atom_pos.append([fromB(pos[0][i]), fromB(pos[1][i]), fromB(pos[2][i])])
-#        print("self.atom_pos=",self.atom_pos)
       else:
-#        atoms = ase.Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
-#        print("atoms.get_positions()=",atoms.get_positions())
-#        print("self.sim_cell=",self.sim_cell)
-#        print("lattice")
         self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
-#    if formt[0] == 'lattice':
-#        
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
-#    if formt[0] == 'lattice':
-#      atoms = ase.Atoms(self.atom_labels, self.atom_pos,self.sim_cell)
-#      print("atoms.get_positions()=",atoms.get_positions())
-#      print("self.atom_labels=", self.atom_labels)
-
-
-#  def onClose_section_run(self, backend, gIndex, section):
-#    self.secGWIndex = gIndex
-#
-#    mainFile = self.parser.fIn.fIn.name
-#    dirPath = os.path.dirname(self.parser.fIn.name)
-#    gwFile = os.path.join(dirPath, "GW_INFO.OUT")
-#    if os.path.exists(gwFile):
-#      subSuperContext = exciting_parser_gw.GWContext()
-#      subParser = AncillaryParser(
-#        fileDescription = exciting_parser_gw.buildGWMatchers(),
-#        parser = self.parser,
-#        cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
-#        superContext = subSuperContext)
-#      with open(gwFile) as fIn:
-#        subParser.parseFile(fIn)
 
   def onClose_section_method(self, backend, gIndex, value):
       if value["electronic_structure_method"][-1] == "G0W0":
