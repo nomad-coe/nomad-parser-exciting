@@ -55,23 +55,69 @@ class GWContext(object):
             actype = 'pade'
             npol = 0
             scrtype = "rpa"
+            snempty = 0
+            coreflag = "all"
+            fgrid = "gaule2"
+            k1 = 0
+            k2 = 0
+#            f1 = 0
+#            f2 = 0
+            s1 = 0
+            s2 = 0
+#            m1 = 0
+#            m2 = 0
+#            bc1 = 0
+#            bc2 = 0
+#            sc1 = 0
+#            sc2 = 0
             with open(inputFile) as g:
+                i = 0
                 while 1:
                     s = g.readline()
+                    i += 1
                     if not s: break
                     s = s.strip()
                     s = s.split('=')
-                    if s[0] == "singularity":
+                    if s[0] == "<gw": k1 = i
+                    if s[0] == "</gw>": k2 = i
+#                    if s[0] == "<freqgrid": f1 = i
+#                    if s[0] == "</freqgrid>": f2 = i
+                    if s[0] == "<selfenergy": s1 = i
+                    if s[0] == "</selfenergy>": s2 = i
+#                    if s[0] == "<mixbasis": m1 = i
+#                    if s[0] == "</mixbasis>": m2 = i
+#                    if s[0] == "<barecoul": bc1 = i
+#                    if s[0] == "</barecoul>": bc2 = i
+#                    if s[0] == "<scrcoul": sc1 = i
+#                    if s[0] == "</scrcoul>": sc2 = i
+            with open(inputFile) as g:
+                i = 0
+                while 1:
+                    s = g.readline()
+                    i += 1
+                    if not s: break
+                    s = s.strip()
+                    s = s.split('=')
+                    if (s[0] == "coreflag") and (i >= k1):
+                        coreflag = s[1][1:-1]
+                    if (s[0] == "singularity") and (i >= k1):
                         freq_conv = s[1][1:-1]
-                    if s[0] == "actype":
+                    if (s[0] == "actype") and (i >= k1):
                         actype = s[1][1:-1]
-                    if s[0] == "npol":
+                    if (s[0] == "npol") and (i >= k1):
                         npol = s[1][1:-1]
-                    if s[0] == "scrtype":
+                    if (s[0] == "scrtype") and (i >= k1):
                         scrtype = s[1][1:-1]
+                    if (s[0] == "nempty") and (i >= s1) and (i <= s2):
+                        snempty = s[1][1:-1]
+                    if (s[0] == "fgrid") and (i >= k1):
+                        fgrid = s[1][1:-1]
+            backend.addValue("x_exciting_GW_frequency_grid_type", fgrid)
+            backend.addValue("x_exciting_GW_self_energy_c_empty_states", int(snempty))
+            backend.addValue("x_exciting_GW_core_treatment", coreflag)
             backend.addValue("x_exciting_GW_self_energy_singularity_treatment", singularity)
             backend.addValue("x_exciting_GW_self_energy_c_analytical_continuation", actype)
-            backend.addValue("x_exciting_GW_self_energy_c_number_of_poles", npol)
+            backend.addValue("x_exciting_GW_self_energy_c_number_of_poles", int(npol))
             backend.addValue("x_exciting_GW_screened_Coulomb", scrtype)
             backend.closeSection("x_exciting_section_GW_settings",selfGWSetGIndex)
 
