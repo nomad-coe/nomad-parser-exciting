@@ -8,6 +8,7 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw #, exciting_parser_gw_bor
 from ase import Atoms
+import logging
 
 class ExcitingParserContext(object):
 
@@ -24,40 +25,43 @@ class ExcitingParserContext(object):
     self.atom_labels = []
     self.secMethodIndex = None  
     self.secSystemIndex = None
-    self.secGWIndex = None 
+    self.secSingleConfIndex = None
     self.spinTreat = None
     self.sim_cell = []
     self.cell_format = ''
+    self.secRunIndex = None
 
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
 
+  def onOpen_section_single_configuration_calculation(self, backend, gIndex, section):
+    if self.secSingleConfIndex is None:
+      self.secSingleConfIndex = gIndex
+
   def onOpen_section_method(self, backend, gIndex, section):
-    self.secMethodIndex = gIndex
+    if self.secMethodIndex is None:
+      self.secMethodIndex = gIndex
+
+  def onClose_section_run(self, backend, gIndex, section):
+#    logging.error("BASE onClose_section_run")
+    self.secRunIndex = gIndex
 
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
     gw_File = os.path.join(dirPath, "GW_INFO.OUT")
     gwFile = os.path.join(dirPath, "GWINFO.OUT")
 
-    if os.path.exists(gw_File):
-      subSuperContext = exciting_parser_gw.GWContext()
-      subParser = AncillaryParser(
-        fileDescription = exciting_parser_gw.buildGWMatchers(),
-        parser = self.parser,
-        cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
-        superContext = subSuperContext)
-      with open(gw_File) as fIn:
-        subParser.parseFile(fIn)
-    elif os.path.exists(gwFile):
-      subSuperContext = exciting_parser_gw.GWContext()
-      subParser = AncillaryParser(
-        fileDescription = exciting_parser_gw.buildGWMatchers(),
-        parser = self.parser,
-        cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
-        superContext = subSuperContext)
-      with open(gwFile) as fIn:
-        subParser.parseFile(fIn)
+    for gFile in [gw_File, gwFile]:
+      if os.path.exists(gFile):
+#        logging.error("Starting GW")
+        gwParser = exciting_parser_gw.GWParser()
+        gwParser.parseGW(gFile, backend,
+                         dftMethodSectionGindex = self.secMethodIndex,
+                         dftSingleConfigurationGindex = self.secSingleConfIndex)
+
+#        logging.error("Finished GW")
+        break
+#    logging.error("done BASE onClose_section_run")
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -99,15 +103,15 @@ class ExcitingParserContext(object):
       backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+#    logging.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
-    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
-    gwFile = os.path.join(dirPath, "GWINFO.OUT")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
+#    logging.error("done BASE onClose_section_single_configuration_calculation")
 
     if os.path.exists(dosFile):
       with open(dosFile) as f:
@@ -115,10 +119,6 @@ class ExcitingParserContext(object):
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
-    if os.path.exists(gwFile) or os.path.exists(gw_File):
-      backend.addValue('electronic_structure_method', "G0W0")
-    else:
-        backend.addValue('electronic_structure_method', "DFT")
     if os.path.exists(eigvalFile):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
@@ -279,21 +279,10 @@ class ExcitingParserContext(object):
         self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
 
+
   def onClose_section_method(self, backend, gIndex, value):
-      if value["electronic_structure_method"][-1] == "G0W0":
-          gi = backend.openSection("section_method_to_method_refs")
-          backend.addValue("method_to_method_ref", (gIndex - 1))
-          backend.addValue("method_to_method_kind", 'starting_point')
-          backend.closeSection("section_method_to_method_refs", gi)
-
-          gi = backend.openSection("section_calculation_to_calculation_refs")
-          backend.addValue("calculation_to_calculation_ref", (self.CalculationGIndex - 1))
-          backend.addValue("calculation_to_calculation_kind", 'starting_point')
-          backend.closeSection("section_calculation_to_calculation_refs", gi)
-
-  def onOpen_section_single_configuration_calculation(self, backend, gIndex, value):
-      self.CalculationGIndex = gIndex
-
+    if gIndex == self.secMethodIndex:
+      backend.addValue('electronic_structure_method', "DFT")
 
 mainFileDescription = \
     SM(name = "root matcher",

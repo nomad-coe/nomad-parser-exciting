@@ -34,8 +34,9 @@ class DosHandler(xml.sax.handler.ContentHandler):
 #        self.dosProjSectionGIndex = -1
 
     def startElement(self, name, attrs):
+        ha_per_joule = convert_unit(1, "hartree", "J")
+        bohr_cube_to_m_cube = convert_unit(1, "bohr^3", "m^3")
         fromH = unit_conversion.convert_unit_function("hartree", "J")
-#        ev_per_joule = convert_unit(1, "eV", "J")
         if name == "totaldos":
             self.dosSectionGIndex = self.backend.openSection("section_dos")
             self.inDos = True
@@ -49,11 +50,11 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.inDosProj = True
         elif name == "point":
             if self.inDos:
-                self.totDos.append(float(attrs.getValue('dos')))
+                self.totDos.append(ha_per_joule*bohr_cube_to_m_cube*float(attrs.getValue('dos')))
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
             elif self.inDosProj:
-                self.dosProj.append(float(attrs.getValue('dos')))
+                self.dosProj.append(ha_per_joule*bohr_cube_to_m_cube*float(attrs.getValue('dos')))
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
         elif name == "diagram": 
@@ -102,7 +103,6 @@ class DosHandler(xml.sax.handler.ContentHandler):
 #        print("self.dosProjSpin=",len(self.dosProjSpin))
 #        print("self.dosProjDummy2=",len(self.dosProjDummy2))
     def endElement(self, name):
-#        ev_per_joule = convert_unit(1, "eV", "J")
         if name == 'totaldos':
             self.inDos = False
             if not self.spinTreat:

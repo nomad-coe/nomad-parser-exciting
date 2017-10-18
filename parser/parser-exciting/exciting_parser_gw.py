@@ -5,36 +5,32 @@ from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json
+import os, sys, json, logging
 
 ################################################################
 # This is the subparser for the exciting GW output
 ################################################################
 
 
-class GWContext(object):
+class GWParser(object):
     """context for wien2k In2 parser"""
 
     def __init__(self):
-        self.parser = None
         self.spinTreat = None
         self.vertexDist = []
         self.vertexLabels = []
         self.vertexNum = 0
 
-    def initialize_values(self):
-        """allows to reset values if the same superContext is used to parse different files"""
-        pass
+    def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex):
+#        logging.error("GW onClose_section_single_configuration_calculation")
+        backend.openNonOverlappingSection("section_single_configuration_calculation")
+        if dftSingleConfigurationGindex is not None:
+            backend.openNonOverlappingSection("section_calculation_to_calculation_refs")
+            backend.addValue("calculation_to_calculation_ref", dftSingleConfigurationGindex)
+            backend.addValue("calculation_to_calculation_kind", "starting_point")
+            backend.closeNonOverlappingSection("section_calculation_to_calculation_refs")
 
-    def startedParsing(self, path, parser):
-  
-        """called when parsing starts"""
-        self.parser = parser
-        self.initialize_values()
-
-    def onClose_x_exciting_section_GW(self, backend, gIndex, section):
-
-        dirPath = os.path.dirname(self.parser.fIn.name)
+        dirPath = os.path.dirname(gwFile)
         if os.access(os.path.join(dirPath, "EVALQP.DAT"), os.F_OK):
             eigvalGWFile = os.path.join(dirPath, "EVALQP.DAT")
         elif os.access(os.path.join(dirPath, "EVALQP.TXT"), os.F_OK):
@@ -50,7 +46,13 @@ class GWContext(object):
         inputFile = os.path.join(dirPath, "input.xml")
 
         if os.path.exists(inputFile):
-            selfGWSetGIndex = backend.openSection("x_exciting_section_GW_settings")
+            selfGWSetGIndex = backend.openSection("section_method")
+            backend.addValue('electronic_structure_method', "G0W0")
+            if dftMethodSectionGindex is not None:
+                m2mGindex = backend.openNonOverlappingSection("section_method_to_method_refs")
+                backend.addValue("method_to_method_ref", dftMethodSectionGindex)
+                backend.addValue("method_to_method_kind", "starting_point")
+                backend.closeNonOverlappingSection("section_method_to_method_refs")
             singularity = 'mpd'
             actype = 'pade'
             npol = 0
@@ -60,16 +62,16 @@ class GWContext(object):
             fgrid = "gaule2"
             k1 = 0
             k2 = 0
-#            f1 = 0
-#            f2 = 0
+            #            f1 = 0
+            #            f2 = 0
             s1 = 0
             s2 = 0
-#            m1 = 0
-#            m2 = 0
-#            bc1 = 0
-#            bc2 = 0
-#            sc1 = 0
-#            sc2 = 0
+            #            m1 = 0
+            #            m2 = 0
+            #            bc1 = 0
+            #            bc2 = 0
+            #            sc1 = 0
+            #            sc2 = 0
             with open(inputFile) as g:
                 i = 0
                 while 1:
@@ -80,16 +82,16 @@ class GWContext(object):
                     s = s.split('=')
                     if s[0] == "<gw": k1 = i
                     if s[0] == "</gw>": k2 = i
-#                    if s[0] == "<freqgrid": f1 = i
-#                    if s[0] == "</freqgrid>": f2 = i
+                    #                    if s[0] == "<freqgrid": f1 = i
+                    #                    if s[0] == "</freqgrid>": f2 = i
                     if s[0] == "<selfenergy": s1 = i
                     if s[0] == "</selfenergy>": s2 = i
-#                    if s[0] == "<mixbasis": m1 = i
-#                    if s[0] == "</mixbasis>": m2 = i
-#                    if s[0] == "<barecoul": bc1 = i
-#                    if s[0] == "</barecoul>": bc2 = i
-#                    if s[0] == "<scrcoul": sc1 = i
-#                    if s[0] == "</scrcoul>": sc2 = i
+                    #                    if s[0] == "<mixbasis": m1 = i
+                    #                    if s[0] == "</mixbasis>": m2 = i
+                    #                    if s[0] == "<barecoul": bc1 = i
+                    #                    if s[0] == "</barecoul>": bc2 = i
+                    #                    if s[0] == "<scrcoul": sc1 = i
+                    #                    if s[0] == "</scrcoul>": sc2 = i
             with open(inputFile) as g:
                 i = 0
                 while 1:
@@ -119,7 +121,7 @@ class GWContext(object):
             backend.addValue("x_exciting_GW_self_energy_c_analytical_continuation", actype)
             backend.addValue("x_exciting_GW_self_energy_c_number_of_poles", int(npol))
             backend.addValue("x_exciting_GW_screened_Coulomb", scrtype)
-            backend.closeSection("x_exciting_section_GW_settings",selfGWSetGIndex)
+            backend.closeSection("section_method",selfGWSetGIndex)
 
         if os.path.exists(vertexGWFile):
             with open(vertexGWFile) as g:
@@ -134,7 +136,7 @@ class GWContext(object):
                         elif float(s[0]) != self.vertexDist[-1]:
                             self.vertexDist.append(float(s[0]))
                 self.vertexNum = len(self.vertexDist)-1
-     
+
         if os.path.exists(vertexLabGWFile):
             with open(vertexLabGWFile) as g:
                 while 1:
@@ -147,8 +149,7 @@ class GWContext(object):
                         self.vertexLabels.append(f[1])
 
         if os.path.exists(eigvalGWFile):
-            eigvalGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
-            eigvalGWGIndex = backend.openSection("x_exciting_section_GW_qp_eigenvalues")
+            eigvalGWGIndex = backend.openSection("section_eigenvalues")
             with open(eigvalGWFile) as g:
                 qpGWKpoint=[]
                 Sx = [[],[]]
@@ -187,23 +188,21 @@ class GWContext(object):
                                     Sc[i][-1].append(fromH(float(s[5])))
                                     qpE[i][-1].append(fromH(float(s[3])))
                                     Znk[i][-1].append(float(s[9]))
-        backend.addValue("x_exciting_GW_qp_eigenvalues_kpoints", qpGWKpoint)
-        backend.addValue("x_exciting_GW_qp_number_of_eigenvalues", len(qpE[0]))
-        backend.addValue("x_exciting_GW_qp_number_of_eigenvalues_kpoints", len(qpGWKpoint))
-        backend.addValue("x_exciting_GW_qp_eigenvalues_values", qpE)
+        backend.addValue("eigenvalues_kpoints", qpGWKpoint)
+        backend.addValue("number_of_eigenvalues", len(qpE[0]))
+        backend.addValue("number_of_eigenvalues_kpoints", len(qpGWKpoint))
+        backend.addValue("eigenvalues_values", qpE)
         backend.addValue("x_exciting_GW_qp_linearization_prefactor", Znk)
-        backend.closeSection("x_exciting_section_GW_qp_eigenvalues",eigvalGWGIndex)
-
-        selfGWGIndex = backend.openSection("x_exciting_section_GW_self_energy")
+        backend.closeSection("section_eigenvalues",eigvalGWGIndex)
         backend.addValue("x_exciting_GW_self_energy_x", Sx)
         backend.addValue("x_exciting_GW_self_energy_c", Sc)
-        backend.closeSection("x_exciting_section_GW_self_energy",selfGWGIndex)
-        backend.closeSection("x_exciting_section_GW_output",eigvalGWOutGIndex)
-####################DOS######################
+
+        ####################DOS######################
 
         if os.path.exists(dosGWFile):
-            dosGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
-            dosGWGIndex = backend.openSection("x_exciting_section_GW_dos")
+            dosGWGIndex = backend.openSection("section_dos")
+            ha_per_joule = unit_conversion.convert_unit(1, "hartree", "J")
+            bohr_cube_to_m_cube = unit_conversion.convert_unit(1, "bohr^3", "m^3")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
             with open(dosGWFile) as g:
                 dosValues = [[],[]]
@@ -213,23 +212,22 @@ class GWContext(object):
                     if not s: break
                     s = s.strip()
                     s = s.split()
-                    ene, value = fromH(float(s[0])), float(s[1])
+                    ene, value = fromH(float(s[0])), ha_per_joule*bohr_cube_to_m_cube*float(s[1])
                     dosEnergies.append(ene)
                     if not self.spinTreat:
                         for i in range(0,2):
                             dosValues[i].append(value)
                     else:
                         pass
-            backend.addValue("x_exciting_GW_dos_energies", dosEnergies)
-            backend.addValue("x_exciting_GW_dos_values", dosValues)
-            backend.addValue("x_exciting_GW_number_of_dos_values", len(dosEnergies))
-            backend.closeSection("x_exciting_section_GW_dos",dosGWGIndex)        
-            backend.closeSection("x_exciting_section_GW_output",dosGWOutGIndex)
-##################BANDSTRUCTURE#####################
+            backend.addValue("dos_energies", dosEnergies)
+            backend.addValue("dos_values", dosValues)
+            backend.addValue("number_of_dos_values", len(dosEnergies))
+            backend.closeSection("section_dos",dosGWGIndex)        
+
+        ##################BANDSTRUCTURE#####################
 
         if os.path.exists(bandCarbGWFile):
-            bandGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
-            bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
+            bandGWGIndex = backend.openSection("section_k_band")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
 
             with open(bandCarbGWFile) as g:
@@ -293,16 +291,14 @@ class GWContext(object):
                             bandGWBE[i][j][-1].append(bandEnergiesSegm[j][l][i][k])
 
             for i in range(0,len(Kindex)-1):
-                bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
-                backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
-                backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
+                bandGWSegmGIndex = backend.openSection("section_k_band_segment")
+                backend.addValue("band_energies", bandGWBE[i])
+                backend.closeSection("section_k_band_segment",bandGWSegmGIndex)
 
-            backend.closeSection("x_exciting_section_GW_k_band",bandGWGIndex)
-            backend.closeSection("x_exciting_section_GW_output",bandGWOutGIndex)
+            backend.closeSection("section_k_band",bandGWGIndex)
 
         if os.path.exists(bandBorGWFile) and not os.path.exists(bandCarbGWFile):
-            bandGWOutGIndex = backend.openSection("x_exciting_section_GW_output")
-            bandGWGIndex = backend.openSection("x_exciting_section_GW_k_band")
+            bandGWGIndex = backend.openSection("section_k_band")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
             with open(bandBorGWFile) as g:
                 bandEnergies = [[[]],[[]]]
@@ -363,38 +359,11 @@ class GWContext(object):
                             bandGWBE[i][j][-1].append(bandEnergiesSegm[j][l][i][k])
 
             for i in range(0,len(Kindex)-1):
-                bandGWSegmGIndex = backend.openSection("x_exciting_section_GW_k_band_segment")
-                backend.addValue("x_exciting_GW_band_energies", bandGWBE[i])
-                backend.closeSection("x_exciting_section_GW_k_band_segment",bandGWSegmGIndex)
+                bandGWSegmGIndex = backend.openSection("section_k_band_segment")
+                backend.addValue("band_energies", bandGWBE[i])
+                backend.closeSection("section_k_band_segment",bandGWSegmGIndex)
 
-            backend.closeSection("x_exciting_section_GW_k_band",bandGWGIndex)
-            backend.closeSection("x_exciting_section_GW_output",bandGWOutGIndex)
-
-def buildGWMatchers():
-    return SM(
-    name = 'root',
-    weak = True,
-    startReStr = "\*\s*GW input parameters\s*\*",
-        sections = ["x_exciting_section_GW","x_exciting_section_GW_settings"],
-    subMatchers = [
-        SM(r"\s*Number of empty states \(GW\):\s*(?P<x_exciting_GW_polarizability_empty_states>[0-9]+)\s*")
-    ])
-
-def get_cachingLevelForMetaName(metaInfoEnv, CachingLvl):
-    """Sets the caching level for the metadata.
-
-    Args:
-        metaInfoEnv: metadata which is an object of the class InfoKindEnv in nomadcore.local_meta_info.py.
-        CachingLvl: Sets the CachingLevel for the sections k_band, run, and single_configuration_calculation.
-            This allows to run the parser without opening new sections.
-
-    Returns:
-        Dictionary with metaname as key and caching level as value.
-    """
-    # manually adjust caching of metadata
-    cachingLevelForMetaName = {
-                               'section_run': CachingLvl,
-                               'section_method': CachingLvl
-                              }
-    return cachingLevelForMetaName
+            backend.closeSection("section_k_band",bandGWGIndex)
+        backend.closeNonOverlappingSection("section_single_configuration_calculation")
+#        logging.error("done GW onClose_section_single_configuration_calculation")
 
