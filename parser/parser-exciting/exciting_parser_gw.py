@@ -21,8 +21,10 @@ class GWParser(object):
         self.vertexLabels = []
         self.vertexNum = 0
 
-    def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex):
+    def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex, xcName, unitCellVol):
 #        logging.error("GW onClose_section_single_configuration_calculation")
+#        print("xcNameGW=", xcName)
+        self.unitCellVol = float(unitCellVol[0])
         backend.openNonOverlappingSection("section_single_configuration_calculation")
         if dftSingleConfigurationGindex is not None:
             backend.openNonOverlappingSection("section_calculation_to_calculation_refs")
@@ -48,6 +50,7 @@ class GWParser(object):
         if os.path.exists(inputFile):
             selfGWSetGIndex = backend.openSection("section_method")
             backend.addValue('electronic_structure_method', "G0W0")
+            backend.addValue('x_exciting_gw_starting_point', xcName)
             if dftMethodSectionGindex is not None:
                 m2mGindex = backend.openNonOverlappingSection("section_method_to_method_refs")
                 backend.addValue("method_to_method_ref", dftMethodSectionGindex)
@@ -58,20 +61,25 @@ class GWParser(object):
             npol = 0
             scrtype = "rpa"
             snempty = 0
+            pnempty = 0
             coreflag = "all"
             fgrid = "gaule2"
+            lmaxmb = 3
+            epsmb = 0.0001
+#            gmb = 1.0
+            sciavtype = "isotropic"
             k1 = 0
             k2 = 0
             #            f1 = 0
             #            f2 = 0
             s1 = 0
             s2 = 0
-            #            m1 = 0
-            #            m2 = 0
-            #            bc1 = 0
-            #            bc2 = 0
-            #            sc1 = 0
-            #            sc2 = 0
+            m1 = 0
+            m2 = 0
+            bc1 = 0
+            bc2 = 0
+            sc1 = 0
+            sc2 = 0
             with open(inputFile) as g:
                 i = 0
                 while 1:
@@ -86,12 +94,12 @@ class GWParser(object):
                     #                    if s[0] == "</freqgrid>": f2 = i
                     if s[0] == "<selfenergy": s1 = i
                     if s[0] == "</selfenergy>": s2 = i
-                    #                    if s[0] == "<mixbasis": m1 = i
-                    #                    if s[0] == "</mixbasis>": m2 = i
-                    #                    if s[0] == "<barecoul": bc1 = i
-                    #                    if s[0] == "</barecoul>": bc2 = i
-                    #                    if s[0] == "<scrcoul": sc1 = i
-                    #                    if s[0] == "</scrcoul>": sc2 = i
+                    if s[0] == "<mixbasis": m1 = i
+                    if s[0] == "</mixbasis>": m2 = i
+                    if s[0] == "<barecoul": bc1 = i
+                    if s[0] == "</barecoul>": bc2 = i
+                    if s[0] == "<scrcoul": sc1 = i
+                    if s[0] == "</scrcoul>": sc2 = i
             with open(inputFile) as g:
                 i = 0
                 while 1:
@@ -108,19 +116,35 @@ class GWParser(object):
                         actype = s[1][1:-1]
                     if (s[0] == "npol") and (i >= k1):
                         npol = s[1][1:-1]
+                    if (s[0] == "nempty") and (i >= k1) and (i <= k2):
+                        pnempty = s[1][1:-1]
                     if (s[0] == "scrtype") and (i >= k1):
                         scrtype = s[1][1:-1]
                     if (s[0] == "nempty") and (i >= s1) and (i <= s2):
                         snempty = s[1][1:-1]
+                    if (s[0] == "nempty") and (i >= m1) and (i <= m2):
+                        lmaxmb = s[1][1:-1]
+                    if (s[0] == "nempty") and (i >= m1) and (i <= m2):
+                        epsmb = s[1][1:-1]
+#                    if (s[0] == "nempty") and (i >= m1) and (i <= m2):
+#                        gmb = s[1][1:-1]
+                    if (s[0] == "sciavtype") and (i >= sc11) and (i <= sc2):
+                        sciavtype = s[1][1:-1]
                     if (s[0] == "fgrid") and (i >= k1):
                         fgrid = s[1][1:-1]
-            backend.addValue("x_exciting_GW_frequency_grid_type", fgrid)
-            backend.addValue("x_exciting_GW_self_energy_c_empty_states", int(snempty))
-            backend.addValue("x_exciting_GW_core_treatment", coreflag)
-            backend.addValue("x_exciting_GW_self_energy_singularity_treatment", singularity)
-            backend.addValue("x_exciting_GW_self_energy_c_analytical_continuation", actype)
-            backend.addValue("x_exciting_GW_self_energy_c_number_of_poles", int(npol))
-            backend.addValue("x_exciting_GW_screened_Coulomb", scrtype)
+            backend.addValue("x_exciting_gw_frequency_grid_type", fgrid)
+            backend.addValue("x_exciting_gw_self_energy_c_empty_states", int(snempty))
+            backend.addValue("x_exciting_gw_core_treatment", coreflag)
+            backend.addValue("x_exciting_gw_self_energy_singularity_treatment", singularity)
+            backend.addValue("x_exciting_gw_self_energy_c_analytical_continuation", actype)
+            backend.addValue("x_exciting_gw_self_energy_c_number_of_poles", int(npol))
+            backend.addValue("x_exciting_gw_screened_Coulomb", scrtype)
+            backend.addValue("x_exciting_gw_polarizability_empty_states", int(pnempty))
+            backend.addValue("x_exciting_gw_basis_set", "mixed")
+            backend.addValue("x_exciting_gw_mixed_basis_lmax", lmaxmb)
+            backend.addValue("x_exciting_gw_mixed_basis_tolerance", epsmb)
+#            backend.addValue("x_exciting_gw_mixed_basis_gmax", gmb)
+            backend.addValue("x_exciting_gw_screened_coulomb_volume_average",sciavtype)
             backend.closeSection("section_method",selfGWSetGIndex)
 
         if os.path.exists(vertexGWFile):
@@ -192,17 +216,17 @@ class GWParser(object):
         backend.addValue("number_of_eigenvalues", len(qpE[0]))
         backend.addValue("number_of_eigenvalues_kpoints", len(qpGWKpoint))
         backend.addValue("eigenvalues_values", qpE)
-        backend.addValue("x_exciting_GW_qp_linearization_prefactor", Znk)
+        backend.addValue("x_exciting_gw_qp_linearization_prefactor", Znk)
         backend.closeSection("section_eigenvalues",eigvalGWGIndex)
-        backend.addValue("x_exciting_GW_self_energy_x", Sx)
-        backend.addValue("x_exciting_GW_self_energy_c", Sc)
+        backend.addValue("x_exciting_gw_self_energy_x", Sx)
+        backend.addValue("x_exciting_gw_self_energy_c", Sc)
 
         ####################DOS######################
 
         if os.path.exists(dosGWFile):
             dosGWGIndex = backend.openSection("section_dos")
             ha_per_joule = unit_conversion.convert_unit(1, "hartree", "J")
-            bohr_cube_to_m_cube = unit_conversion.convert_unit(1, "bohr^3", "m^3")
+#            bohr_cube_to_m_cube = unit_conversion.convert_unit(1, "bohr^3", "m^3")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
             with open(dosGWFile) as g:
                 dosValues = [[],[]]
@@ -212,7 +236,7 @@ class GWParser(object):
                     if not s: break
                     s = s.strip()
                     s = s.split()
-                    ene, value = fromH(float(s[0])), ha_per_joule*bohr_cube_to_m_cube*float(s[1])
+                    ene, value = fromH(float(s[0])), ha_per_joule*self.unitCellVol*float(s[1])
                     dosEnergies.append(ene)
                     if not self.spinTreat:
                         for i in range(0,2):

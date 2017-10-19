@@ -6,7 +6,7 @@ from nomadcore.unit_conversion.unit_conversion import convert_unit
 from nomadcore.unit_conversion import unit_conversion
 
 class DosHandler(xml.sax.handler.ContentHandler):
-    def __init__(self, backend, spinTreat):
+    def __init__(self, backend, spinTreat, unitCellVol):
         self.backend = backend
         self.dosSectionGIndex = -1
         self.inDos = False
@@ -24,6 +24,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
         self.numDosVal = 0
         self.dosProjDummy = []
         self.dosProjDummy2 = []
+        self.unitCellVol = float(unitCellVol[0])
 
     def endDocument(self):
 #        self.inDos = False
@@ -32,10 +33,13 @@ class DosHandler(xml.sax.handler.ContentHandler):
 #        self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
         self.dosSectionGIndex = -1
 #        self.dosProjSectionGIndex = -1
+#        print("self.unitCellVol=",self.unitCellVol)
 
     def startElement(self, name, attrs):
         ha_per_joule = convert_unit(1, "hartree", "J")
-        bohr_cube_to_m_cube = convert_unit(1, "bohr^3", "m^3")
+#        bohr_cube_to_m_cube = convert_unit(1, "bohr^3", "m^3")
+#        print("bohr_cube_to_m_cube = ", bohr_cube_to_m_cube )
+#        print("ha_per_joule= ",ha_per_joule)
         fromH = unit_conversion.convert_unit_function("hartree", "J")
         if name == "totaldos":
             self.dosSectionGIndex = self.backend.openSection("section_dos")
@@ -50,11 +54,11 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.inDosProj = True
         elif name == "point":
             if self.inDos:
-                self.totDos.append(ha_per_joule*bohr_cube_to_m_cube*float(attrs.getValue('dos')))
+                self.totDos.append(ha_per_joule*self.unitCellVol*float(attrs.getValue('dos')))
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
             elif self.inDosProj:
-                self.dosProj.append(ha_per_joule*bohr_cube_to_m_cube*float(attrs.getValue('dos')))
+                self.dosProj.append(ha_per_joule*self.unitCellVol*float(attrs.getValue('dos')))
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
         elif name == "diagram": 
@@ -154,8 +158,8 @@ class DosHandler(xml.sax.handler.ContentHandler):
     def characters(self, content):
         pass
 
-def parseDos(inF, backend, spinTreat):
-    handler = DosHandler(backend, spinTreat)
+def parseDos(inF, backend, spinTreat, unitCellVol):
+    handler = DosHandler(backend, spinTreat, unitCellVol)
     logging.error("will parse")
     xml.sax.parse(inF, handler)
     logging.error("did parse")

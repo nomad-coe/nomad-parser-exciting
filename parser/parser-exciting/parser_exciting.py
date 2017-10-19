@@ -30,6 +30,8 @@ class ExcitingParserContext(object):
     self.sim_cell = []
     self.cell_format = ''
     self.secRunIndex = None
+    self.unit_cell_vol = 0
+    self.xcName = None
 
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
@@ -50,14 +52,16 @@ class ExcitingParserContext(object):
     dirPath = os.path.dirname(self.parser.fIn.name)
     gw_File = os.path.join(dirPath, "GW_INFO.OUT")
     gwFile = os.path.join(dirPath, "GWINFO.OUT")
-
+#    print("xcName= ",self.xcName)
     for gFile in [gw_File, gwFile]:
       if os.path.exists(gFile):
 #        logging.error("Starting GW")
         gwParser = exciting_parser_gw.GWParser()
         gwParser.parseGW(gFile, backend,
                          dftMethodSectionGindex = self.secMethodIndex,
-                         dftSingleConfigurationGindex = self.secSingleConfIndex)
+                         dftSingleConfigurationGindex = self.secSingleConfIndex,
+                         xcName = self.xcName,
+                         unitCellVol = self.unit_cell_vol)
 
 #        logging.error("Finished GW")
         break
@@ -74,6 +78,8 @@ class ExcitingParserContext(object):
     backend.addValue("simulation_cell", cell)
 
   def onClose_x_exciting_section_reciprocal_lattice_vectors(self, backend, gIndex, section):
+#    self.unit_cell_vol = section["x_exciting_unit_cell_volume"]
+#    print("self.unit_cell_vol= ",self.unit_cell_vol)
     recLatticeX = section["x_exciting_geometry_reciprocal_lattice_vector_x"]
     recLatticeY = section["x_exciting_geometry_reciprocal_lattice_vector_y"]
     recLatticeZ = section["x_exciting_geometry_reciprocal_lattice_vector_z"]
@@ -84,6 +90,7 @@ class ExcitingParserContext(object):
 
   def onClose_x_exciting_section_xc(self, backend, gIndex, section):
     xcNr = section["x_exciting_xc_functional"][0]
+#    print("xcNr= ",xcNr)
     xc_internal_map = {
         2: ['LDA_C_PZ', 'LDA_X_PZ'],
         3: ['LDA_C_PW', 'LDA_X_PZ'],
@@ -98,6 +105,8 @@ class ExcitingParserContext(object):
         406: ['HYB_GGA_XC_PBEH']
         }
     for xcName in xc_internal_map[xcNr]:
+      self.xcName = xcName
+#      print("xcName= ",self.xcName)
       gi = backend.openSection("section_XC_functionals")
       backend.addValue("XC_functional_name", xcName)
       backend.closeSection("section_XC_functionals", gi)
@@ -115,7 +124,7 @@ class ExcitingParserContext(object):
 
     if os.path.exists(dosFile):
       with open(dosFile) as f:
-        exciting_parser_dos.parseDos(f, backend, self.spinTreat)
+        exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol)
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
@@ -236,6 +245,8 @@ class ExcitingParserContext(object):
 
   def onClose_section_system(self, backend, gIndex, section):
 
+    self.unit_cell_vol = section["x_exciting_unit_cell_volume"]
+#    print("self.unit_cell_vol= ",self.unit_cell_vol)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
 
     self.secSystemDescriptionIndex = gIndex
