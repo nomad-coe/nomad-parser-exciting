@@ -21,9 +21,11 @@ class GWParser(object):
         self.vertexLabels = []
         self.vertexNum = 0
 
-    def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex, xcName, unitCellVol):
+    def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex, xcName, unitCellVol,gmaxvr):
 #        logging.error("GW onClose_section_single_configuration_calculation")
 #        print("xcNameGW=", xcName)
+        self.gmaxvr = float(gmaxvr[0])
+#        print("gkmax= ",self.gmaxvr)
         self.unitCellVol = float(unitCellVol[0])
         backend.openNonOverlappingSection("section_single_configuration_calculation")
         if dftSingleConfigurationGindex is not None:
@@ -50,7 +52,7 @@ class GWParser(object):
         if os.path.exists(inputFile):
             selfGWSetGIndex = backend.openSection("section_method")
             backend.addValue('electronic_structure_method', "G0W0")
-            backend.addValue('x_exciting_gw_starting_point', xcName)
+            backend.addValue('gw_starting_point', xcName)
             if dftMethodSectionGindex is not None:
                 m2mGindex = backend.openNonOverlappingSection("section_method_to_method_refs")
                 backend.addValue("method_to_method_ref", dftMethodSectionGindex)
@@ -66,8 +68,13 @@ class GWParser(object):
             fgrid = "gaule2"
             lmaxmb = 3
             epsmb = 0.0001
-#            gmb = 1.0
+            gmb = 1.0
             sciavtype = "isotropic"
+            cutofftype = "none"
+            pwm = 2.0
+            ngridq = [2,2,2]
+            freqmax = 1.0
+            nomeg = 16
             k1 = 0
             k2 = 0
             #            f1 = 0
@@ -90,8 +97,8 @@ class GWParser(object):
                     s = s.split('=')
                     if s[0] == "<gw": k1 = i
                     if s[0] == "</gw>": k2 = i
-                    #                    if s[0] == "<freqgrid": f1 = i
-                    #                    if s[0] == "</freqgrid>": f2 = i
+                    if s[0] == "<freqgrid": f1 = i
+                    if s[0] == "</freqgrid>": f2 = i
                     if s[0] == "<selfenergy": s1 = i
                     if s[0] == "</selfenergy>": s2 = i
                     if s[0] == "<mixbasis": m1 = i
@@ -100,6 +107,8 @@ class GWParser(object):
                     if s[0] == "</barecoul>": bc2 = i
                     if s[0] == "<scrcoul": sc1 = i
                     if s[0] == "</scrcoul>": sc2 = i
+#                    print("m1= ",m1)
+#                    print("m2= ",m2)
             with open(inputFile) as g:
                 i = 0
                 while 1:
@@ -108,43 +117,105 @@ class GWParser(object):
                     if not s: break
                     s = s.strip()
                     s = s.split('=')
-                    if (s[0] == "coreflag") and (i >= k1):
+                    if (s[0] == "coreflag") and (i >= k1) and (i < (k2-1)):
                         coreflag = s[1][1:-1]
-                    if (s[0] == "singularity") and (i >= k1):
+                    elif (s[0] == "coreflag") and (i == (k2-1)):
+                        coreflag = s[1][1:-2]
+                    if (s[0] == "singularity") and (i >= k1) and (i < (k2-1)):
                         freq_conv = s[1][1:-1]
-                    if (s[0] == "actype") and (i >= k1):
+                    elif (s[0] == "singularity") and (i == (k2-1)):
+                        freq_conv = s[1][1:-2]
+                    if (s[0] == "actype") and (i >= k1) and (i < (k2-1)):
                         actype = s[1][1:-1]
-                    if (s[0] == "npol") and (i >= k1):
-                        npol = s[1][1:-1]
-                    if (s[0] == "nempty") and (i >= k1) and (i <= k2):
-                        pnempty = s[1][1:-1]
-                    if (s[0] == "scrtype") and (i >= k1):
+                    elif (s[0] == "actype") and (i == (k2-1)):
+                        actype = s[1][1:-2]
+                    if (s[0] == "ngridq") and (i >= k1) and (i < (k2-1)):
+                        dummy = s[1].split('"')
+                        dummy1 = dummy[1].split()
+                        for j in range(0,3):
+                            ngridq[j] = int(dummy1[j])
+                    elif (s[0] == "ngrid") and (i == (k2-1)):
+                        dummy = s[1].split('"')
+                        dummy1 = dummy[1].split()
+                        for j in range(0,3):
+                            ngridq[j] = int(dummy1[j])
+                    if (s[0] == "npol") and (i >= k1) and (i < (k2-1)):
+                        npol = int(s[1][1:-1])
+                    elif (s[0] == "npol") and (i == (k2-1)):
+                        npol = int(s[1][1:-2])
+                    if (s[0] == "nempty") and (i >= k1) and (i < (k2-1)):
+                        pnempty = int(s[1][1:-1])
+                    elif (s[0] == "nempty") and (i == (k2-1)):
+                        pnempty = int(s[1][1:-2])
+                    if (s[0] == "scrtype") and (i >= k1) and (i < (k2-1)):
                         scrtype = s[1][1:-1]
-                    if (s[0] == "nempty") and (i >= s1) and (i <= s2):
-                        snempty = s[1][1:-1]
-                    if (s[0] == "nempty") and (i >= m1) and (i <= m2):
-                        lmaxmb = s[1][1:-1]
-                    if (s[0] == "nempty") and (i >= m1) and (i <= m2):
-                        epsmb = s[1][1:-1]
-#                    if (s[0] == "nempty") and (i >= m1) and (i <= m2):
-#                        gmb = s[1][1:-1]
-                    if (s[0] == "sciavtype") and (i >= sc11) and (i <= sc2):
+                    elif (s[0] == "scrtype") and (i == (k2-1)):
+                        scrtype = s[1][1:-2]
+                    if (s[0] == "nempty") and (i >= s1) and (i < (s2-1)):
+                        snempty = int(s[1][1:-1])
+                    elif (s[0] == "nempty") and (i == (s2-1)):
+                        snempty = int(s[1][1:-2])
+                    if (s[0] == "freqmax") and (i >= f1) and (i < (f2-1)):
+                        freqmax = float(s[1][1:-1])
+                    elif (s[0] == "freqmax") and (i == (f2-1)):
+                        freqmax = float(s[1][1:-2])
+                    if (s[0] == "nomeg") and (i >= f1) and (i < (f2-1)):
+                        nomeg = int(s[1][1:-1])
+                    elif (s[0] == "nomeg") and (i == (f2-1)):
+                        nomeg = int(s[1][1:-2])
+                    if (s[0] == "lmaxmb") and (i >= m1) and (i < (m2-1)):
+                        lmaxmb = int(s[1][1:-1])
+                    elif (s[0] == "lmaxmb") and (i == (m2-1)):
+                        lmaxmb = int(s[1][1:-2])
+                    if (s[0] == "epsmb") and (i >= m1) and (i < (m2-1)):
+                        epsmb = float(s[1][1:-1])
+                    elif (s[0] == "epsmb") and (i == (m2-1)):
+                        epsmb = float(s[1][1:-2])
+                    if (s[0] == "gmb") and (i >= m1) and (i < (m2-1)):
+                        gmb = float(s[1][1:-1])
+                    elif (s[0] == "gmb") and (i == (m2-1)):
+                        gmb = float(s[1][1:-2])
+                    if (s[0] == "sciavtype") and (i >= sc1) and (i < (sc2-1)):
                         sciavtype = s[1][1:-1]
-                    if (s[0] == "fgrid") and (i >= k1):
+                    elif (s[0] == "sciavtype") and (i == (sc2-1)):
+                        sciavtype = s[1][1:-2]
+                    if (s[0] == "fgrid") and (i >= k1) and (i < (k2-1)):
                         fgrid = s[1][1:-1]
-            backend.addValue("x_exciting_gw_frequency_grid_type", fgrid)
-            backend.addValue("x_exciting_gw_self_energy_c_empty_states", int(snempty))
-            backend.addValue("x_exciting_gw_core_treatment", coreflag)
-            backend.addValue("x_exciting_gw_self_energy_singularity_treatment", singularity)
-            backend.addValue("x_exciting_gw_self_energy_c_analytical_continuation", actype)
-            backend.addValue("x_exciting_gw_self_energy_c_number_of_poles", int(npol))
-            backend.addValue("x_exciting_gw_screened_Coulomb", scrtype)
-            backend.addValue("x_exciting_gw_polarizability_empty_states", int(pnempty))
-            backend.addValue("x_exciting_gw_basis_set", "mixed")
-            backend.addValue("x_exciting_gw_mixed_basis_lmax", lmaxmb)
-            backend.addValue("x_exciting_gw_mixed_basis_tolerance", epsmb)
-#            backend.addValue("x_exciting_gw_mixed_basis_gmax", gmb)
-            backend.addValue("x_exciting_gw_screened_coulomb_volume_average",sciavtype)
+                    elif (s[0] == "fgrid") and (i == (k2-1)):
+                        fgrid = s[1][1:-2]
+                    if (s[0] == "pwm") and (i >= bc1) and (i < (bc2-1)):
+                        pwm = float(s[1][1:-1])
+                    elif (s[0] == "pwm") and (i == (bc2-1)):
+                        pwm = float(s[1][1:-2])
+                    if (s[0] == "cutofftype") and (i >= bc1) and (i < (bc2-1)):
+                        cutofftype = s[1][1:-1]
+                    elif (s[0] == "cutofftype") and (i == (bc2-1)):
+                        cutofftype = s[1][1:-2]
+#            gmb = gmb*self.gmaxvr
+#            pwm = pwm*gmb*self.gmaxvr
+#            print("gmb= ",type(gmb))
+#            print("pwm= ", type(pwm))
+#            print("self.gmaxvr= ",type(self.gmaxvr))            
+            backend.addValue("gw_frequency_grid_type", fgrid)
+            backend.addValue("gw_self_energy_c_number_of_empty_states", int(snempty))
+            backend.addValue("gw_core_treatment", coreflag)
+            backend.addValue("gw_self_energy_singularity_treatment", singularity)
+            backend.addValue("gw_self_energy_c_analytical_continuation", actype)
+            backend.addValue("gw_self_energy_c_number_of_poles", int(npol))
+            backend.addValue("gw_screened_Coulomb", scrtype)
+            backend.addValue("gw_polarizability_number_of_empty_states", int(pnempty))
+            backend.addValue("gw_basis_set", "mixed")
+            backend.addValue("gw_mixed_basis_lmax", lmaxmb)
+            backend.addValue("gw_mixed_basis_tolerance", epsmb)
+            backend.addValue("gw_mixed_basis_gmax", gmb*self.gmaxvr)
+            backend.addValue("gw_screened_coulomb_volume_average",sciavtype)
+            backend.addValue("gw_bare_coulomb_gmax", pwm*gmb*self.gmaxvr)
+            backend.addValue("gw_ngridq", ngridq)
+            backend.addValue("gw_bare_coulomb_cutofftype", cutofftype)
+            backend.addValue("gw_max_frequency", freqmax)
+            backend.addValue("gw_number_of_frequencies", nomeg)
+            backend.addValue("gw_qp_equation_treatment", "linearization")
+#    backend.addArrayValues
             backend.closeSection("section_method",selfGWSetGIndex)
 
         if os.path.exists(vertexGWFile):
@@ -176,6 +247,7 @@ class GWParser(object):
             eigvalGWGIndex = backend.openSection("section_eigenvalues")
             with open(eigvalGWFile) as g:
                 qpGWKpoint=[]
+                Vxc = [[],[]]
                 Sx = [[],[]]
                 Sc = [[],[]]
                 qpE = [[],[]]
@@ -188,6 +260,7 @@ class GWParser(object):
                     if "k-point" in s.split():
                         qpGWKpoint.append([])
                         for i in range(0,2):
+                            Vxc[i].append([])
                             Sx[i].append([])
                             Sc[i].append([])
                             qpE[i].append([])
@@ -212,14 +285,16 @@ class GWParser(object):
                                     Sc[i][-1].append(fromH(float(s[5])))
                                     qpE[i][-1].append(fromH(float(s[3])))
                                     Znk[i][-1].append(float(s[9]))
+                                    Vxc[i][-1].append(fromH(float(s[6])))
         backend.addValue("eigenvalues_kpoints", qpGWKpoint)
         backend.addValue("number_of_eigenvalues", len(qpE[0]))
         backend.addValue("number_of_eigenvalues_kpoints", len(qpGWKpoint))
         backend.addValue("eigenvalues_values", qpE)
-        backend.addValue("x_exciting_gw_qp_linearization_prefactor", Znk)
+        backend.addValue("gw_qp_linearization_prefactor", Znk)
         backend.closeSection("section_eigenvalues",eigvalGWGIndex)
-        backend.addValue("x_exciting_gw_self_energy_x", Sx)
-        backend.addValue("x_exciting_gw_self_energy_c", Sc)
+        backend.addValue("gw_self_energy_x", Sx)
+        backend.addValue("gw_self_energy_c", Sc)
+        backend.addValue("gw_xc_potential", Vxc)
 
         ####################DOS######################
 

@@ -32,6 +32,7 @@ class ExcitingParserContext(object):
     self.secRunIndex = None
     self.unit_cell_vol = 0
     self.xcName = None
+    self.gmaxvr = 0
 
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
@@ -61,7 +62,8 @@ class ExcitingParserContext(object):
                          dftMethodSectionGindex = self.secMethodIndex,
                          dftSingleConfigurationGindex = self.secSingleConfIndex,
                          xcName = self.xcName,
-                         unitCellVol = self.unit_cell_vol)
+                         unitCellVol = self.unit_cell_vol,
+                         gmaxvr = self.gmaxvr)
 
 #        logging.error("Finished GW")
         break
@@ -247,6 +249,8 @@ class ExcitingParserContext(object):
 
     self.unit_cell_vol = section["x_exciting_unit_cell_volume"]
 #    print("self.unit_cell_vol= ",self.unit_cell_vol)
+    self.gmaxvr = section["x_exciting_gmaxvr"]
+#    print("gkmax= ", self.gkmax)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
 
     self.secSystemDescriptionIndex = gIndex
