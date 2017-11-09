@@ -6,7 +6,7 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw #, exciting_parser_gw_bor
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw #, exciting_parser_input
 from ase import Atoms
 import logging
 
@@ -122,6 +122,7 @@ class ExcitingParserContext(object):
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
+#    inputFile = os.path.join(dirPath, "input.xml")
 #    logging.error("done BASE onClose_section_single_configuration_calculation")
 
     if os.path.exists(dosFile):
@@ -270,8 +271,9 @@ class ExcitingParserContext(object):
  
     smearing_internal_map = {
         "Gaussian": ['gaussian'],
-        "Methfessel-Paxton": ['methfessel-paxton'],
-        "Fermi-Dirac": ['fermi'],
+        "Methfessel-Paxton 1": ['methfessel-paxton'],
+        "Methfessel-Paxton 2": ['methfessel-paxton'],
+        "Fermi Dirac": ['fermi'],
         "Extended": ['tetrahedra']
         }
 
