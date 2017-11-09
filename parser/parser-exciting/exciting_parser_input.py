@@ -65,7 +65,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
     def startElement(self, name, attrs):
         fromH = unit_conversion.convert_unit_function("hartree", "J")
         if name == "gw":
-            self.inputSectionGIndex = self.backend.openSection("section_system")
+#            self.inputSectionGIndex = self.backend.openSection("section_system")
             self.inGWInput = True
             try:
                 self.coreflag = attrs.getValue('coreflag')
