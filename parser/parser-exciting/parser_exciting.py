@@ -271,9 +271,8 @@ class ExcitingParserContext(object):
  
     smearing_internal_map = {
         "Gaussian": ['gaussian'],
-        "Methfessel-Paxton 1": ['methfessel-paxton'],
-        "Methfessel-Paxton 2": ['methfessel-paxton'],
-        "Fermi Dirac": ['fermi'],
+        "Methfessel-Paxton": ['methfessel-paxton'],
+        "Fermi-Dirac": ['fermi'],
         "Extended": ['tetrahedra']
         }
 

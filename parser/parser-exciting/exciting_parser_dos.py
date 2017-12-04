@@ -54,11 +54,11 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.inDosProj = True
         elif name == "point":
             if self.inDos:
-                self.totDos.append(ha_per_joule*float(attrs.getValue('dos')))
+                self.totDos.append(float(attrs.getValue('dos'))/ha_per_joule)
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
             elif self.inDosProj:
-                self.dosProj.append(ha_per_joule*float(attrs.getValue('dos')))
+                self.dosProj.append(float(attrs.getValue('dos'))/ha_per_joule)
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
         elif name == "diagram": 
