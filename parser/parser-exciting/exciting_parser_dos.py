@@ -37,9 +37,10 @@ class DosHandler(xml.sax.handler.ContentHandler):
 
     def startElement(self, name, attrs):
         ha_per_joule = convert_unit(1, "hartree", "J")
-#        bohr_cube_to_m_cube = convert_unit(1, "bohr^3", "m^3")
-#        print("bohr_cube_to_m_cube = ", bohr_cube_to_m_cube )
-#        print("ha_per_joule= ",ha_per_joule)
+#        joule_in_eV = convert_unit(1, "eV", "J")
+#        a_cube_to_m_cube = convert_unit(1, "angstrom^3", "m^3")
+#        print("a_cube_to_m_cube= ", a_cube_to_m_cube)
+#        print("joule_in_ev=", joule_in_eV)
         fromH = unit_conversion.convert_unit_function("hartree", "J")
         if name == "totaldos":
             self.dosSectionGIndex = self.backend.openSection("section_dos")
@@ -54,11 +55,11 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.inDosProj = True
         elif name == "point":
             if self.inDos:
-                self.totDos.append(float(attrs.getValue('dos'))/ha_per_joule)
+                self.totDos.append(float(attrs.getValue('dos'))*ha_per_joule)
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
             elif self.inDosProj:
-                self.dosProj.append(float(attrs.getValue('dos'))/ha_per_joule)
+                self.dosProj.append(float(attrs.getValue('dos'))*ha_per_joule)
 #                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
         elif name == "diagram": 
@@ -125,8 +126,8 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.totDosSpin[1] = self.totDos[self.numDosVal:int(2*(self.numDosVal))]
                 self.energySpin = self.energy[0:self.numDosVal]
                 self.backend.addValue("dos_values", self.totDosSpin)
-#            self.backend.addValue("dos_energies",self.energySpin)
-#            self.backend.addValue("number_of_dos_values", self.numDosVal)
+                self.backend.addValue("dos_energies",self.energySpin)
+                self.backend.addValue("number_of_dos_values", self.numDosVal)
         elif name == 'partialdos':
             pass
 #            self.inDosProj = False

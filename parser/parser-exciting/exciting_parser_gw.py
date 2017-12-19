@@ -169,7 +169,7 @@ class GWParser(object):
                     if not s: break
                     s = s.strip()
                     s = s.split()
-                    ene, value = fromH(float(s[0])), float(s[1])/ha_per_joule
+                    ene, value = fromH(float(s[0])), float(s[1])*ha_per_joule
                     dosEnergies.append(ene)
                     if not self.spinTreat:
                         for i in range(0,2):
