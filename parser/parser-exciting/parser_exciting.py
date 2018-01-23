@@ -296,7 +296,10 @@ class ExcitingParserContext(object):
     self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
 
 
-  def onClose_section_method(self, backend, gIndex, value):
+  def onClose_section_method(self, backend, gIndex, section):
+    energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
+#    print("energy_thresh=", energy_thresh)
+    backend.addValue('scf_threshold_energy_change', energy_thresh)
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
 
@@ -411,7 +414,7 @@ mainFileDescription = \
                    SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
-                   SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<x_exciting_energy_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<scf_threshold_energy_change__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
+                   SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<x_exciting_energy_convergence_scf_iteration>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_energy_change__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))")
                   ]),
                 SM(name="final_quantities",
