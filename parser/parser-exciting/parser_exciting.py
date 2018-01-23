@@ -33,6 +33,7 @@ class ExcitingParserContext(object):
     self.unit_cell_vol = 0
     self.xcName = None
     self.gmaxvr = 0
+    self.energy_thresh = []
 
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
@@ -297,11 +298,10 @@ class ExcitingParserContext(object):
 
 
   def onClose_section_method(self, backend, gIndex, section):
-    energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
-#    print("energy_thresh=", energy_thresh)
-    backend.addValue('scf_threshold_energy_change', energy_thresh)
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
+      energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
+      backend.addValue('scf_threshold_energy_change', energy_thresh)
 
 mainFileDescription = \
     SM(name = "root matcher",
