@@ -37,7 +37,7 @@ object ExcitingParserHelium extends SimpleExternalParserGenerator(
   ),
   mainFileTypes = Seq("text/.*"),
   mainFileRe = """\s*\+-----------------------------------+\+\s*
-\s*\|\s*EXCITING\s(?<version>helium\s*\S*) started\s*\|\s*
+\s*\|\s*EXCITING\s(?<version>Lithium\s*\S*) started\s*\|\s*
 (?:\s*\|\sversion hash id:\s*(?<hashId>\S+)\s*\|)?""".r,
   cmd = Seq(DefaultPythonInterpreter.pythonExe(), "${envDir}/parsers/exciting/parser/parser-exciting/parser_exciting_helium.py",
     "--uri", "${mainFileUri}", "${mainFilePath}"),

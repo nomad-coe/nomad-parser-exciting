@@ -30,12 +30,12 @@ object ExcitingParserSpec extends Specification {
 
   "ExcitingParserHeliumTest" >> {
     "test with json-events" >> {
-      ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/helium/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
+      ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/lithium/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
     }
   }
 
   "test with json" >> {
-    ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/helium/INFO.OUT", "json") must_== ParseResult.ParseSuccess
+    ParserRun.parse(ExcitingParserHelium, "parsers/exciting/test/examples/lithium/INFO.OUT", "json") must_== ParseResult.ParseSuccess
   }
 
   "ExcitingParserTestiGW" >> {

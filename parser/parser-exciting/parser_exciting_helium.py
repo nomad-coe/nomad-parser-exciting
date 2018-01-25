@@ -7,6 +7,8 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
 
+################ PARSER FOR VERSION *************    LITHIUM     ****************
+
 class ExcitingHeliumParserContext(object):
 
   def startedParsing(self, path, parser):
