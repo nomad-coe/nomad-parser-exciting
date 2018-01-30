@@ -6,6 +6,7 @@ from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
+from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw #, exciting_parser_input
 from ase import Atoms
 import logging
@@ -118,6 +119,35 @@ class ExcitingParserContext(object):
 #    logging.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
+    forceX = section["x_exciting_atom_forces_x"]
+    if forceX:
+      forceY = section["x_exciting_atom_forces_y"]
+      forceZ = section["x_exciting_atom_forces_z"]
+      forceCoreX = section["x_exciting_atom_core_forces_x"]
+      forceCoreY = section["x_exciting_atom_core_forces_y"]
+      forceCoreZ = section["x_exciting_atom_core_forces_z"]
+      forceIBSX = section["x_exciting_atom_IBS_forces_x"]
+      forceIBSY = section["x_exciting_atom_IBS_forces_y"]
+      forceIBSZ = section["x_exciting_atom_IBS_forces_z"]
+      forceHFX = section["x_exciting_atom_HF_forces_x"]
+      forceHFY = section["x_exciting_atom_HF_forces_y"]
+      forceHFZ = section["x_exciting_atom_HF_forces_z"]
+      fConv = convert_unit_function("hartree/bohr", "N")
+      atoms = len(forceX)
+      atom_forces = []
+      atom_core_forces = []
+      atom_IBS_forces = []
+      atom_HF_forces = []
+      for i in range(0,atoms):
+        atom_forces.append([fConv(forceX[i]),fConv(forceY[i]),fConv(forceZ[i])])
+        atom_core_forces.append([fConv(forceCoreX[i]),fConv(forceCoreY[i]),fConv(forceCoreZ[i])])
+        atom_IBS_forces.append([fConv(forceIBSX[i]),fConv(forceIBSY[i]),fConv(forceIBSZ[i])])
+        atom_HF_forces.append([fConv(forceHFX[i]),fConv(forceHFY[i]),fConv(forceHFZ[i])])
+      backend.addValue("atom_forces",atom_forces)
+      backend.addValue("x_exciting_atom_core_forces",atom_core_forces)
+      backend.addValue("x_exciting_atom_IBS_forces",atom_IBS_forces)
+      backend.addValue("x_exciting_atom_HF_forces",atom_HF_forces)
+#    print("atom_forces=",atom_forces)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
@@ -301,7 +331,15 @@ class ExcitingParserContext(object):
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
       energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
+      potential_thresh = section["x_exciting_scf_threshold_potential_change_list"][0]
+      charge_thresh = section["x_exciting_scf_threshold_charge_change_list"][0]
+      if section["x_exciting_scf_threshold_force_change_list"]:
+        force_thresh = section["x_exciting_scf_threshold_force_change_list"][0]
+        backend.addValue('x_exciting_scf_threshold_force_change', force_thresh)
       backend.addValue('scf_threshold_energy_change', energy_thresh)
+      backend.addValue('x_exciting_scf_threshold_potential_change', potential_thresh)
+      backend.addValue('x_exciting_scf_threshold_charge_change', charge_thresh)
+#      backend.addValue('x_exciting_scf_threshold_force_change', force_thresh)
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -365,8 +403,8 @@ mainFileDescription = \
         ]),
     SM(r"\s*Total nuclear charge\s*:\s*(?P<x_exciting_nuclear_charge>[-0-9.]+)"),
     SM(r"\s*Total electronic charge\s*:\s*(?P<x_exciting_electronic_charge>[-0-9.]+)"),
-    SM(r"\s*Total core charge\s*:\s*(?P<x_exciting_core_charge>[-0-9.]+)"),
-    SM(r"\s*Total valence charge\s*:\s*(?P<x_exciting_valence_charge>[-0-9.]+)"),
+    SM(r"\s*Total core charge\s*:\s*(?P<x_exciting_core_charge_initial>[-0-9.]+)"),
+    SM(r"\s*Total valence charge\s*:\s*(?P<x_exciting_valence_charge_initial>[-0-9.]+)"),
     SM(r"\s*Effective Wigner radius, r_s\s*:\s*(?P<x_exciting_wigner_radius>[-0-9.]+)"),
     SM(r"\s*Number of empty states\s*:\s*(?P<x_exciting_empty_states>[-0-9.]+)"),
     SM(r"\s*Total number of valence states\s*:\s*(?P<x_exciting_valence_states>[-0-9.]+)"),
@@ -408,14 +446,17 @@ mainFileDescription = \
                    SM(r"\s*Core-electron kinetic energy\s*:\s*(?P<x_exciting_core_electron_kinetic_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Absolute change in total energy   (target)\s*:\s*(?P<energy_change_scf_iteration__hartree>[-0-9.]+)\s*(\s*(?P<scf_threshold_energy_change__hartree>[-0-9.]+))"),
                    SM(r"\s*DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*(?P<x_exciting_dos_fermi_scf_iteration__hartree_1>[-0-9.]+)"),
+                   SM(r"\s*core\s*:\s*(?P<x_exciting_core_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*core leakage\s*:\s*(?P<x_exciting_core_leakage_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*valence\s*:\s*(?P<x_exciting_valence_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
+                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_potential_change_list__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<x_exciting_energy_convergence_scf_iteration>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_energy_change__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
-                   SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))")
+                   SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_charge_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
+                   SM(r"\s*Abs. change in max-nonIBS-force\s*\(target\)\s*:\s*(?P<x_exciting_force_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_force_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)")
                   ]),
                 SM(name="final_quantities",
                   startReStr = r"\| Convergence targets achieved. Performing final SCF iteration\s*\+",
@@ -443,17 +484,21 @@ mainFileDescription = \
                      SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
                    ]),
                 SM(name="final_forces",
-                  startReStr = r"\| Writing atomic positions and forces\s*\-",
-                  endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+#                  startReStr = r"\| Writing atomic positions and forces\s*\-",
+                  startReStr = r"\s*Total atomic forces including IBS \(cartesian\) \s*:",
+                  endReStr = r"\|\s*Groundstate module stopped\s*\*",
+#                  endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+                  floating = True,
                    subMatchers = [
-                     SM(name="total_forces",
-                     startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
-##                       SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)",
+#                     SM(name="total_forces",
+#                     startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
+                       SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_forces_z>[-0-9.]+)",
+                          repeats = True )    
 #####                     subMatchers = [
 #####                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
 #####                          repeats = True)
 #####                   ] )
-)
+#)
 #                     print ("number atoms=", x_exciting_number_of_atoms)
 #                     SM(name="force_components",
 #                     startReStr = r"\s*Atomic force components including IBS \(cartesian\)\s*:",
@@ -465,7 +510,24 @@ mainFileDescription = \
 #                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
 #                   ] 
 #                    )
-                   ])
+                   ]),
+                 SM(name="force_components",
+                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+                  endReStr = r"\|\s* Groundstate module stopped\s* \*",
+                  subMatchers = [
+#                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+                   SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_HF_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_z>[-0-9.]+)\s*HF force",
+                     repeats = True,
+                     floating = True),
+                   SM(r"\s*\:\s*(?P<x_exciting_atom_core_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_z>[-0-9.]+)\s*core correction",
+                     repeats = True,
+                     floating = True),
+                   SM(r"\s*\:\s*(?P<x_exciting_atom_IBS_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_z>[-0-9.]+)\s*IBS correction",
+                     repeats = True,
+                     floating = True),
+#                   SM(r"(?P<x_exciting_store_total_forces>.*)",
+#                          repeats = True, 
+                ] )
                ]
             )
           ])
@@ -490,7 +552,19 @@ cachingLevelForMetaName = {
                             "x_exciting_geometry_reciprocal_lattice_vector_x":CachingLevel.Cache,
                             "x_exciting_geometry_reciprocal_lattice_vector_y":CachingLevel.Cache,
                             "x_exciting_geometry_reciprocal_lattice_vector_z":CachingLevel.Cache,
-                            "x_exciting_section_reciprocal_lattice_vectors": CachingLevel.Ignore
+                            "x_exciting_section_reciprocal_lattice_vectors": CachingLevel.Ignore,
+                            "x_exciting_atom_forces_x":CachingLevel.Cache,
+                            "x_exciting_atom_forces_y":CachingLevel.Cache,
+                            "x_exciting_atom_forces_z":CachingLevel.Cache,
+                            "x_exciting_atom_HF_forces_x":CachingLevel.Cache,
+                            "x_exciting_atom_HF_forces_y":CachingLevel.Cache,
+                            "x_exciting_atom_HF_forces_z":CachingLevel.Cache,
+                            "x_exciting_atom_core_forces_x":CachingLevel.Cache,
+                            "x_exciting_atom_core_forces_y":CachingLevel.Cache,
+                            "x_exciting_atom_core_forces_z":CachingLevel.Cache,
+                            "x_exciting_atom_IBS_forces_x":CachingLevel.Cache,
+                            "x_exciting_atom_IBS_forces_y":CachingLevel.Cache,
+                            "x_exciting_atom_IBS_forces_z":CachingLevel.Cache
                           }
 if __name__ == "__main__":
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
