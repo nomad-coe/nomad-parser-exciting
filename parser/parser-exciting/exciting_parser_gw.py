@@ -20,6 +20,14 @@ class GWParser(object):
         self.vertexDist = []
         self.vertexLabels = []
         self.vertexNum = 0
+        self.parser = None
+        self.secSingleConfIndex = None
+
+    def startedParsing(self, path, parser):
+        """called when parsing starts"""
+        self.parser = parser
+        # allows to reset values if the same superContext is used to parse different files
+#        self.initialize_values()
 
     def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex, xcName, unitCellVol,gmaxvr):
 #        logging.error("GW onClose_section_single_configuration_calculation")
@@ -323,4 +331,65 @@ class GWParser(object):
             backend.closeSection("section_k_band",bandGWGIndex)
         backend.closeNonOverlappingSection("section_single_configuration_calculation")
 #        logging.error("done GW onClose_section_single_configuration_calculation")
+
+#    def onOpen_section_method(self, backend, gIndex, section):
+#        fava = section["gw_frequency_number"]
+#        print("fava=",fava)
+
+#    def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+#        if dftSingleConfigurationGindex is not None:
+##        if self.secSingleConfIndex is None:
+##            self.secSingleConfIndex = gIndex
+##            singleGIndex = backend.openSection("section_single_configuration_calculation")
+#            fermi = section["gw_fermi_energy"]
+#            fundamental = section["gw_fundamental_gap"]
+#            optical = section["gw_optical_gap"]
+#            backend.addValue("gw_fermi_energy", fermi)
+#            backend.addValue("gw_fundamental_gap", fundamental)
+#            backend.addValue("gw_optical_gap", optical)
+##            backend.closeSection("section_single_configuration_calculation",singleGIndex)
+#        else:
+#            singleGIndex = backend.openSection("section_single_configuration_calculation")
+#            fermi = section["gw_fermi_energy"]
+#            fundamental = section["gw_fundamental_gap"]
+#            optical = section["gw_optical_gap"]
+#            backend.addValue("gw_fermi_energy", fermi)
+#            backend.addValue("gw_fundamental_gap", fundamental)
+ #           backend.addValue("gw_optical_gap", optical)
+ #           backend.closeSection("section_single_configuration_calculation",singleGIndex)
+
+def buildGWMatchers():     
+    return SM(     
+    name = 'root',     
+    weak = True,    
+    startReStr = "\=\s*Main GW output file\s*\=",
+#    sections = ["section_run"], 
+    subMatchers = [
+    SM(
+      startReStr = "\-\s*frequency grid\s*\-",
+      endReStr = "\-\s*Peak memory estimate \(Mb, per process\)\:\s*\-",
+      sections = ["section_method"],
+      subMatchers = [
+#        SM(r"\s*Type\:\s*\<\s*(?P<gw_dummy>[-a-zA-Z]+)\s*\>"),
+        SM(r"\s*(?P<gw_frequency_number>[0-9]+)\s*(?P<gw_frequency_values__hartree>[0-9]\.[0-9]*([E]?[-]?[-0-9]+))\s*(?P<gw_frequency_weights>[0-9]\.[0-9]*([E]?[-]?[-0-9]+))", repeats = True)
+    ]),
+    SM(
+      startReStr = "\-\s*G0W0\s*\-",
+      endReStr = "\=\s*GW timing info \(seconds\)\s*\=",        
+      sections = ["section_single_configuration_calculation"],     
+      subMatchers = [
+        SM(r"\s*Fermi energy\:\s*(?P<gw_fermi_energy__hartree>[-0-9.]+)"),
+        SM(r"\s* Fundamental BandGap \(eV\)\:\s*(?P<gw_fundamental_gap__eV>[0-9.]+)"),         
+        SM(r"\s*Direct BandGap \(eV\)\:\s*(?P<gw_fundamental_gap__eV>[0-9.]+)"),
+        SM(r"\s* Optical BandGap \(eV\)\:\s*(?P<gw_optical_gap__eV>[0-9.]+)")
+    ])
+    ])
+def get_cachingLevelForMetaName(metaInfoEnv, CachingLvl):
+    cachingLevelForMetaName = {}
+#                                'section_single_configuration_calculation': CachingLvl
+#                               }
+#    cachingLevelForMetaName["gw_fundamental_gap"] = CachingLevel.Cache
+#    cachingLevelForMetaName["gw_optical_gap"] = CachingLevel.Cache
+#    cachingLevelForMetaName["gw_fermi_energy"] = CachingLevel.Cache
+    return cachingLevelForMetaName
 

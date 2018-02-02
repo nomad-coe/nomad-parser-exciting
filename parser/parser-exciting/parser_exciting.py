@@ -58,6 +58,7 @@ class ExcitingParserContext(object):
 #    print("xcName= ",self.xcName)
     for gFile in [gw_File, gwFile]:
       if os.path.exists(gFile):
+#        print("gFile=",gFile)
 #        logging.error("Starting GW")
         gwParser = exciting_parser_gw.GWParser()
         gwParser.parseGW(gFile, backend,
@@ -67,6 +68,13 @@ class ExcitingParserContext(object):
                          unitCellVol = self.unit_cell_vol,
                          gmaxvr = self.gmaxvr)
 
+        subParser = AncillaryParser(
+            fileDescription = exciting_parser_gw.buildGWMatchers(),
+            parser = self.parser,
+            cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
+            superContext = gwParser)
+        with open(gFile) as fIn:
+            subParser.parseFile(fIn)
 #        logging.error("Finished GW")
         break
 #    logging.error("done BASE onClose_section_run")
