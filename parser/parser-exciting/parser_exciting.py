@@ -7,7 +7,7 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw #, exciting_parser_input
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_GS_input
 from ase import Atoms
 import logging
 
@@ -116,12 +116,19 @@ class ExcitingParserContext(object):
         300: ['GGA_C_BGCP', 'GGA_X_PBE'],
         406: ['HYB_GGA_XC_PBEH']
         }
-    for xcName in xc_internal_map[xcNr]:
-      self.xcName = xcName
-#      print("xcName= ",self.xcName)
-      gi = backend.openSection("section_XC_functionals")
-      backend.addValue("XC_functional_name", xcName)
-      backend.closeSection("section_XC_functionals", gi)
+    if xcNr == 100:
+        dirPath = os.path.dirname(self.parser.fIn.name)
+        inputGSFile = os.path.join(dirPath, "input.xml") 
+        with open(inputGSFile) as f:
+            exciting_parser_GS_input.parseInput(f, backend)
+#        pass
+    else:
+        for xcName in xc_internal_map[xcNr]:
+          self.xcName = xcName
+#          print("xcName= ",self.xcName)
+          gi = backend.openSection("section_XC_functionals")
+          backend.addValue("XC_functional_name", xcName)
+          backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
 #    logging.error("BASE onClose_section_single_configuration_calculation")
@@ -340,6 +347,7 @@ class ExcitingParserContext(object):
       backend.addValue('electronic_structure_method', "DFT")
       energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
       potential_thresh = section["x_exciting_scf_threshold_potential_change_list"][0]
+#      print("potential_thresh====",potential_thresh)
       charge_thresh = section["x_exciting_scf_threshold_charge_change_list"][0]
       if section["x_exciting_scf_threshold_force_change_list"]:
         force_thresh = section["x_exciting_scf_threshold_force_change_list"][0]
@@ -461,7 +469,7 @@ mainFileDescription = \
                    SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_potential_change_list__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
+                   SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration__hartree>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_potential_change_list__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<x_exciting_energy_convergence_scf_iteration>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_energy_change__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_charge_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Abs. change in max-nonIBS-force\s*\(target\)\s*:\s*(?P<x_exciting_force_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_force_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)")
