@@ -1,3 +1,18 @@
+# Copyright 2016-2018 The NOMAD Developers Group
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 import xml.sax
 import logging
 import numpy as np
@@ -27,20 +42,13 @@ class DosHandler(xml.sax.handler.ContentHandler):
         self.unitCellVol = float(unitCellVol[0])
 
     def endDocument(self):
-#        self.inDos = False
         self.inDosProj = False
         self.backend.closeSection("section_dos",self.dosSectionGIndex)
-#        self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
         self.dosSectionGIndex = -1
-#        self.dosProjSectionGIndex = -1
-#        print("self.unitCellVol=",self.unitCellVol)
 
     def startElement(self, name, attrs):
         ha_per_joule = convert_unit(1, "hartree", "J")
-#        joule_in_eV = convert_unit(1, "eV", "J")
-#        a_cube_to_m_cube = convert_unit(1, "angstrom^3", "m^3")
-#        print("a_cube_to_m_cube= ", a_cube_to_m_cube)
-#        print("joule_in_ev=", joule_in_eV)
+        joule_in_ev = convert_unit(1, "eV", "J")
         fromH = unit_conversion.convert_unit_function("hartree", "J")
         if name == "totaldos":
             self.dosSectionGIndex = self.backend.openSection("section_dos")
@@ -56,11 +64,9 @@ class DosHandler(xml.sax.handler.ContentHandler):
         elif name == "point":
             if self.inDos:
                 self.totDos.append(float(attrs.getValue('dos'))*ha_per_joule)
-#                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
             elif self.inDosProj:
                 self.dosProj.append(float(attrs.getValue('dos'))*ha_per_joule)
-#                self.energy.append(float(attrs.getValue('e')))
                 self.energy.append(fromH(float(attrs.getValue('e'))))
         elif name == "diagram": 
             if not self.speciesrn: pass
@@ -78,7 +84,6 @@ class DosHandler(xml.sax.handler.ContentHandler):
                     for k in range(0,len(self.speciesrn)):
                         self.dosProjDummy2[k].append([])
                         self.dosProjSpin[i][j].append([])
-#            print("self.dosProjSpinPrima=",self.dosProjSpin)
             for i in range (0,len(self.speciesrn)):
                 if not self.spinTreat:
                     self.dosProjDummy[i] = self.dosProj[i*len(self.dosProjSpin)*self.numDosVal:(i+1)*len(self.dosProjSpin)*self.numDosVal]
@@ -92,21 +97,14 @@ class DosHandler(xml.sax.handler.ContentHandler):
                     for j in range(0,len(self.speciesrn)):
                         self.dosProjSpin[i][0][j] = self.dosProjDummy2[j][i]               
                         self.dosProjSpin[i][1][j] = self.dosProjDummy2[j][i]
-#                        print("self.dosProjSpin=",self.dosProjSpin)
             else:
                 for j in range(0,len(self.speciesrn)):
                     for i in range(0,int(2*len(self.dosProjSpin))):
                         if i < len(self.dosProjSpin):
-#                            print("i=",i)
-#                            pass
                             self.dosProjSpin[i][0][j] = self.dosProjDummy2[j][i]
                         else:
                             k = int(i - len(self.dosProjSpin))
-#                            print("i=",i,"j=",j,"k=",k)
                             self.dosProjSpin[k][1][j] = self.dosProjDummy2[j][i]
-#        print("self.dosProjSpin=",len(self.dosProjSpin))
-#        print("self.dosProjSpin=",len(self.dosProjSpin))
-#        print("self.dosProjDummy2=",len(self.dosProjDummy2))
     def endElement(self, name):
         if name == 'totaldos':
             self.inDos = False
@@ -119,7 +117,6 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("dos_energies",self.energySpin)
                 self.backend.addValue("number_of_dos_values", self.numDosVal)
                 self.backend.addValue("dos_kind","electronic")
-#                print("self.totDosSpin=",self.totDosSpin)
             else:
                 self.numDosVal = int(len(self.energy)/2)
                 self.totDosSpin[0] = self.totDos[0:self.numDosVal]
@@ -130,14 +127,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("number_of_dos_values", self.numDosVal)
         elif name == 'partialdos':
             pass
-#            self.inDosProj = False
-#            print("self.dosProjSpin=",self.dosProjSpin)
-#            self.backend.addArrayValues("atom_projected_dos_values_lm",np.asarray(self.dosProjSpin))
-#            self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
-#            self.dosProjSectionGIndex = -1
         elif name == 'interstitialdos':
-#            print("self.energy=",len(self.energy))
-#            print("self.dosProjSpinFine=",self.dosProjSpin)
             self.backend.addValue("atom_projected_dos_values_lm",self.dosProjSpin)
             self.backend.addValue("number_of_lm_atom_projected_dos",len(self.dosProjSpin))
             self.backend.addValue("number_of_atom_projected_dos_values",self.numDosVal)
@@ -146,7 +136,6 @@ class DosHandler(xml.sax.handler.ContentHandler):
             self.backend.closeSection("section_atom_projected_dos",self.dosProjSectionGIndex)
             self.dosProjSectionGIndex = -1
             self.inDosProj = False
-#        backend.addValue()
     def startElementNS(self, name, qname, attrs):
         attrDict={}
         for name in attrs.getNames():

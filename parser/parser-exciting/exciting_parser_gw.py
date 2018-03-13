@@ -1,3 +1,18 @@
+# Copyright 2016-2018 The NOMAD Developers Group
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 from builtins import object
 import setup_paths
 import xml.sax
@@ -31,9 +46,7 @@ class GWParser(object):
 
     def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex, xcName, unitCellVol,gmaxvr):
 #        logging.error("GW onClose_section_single_configuration_calculation")
-#        print("xcNameGW=", xcName)
         self.gmaxvr = float(gmaxvr[0])
-#        print("gkmax= ",self.gmaxvr)
         self.unitCellVol = float(unitCellVol[0])
         backend.openNonOverlappingSection("section_single_configuration_calculation")
         if dftSingleConfigurationGindex is not None:
@@ -167,7 +180,6 @@ class GWParser(object):
         if os.path.exists(dosGWFile):
             dosGWGIndex = backend.openSection("section_dos")
             ha_per_joule = unit_conversion.convert_unit(1, "hartree", "J")
-#            bohr_cube_to_m_cube = unit_conversion.convert_unit(1, "bohr^3", "m^3")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
             with open(dosGWFile) as g:
                 dosValues = [[],[]]

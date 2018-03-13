@@ -1,3 +1,18 @@
+# Copyright 2016-2018 The NOMAD Developers Group
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 from builtins import object
 import setup_paths
 import numpy as np
@@ -48,18 +63,14 @@ class ExcitingParserContext(object):
       self.secMethodIndex = gIndex
 
   def onClose_section_run(self, backend, gIndex, section):
-#    logging.error("BASE onClose_section_run")
     self.secRunIndex = gIndex
 
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
     gw_File = os.path.join(dirPath, "GW_INFO.OUT")
     gwFile = os.path.join(dirPath, "GWINFO.OUT")
-#    print("xcName= ",self.xcName)
     for gFile in [gw_File, gwFile]:
       if os.path.exists(gFile):
-#        print("gFile=",gFile)
-#        logging.error("Starting GW")
         gwParser = exciting_parser_gw.GWParser()
         gwParser.parseGW(gFile, backend,
                          dftMethodSectionGindex = self.secMethodIndex,
@@ -75,9 +86,7 @@ class ExcitingParserContext(object):
             superContext = gwParser)
         with open(gFile) as fIn:
             subParser.parseFile(fIn)
-#        logging.error("Finished GW")
         break
-#    logging.error("done BASE onClose_section_run")
 
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
@@ -90,8 +99,6 @@ class ExcitingParserContext(object):
     backend.addValue("simulation_cell", cell)
 
   def onClose_x_exciting_section_reciprocal_lattice_vectors(self, backend, gIndex, section):
-#    self.unit_cell_vol = section["x_exciting_unit_cell_volume"]
-#    print("self.unit_cell_vol= ",self.unit_cell_vol)
     recLatticeX = section["x_exciting_geometry_reciprocal_lattice_vector_x"]
     recLatticeY = section["x_exciting_geometry_reciprocal_lattice_vector_y"]
     recLatticeZ = section["x_exciting_geometry_reciprocal_lattice_vector_z"]
@@ -102,7 +109,6 @@ class ExcitingParserContext(object):
 
   def onClose_x_exciting_section_xc(self, backend, gIndex, section):
     xcNr = section["x_exciting_xc_functional"][0]
-#    print("xcNr= ",xcNr)
     xc_internal_map = {
         2: ['LDA_C_PZ', 'LDA_X_PZ'],
         3: ['LDA_C_PW', 'LDA_X_PZ'],
@@ -121,11 +127,9 @@ class ExcitingParserContext(object):
         inputGSFile = os.path.join(dirPath, "input.xml") 
         with open(inputGSFile) as f:
             exciting_parser_GS_input.parseInput(f, backend)
-#        pass
     else:
         for xcName in xc_internal_map[xcNr]:
           self.xcName = xcName
-#          print("xcName= ",self.xcName)
           gi = backend.openSection("section_XC_functionals")
           backend.addValue("XC_functional_name", xcName)
           backend.closeSection("section_XC_functionals", gi)
@@ -134,41 +138,64 @@ class ExcitingParserContext(object):
 #    logging.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
-    forceX = section["x_exciting_atom_forces_x"]
-    if forceX:
-      forceY = section["x_exciting_atom_forces_y"]
-      forceZ = section["x_exciting_atom_forces_z"]
-      forceCoreX = section["x_exciting_atom_core_forces_x"]
-      forceCoreY = section["x_exciting_atom_core_forces_y"]
-      forceCoreZ = section["x_exciting_atom_core_forces_z"]
-      forceIBSX = section["x_exciting_atom_IBS_forces_x"]
-      forceIBSY = section["x_exciting_atom_IBS_forces_y"]
-      forceIBSZ = section["x_exciting_atom_IBS_forces_z"]
-      forceHFX = section["x_exciting_atom_HF_forces_x"]
-      forceHFY = section["x_exciting_atom_HF_forces_y"]
-      forceHFZ = section["x_exciting_atom_HF_forces_z"]
-      fConv = convert_unit_function("hartree/bohr", "N")
-      atoms = len(forceX)
-      atom_forces = []
-      atom_core_forces = []
-      atom_IBS_forces = []
-      atom_HF_forces = []
-      for i in range(0,atoms):
-        atom_forces.append([fConv(forceX[i]),fConv(forceY[i]),fConv(forceZ[i])])
-        atom_core_forces.append([fConv(forceCoreX[i]),fConv(forceCoreY[i]),fConv(forceCoreZ[i])])
-        atom_IBS_forces.append([fConv(forceIBSX[i]),fConv(forceIBSY[i]),fConv(forceIBSZ[i])])
-        atom_HF_forces.append([fConv(forceHFX[i]),fConv(forceHFY[i]),fConv(forceHFZ[i])])
-      backend.addValue("atom_forces",atom_forces)
-      backend.addValue("x_exciting_atom_core_forces",atom_core_forces)
-      backend.addValue("x_exciting_atom_IBS_forces",atom_IBS_forces)
-      backend.addValue("x_exciting_atom_HF_forces",atom_HF_forces)
+#
+##############TO DO. FIX FORCES#####################
+#    forceX = section["x_exciting_atom_forces_x"]
+#    if forceX:
+#      forceY = section["x_exciting_atom_forces_y"]
+#      forceZ = section["x_exciting_atom_forces_z"]
+#      print("forceX===",forceX)
+#      print("forceY===",forceY)
+#      print("forceZ===",forceZ)
+#      forceCoreX = section["x_exciting_atom_core_forces_x"]
+#      forceCoreY = section["x_exciting_atom_core_forces_y"]
+#      forceCoreZ = section["x_exciting_atom_core_forces_z"]
+#      print("forceCoreX===",forceCoreX)
+##      print("forceCoreY===",forceCoreY)
+#      print("forceCoreZ===",forceCoreZ)
+#      forceIBSX = section["x_exciting_atom_IBS_forces_x"]
+#      forceIBSY = section["x_exciting_atom_IBS_forces_y"]
+#      forceIBSZ = section["x_exciting_atom_IBS_forces_z"]
+#      print("forceIBSX===",forceIBSX)
+#      print("forceIBSY===",forceIBSY)
+#      print("forceIBSZ===",forceIBSZ)
+#      forceHFX = section["x_exciting_atom_HF_forces_x"]
+#      forceHFY = section["x_exciting_atom_HF_forces_y"]
+#      forceHFZ = section["x_exciting_atom_HF_forces_z"]
+#      fConv = convert_unit_function("hartree/bohr", "N")
+#      atoms = len(forceX)
+#      atom_forces = []
+#      atom_core_forces = []
+#      atom_IBS_forces = []
+#      atom_HF_forces = []
+#      for i in range(0,atoms):
+#        print("atoms===",atoms)
+#        print("i===",i)
+#        print("atom_forces===",atom_forces)
+#        print("forceX[i]===",forceX[i])
+#        print("forceY[i]===",forceY[i])
+#        print("forceZ[i]===",forceZ[i])
+#        print("forceCoreX[i]===",forceCoreX[i])
+#        print("forceCoreY[i]===",forceCoreY[i])
+#        print("forceCoreZ[i]===",forceCoreZ[i])
+#        print("forceIBSX[i]===",forceIBSX[i])
+#        print("forceIBSY[i]===",forceIBSY[i])
+#        print("forceIBSZ[i]===",forceIBSZ[i])
+#        atom_forces.append([fConv(forceX[i]),fConv(forceY[i]),fConv(forceZ[i])])
+#        atom_core_forces.append([fConv(forceCoreX[i]),fConv(forceCoreY[i]),fConv(forceCoreZ[i])])
+#        atom_IBS_forces.append([fConv(forceIBSX[i]),fConv(forceIBSY[i]),fConv(forceIBSZ[i])])
+#        atom_HF_forces.append([fConv(forceHFX[i]),fConv(forceHFY[i]),fConv(forceHFZ[i])])
+#      backend.addValue("atom_forces",atom_forces)
+#      backend.addValue("x_exciting_atom_core_forces",atom_core_forces)
+#      backend.addValue("x_exciting_atom_IBS_forces",atom_IBS_forces)
+#      backend.addValue("x_exciting_atom_HF_forces",atom_HF_forces)
 #    print("atom_forces=",atom_forces)
+#
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
-#    inputFile = os.path.join(dirPath, "input.xml")
 #    logging.error("done BASE onClose_section_single_configuration_calculation")
 
     if os.path.exists(dosFile):
@@ -295,9 +322,7 @@ class ExcitingParserContext(object):
   def onClose_section_system(self, backend, gIndex, section):
 
     self.unit_cell_vol = section["x_exciting_unit_cell_volume"]
-#    print("self.unit_cell_vol= ",self.unit_cell_vol)
     self.gmaxvr = section["x_exciting_gmaxvr"]
-#    print("gkmax= ", self.gkmax)
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
 
     self.secSystemDescriptionIndex = gIndex
@@ -347,7 +372,6 @@ class ExcitingParserContext(object):
       backend.addValue('electronic_structure_method', "DFT")
       energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
       potential_thresh = section["x_exciting_scf_threshold_potential_change_list"][0]
-#      print("potential_thresh====",potential_thresh)
       charge_thresh = section["x_exciting_scf_threshold_charge_change_list"][0]
       if section["x_exciting_scf_threshold_force_change_list"]:
         force_thresh = section["x_exciting_scf_threshold_force_change_list"][0]
@@ -391,7 +415,6 @@ mainFileDescription = \
        subMatchers = [
         SM(r"\s*muffin-tin radius\s*:\s*(?P<x_exciting_muffin_tin_radius__bohr>[-0-9.]+)", repeats = True),
         SM(r"\s*# of radial points in muffin-tin\s*:\s*(?P<x_exciting_muffin_tin_points>[-0-9.]+)", repeats = True),
-#        SM(startReStr = r"\s*atomic positions\s*\(lattice\)\s*:\s*",
         SM(startReStr = r"\s*atomic positions\s*\((?P<x_exciting_atom_position_format>[-a-zA-Z]+)\)\s*:\s*",
            endReStr = r"\s*magnetic fields\s*",
            subMatchers = [
@@ -430,8 +453,6 @@ mainFileDescription = \
     SM(startReStr = r"\s*Exchange-correlation type\s*:\s*(?P<x_exciting_xc_functional>[-0-9.]+)",
        sections = ['x_exciting_section_xc']),
     SM(r"\s*Smearing scheme\s*:\s*(?P<x_exciting_smearing_type>[-a-zA-Z0-9]+)"),
-#    SM(r"\s*Smearing width\s*:\s*(?P<x_exciting_smearing_width__hartree>[-0-9.]+)"),
-#    SM(r"\s*Smearing scheme\s*:\s*(?P<smearing_kind>[-a-zA-Z0-9]+)"),
     SM(r"\s*Smearing width\s*:\s*(?P<smearing_width__hartree>[-0-9.]+)"),
     SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
