@@ -33,12 +33,14 @@ class ExcitingParserContext(object):
 
   def initialize_values(self):
     self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
+    self.atom_pos = []
+    self.atom_labels = []
 
   def startedParsing(self, path, parser):
     self.parser=parser
     self.initialize_values()
-    self.atom_pos = []
-    self.atom_labels = []
+#    self.atom_pos = []
+#    self.atom_labels = []
     self.secMethodIndex = None  
     self.secSystemIndex = None
     self.secSingleConfIndex = None
@@ -50,20 +52,74 @@ class ExcitingParserContext(object):
     self.xcName = None
     self.gmaxvr = 0
     self.energy_thresh = []
+    self.samplingMethod = None
+    self.secSamplingMethodIndex = None
+    self.geometryForceThreshold = 0
+    self.frameSequence = []
+    self.samplingGIndex = 0
+    self.dummy = 0
 
+  def onOpen_section_sampling_method(self, backend, gIndex, section):
+    self.secSamplingMethodIndex = gIndex
+    backend.addValue("sampling_method", "geometry_optimization")
+#    print("self.secSamplingMethodIndex=",self.secSamplingMethodIndex)
+    self.samplingMethod = "geometry_optimization"
+#    print("self.samplingMethod=",self.samplingMethod)
+    
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
 
   def onOpen_section_single_configuration_calculation(self, backend, gIndex, section):
     if self.secSingleConfIndex is None:
       self.secSingleConfIndex = gIndex
+    self.frameSequence.append(gIndex)
 
   def onOpen_section_method(self, backend, gIndex, section):
     if self.secMethodIndex is None:
       self.secMethodIndex = gIndex
 
+  def onOpen_x_exciting_section_geometry_optimization(self, backend, gIndex, section):
+#    """Trigger called when x_abinit_section_dataset is opened.
+#    """
+    self.samplingGIndex = backend.openSection("section_sampling_method")
+
   def onClose_section_run(self, backend, gIndex, section):
     self.secRunIndex = gIndex
+
+  def onClose_x_exciting_section_geometry_optimization(self, backend, gIndex, section):
+    """Trigger called when x_abinit_section_dataset is closed.
+    """
+#    print("len(self.frameSequence)=",len(self.frameSequence))
+    if len(self.frameSequence) > 1:
+      frameGIndex = backend.openSection("section_frame_sequence")
+#        if section["x_abinit_geometry_optimization_converged"] is not None:
+#          if section["x_abinit_geometry_optimization_converged"][-1] == "are converged":
+      backend.addValue("geometry_optimization_converged", True)
+#          else:
+#            backend.addValue("geometry_optimization_converged", False)
+      backend.closeSection("section_frame_sequence", frameGIndex)
+#    self.frameSequence = []
+    backend.closeSection("section_sampling_method", self.samplingGIndex)
+
+  def onClose_section_frame_sequence(self, backend, gIndex, section):
+    """Trigger called when section_framce_sequence is closed.
+    """
+    backend.addValue("number_of_frames_in_sequence", len(self.frameSequence))
+    backend.addArrayValues("frame_sequence_local_frames_ref", np.array(self.frameSequence))
+    backend.addValue("frame_sequence_to_sampling_ref", self.samplingGIndex)
+
+#    print("self.samplingMethod=",self.samplingMethod)
+    if self.samplingMethod == "geometry_optimization":
+#        gix = backend.openSection("section_sampling_method")
+#        backend.addValue("XC_functional_name", xcName)
+#        backend.closeSection("section_sampling_method", gix)
+#        geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"]
+#        print("geometryForceThreshold=",self.geometryForceThreshold)
+        gi = backend.openSection("section_sampling_method")
+        backend.addValue("geometry_optimization_threshold_force", self.geometryForceThreshold)
+        backend.closeSection("section_sampling_method", gi)
+    else:
+        pass
 
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
@@ -138,6 +194,13 @@ class ExcitingParserContext(object):
 #    logging.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
+#    print("self.samplingMethod=",self.samplingMethod)
+    if self.samplingMethod == "geometry_optimization":
+        self.geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"][0]
+#        print("geometryForceThreshold=",geometryForceThreshold)
+#        backend.addValue("geometry_optimization_threshold_force", geometryForceThreshold)
+#    else:
+#        pass
 #
 ##############TO DO. FIX FORCES#####################
 #    forceX = section["x_exciting_atom_forces_x"]
@@ -330,6 +393,8 @@ class ExcitingParserContext(object):
     if self.atom_pos and self.cell_format[0] == 'cartesian':
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
     elif self.atom_pos and self.cell_format[0] == 'lattice':
+#       print("aaaself.atom_pos=",self.atom_pos)
+#       print("aaaself.atom_labels=",self.atom_labels)
        atoms = Atoms(self.atom_labels, self.atom_pos, cell=[(1, 0, 0),(0, 1, 0),(0, 0, 1)])
        atoms.set_cell(self.sim_cell, scale_atoms=True)
        self.atom_pos = atoms.get_positions()
@@ -347,25 +412,47 @@ class ExcitingParserContext(object):
         "Extended": ['tetrahedra']
         }
 
-    for smName in smearing_internal_map[excSmearingKind[0]]:
-      backend.addValue("smearing_kind", smName)
+    if self.samplingMethod is not "geometry_optimization":
+        for smName in smearing_internal_map[excSmearingKind[0]]:
+          backend.addValue("smearing_kind", smName)
+    else:
+        pass
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
     fromB = unit_conversion.convert_unit_function("bohr", "m")
     formt = section['x_exciting_atom_position_format']
+    if self.atom_pos is not None: self.atom_pos = []
+    if self.atom_labels is not None: self.atom_labels = []
     self.cell_format = formt
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
+#    print("pos=",pos)
     pl = [len(comp) for comp in pos]
     natom = pl[0]
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
     for i in range(natom):
+#      print("i=",i)
+#      print("natom=",natom)
+#      print("[pos[0][i]=",pos[0][i])
+#      print("[pos[1][i]=",pos[1][i])
+#      print("[pos[2][i]=",pos[2][i])
+#      print("self.atom_pos=",self.atom_pos)
       if formt[0] == 'cartesian':
         self.atom_pos.append([fromB(pos[0][i]), fromB(pos[1][i]), fromB(pos[2][i])])
       else:
+#        print("self.atom_labels_prima=",self.atom_labels)
+#        print("self.atom_pos_prima=",self.atom_pos)
         self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
-    self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
-
+#        print("self.atom_pos_dopo=",self.atom_pos)
+#        print("self.atom_labels_dopo=",self.atom_labels)
+#    print("natom=",natom)
+#    print("section['x_exciting_geometry_atom_labels']=",section['x_exciting_geometry_atom_labels'])
+#    print("self.samplingMethod[0]=",self.samplingMethod)
+    if self.samplingMethod is not "geometry_optimization":
+        self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
+    else:
+        self.atom_labels = self.atom_labels + section['x_exciting_geometry_atom_labels']
+#    print("self.atom_labels_dopodopo=",self.atom_labels)
 
   def onClose_section_method(self, backend, gIndex, section):
     if gIndex == self.secMethodIndex:
@@ -519,54 +606,78 @@ mainFileDescription = \
                      SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge>[-0-9.]+)"),
                      SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge>[-0-9.]+)"),
                      SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
-                   ]),
-                SM(name="final_forces",
-#                  startReStr = r"\| Writing atomic positions and forces\s*\-",
-                  startReStr = r"\s*Total atomic forces including IBS \(cartesian\) \s*:",
-                  endReStr = r"\|\s*Groundstate module stopped\s*\*",
-#                  endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
-                  floating = True,
-                   subMatchers = [
-#                     SM(name="total_forces",
-#                     startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
-                       SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_forces_z>[-0-9.]+)",
-                          repeats = True )    
-#####                     subMatchers = [
-#####                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
-#####                          repeats = True)
-#####                   ] )
-#)
-#                     print ("number atoms=", x_exciting_number_of_atoms)
-#                     SM(name="force_components",
-#                     startReStr = r"\s*Atomic force components including IBS \(cartesian\)\s*:",
-#                     forwardMatch = True,
-#                     subMatchers = [
-#                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)", weak = True),
-#                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
-#                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)")
-#                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
-#                   ] 
-#                    )
-                   ]),
-                 SM(name="force_components",
-                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
-                  endReStr = r"\|\s* Groundstate module stopped\s* \*",
-                  subMatchers = [
+                   ]) #,
+#                SM(name="final_forces",
+##                  startReStr = r"\| Writing atomic positions and forces\s*\-",
+#                  startReStr = r"\s*Total atomic forces including IBS \(cartesian\) \s*:",
+#                  endReStr = r"\|\s*Groundstate module stopped\s*\*",
+##                  endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+#                  floating = True,
+#                   subMatchers = [
+##                     SM(name="total_forces",
+##                     startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
+#                       SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_forces_z>[-0-9.]+)",
+#                          repeats = True )    
+######                     subMatchers = [
+######                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
+######                          repeats = True)
+######                   ] )
+##)
+##                     print ("number atoms=", x_exciting_number_of_atoms)
+##                     SM(name="force_components",
+##                     startReStr = r"\s*Atomic force components including IBS \(cartesian\)\s*:",
+##                     forwardMatch = True,
+##                     subMatchers = [
+##                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)", weak = True),
+##                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
+##                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)")
+##                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
+##                   ] 
+##                    )
+#                   ]),
+#                 SM(name="force_components",
 #                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
-                   SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_HF_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_z>[-0-9.]+)\s*HF force",
-                     repeats = True,
-                     floating = True),
-                   SM(r"\s*\:\s*(?P<x_exciting_atom_core_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_z>[-0-9.]+)\s*core correction",
-                     repeats = True,
-                     floating = True),
-                   SM(r"\s*\:\s*(?P<x_exciting_atom_IBS_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_z>[-0-9.]+)\s*IBS correction",
-                     repeats = True,
-                     floating = True),
-#                   SM(r"(?P<x_exciting_store_total_forces>.*)",
-#                          repeats = True, 
-                ] )
+#                  endReStr = r"\|\s* Groundstate module stopped\s* \*",
+#                  subMatchers = [
+##                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
+#                   SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_HF_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_z>[-0-9.]+)\s*HF force",
+#                     repeats = True,
+#                     floating = True),
+#                   SM(r"\s*\:\s*(?P<x_exciting_atom_core_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_z>[-0-9.]+)\s*core correction",
+#                     repeats = True,
+#                     floating = True),
+#                   SM(r"\s*\:\s*(?P<x_exciting_atom_IBS_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_z>[-0-9.]+)\s*IBS correction",
+#                     repeats = True,
+#                     floating = True),
+##                   SM(r"(?P<x_exciting_store_total_forces>.*)",
+##                          repeats = True, 
+#                ] )
                ]
-            )
+            ),
+            SM(name = "geometry optimization",
+              startReStr = r"\|\s*Structure-optimization module started*\s*\*",
+              sections = ["section_sampling_method","x_exciting_section_geometry_optimization"],
+#              fixedStartValues={'sampling_method': 'geometry_optimization'},
+#              repeats = True,
+              subMatchers = [
+                   SM(name = "optimization steps",
+                   startReStr = r"\|\s*Optimization step\s*(?P<x_exciting_geometry_optimization_step>[-0-9]+)\s*\(method = (?P<x_exciting_geometry_optimization_method>[A-Za-z]+)\)\s*\-",
+                   sections = ["section_single_configuration_calculation"],
+#                   SM(r"\s*Output level for this task is set to normal\s*"),
+#                   SM(r"\|\s*Optimization step (?P<x_exciting_geometry_optimization_step>[-0-9]+)\: Initialize optimization\s*\-"),
+                   repeats = True,
+                   subMatchers = [
+                   SM(r"\s*Maximum force magnitude\s*\(target\)\s*:\s*(?P<x_exciting_maximum_force_magnitude__hartree_bohr_1>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_geometry_optimization_threshold_force__hartree_bohr_1>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
+                   SM(r"\s*Total energy at this optimization step\s*:\s*(?P<energy_total__hartree>[-0-9.]+)"),
+                   SM(startReStr = r"\s*Atomic positions at this step \s*\((?P<x_exciting_atom_position_format>[-a-zA-Z]+)\)\s*:\s*",
+                   endReStr = r"\s*Total atomic forces including IBS \(cartesian\) \:",
+                   sections = ["section_system","x_exciting_section_atoms_group"],
+#           endReStr = r"\s*magnetic fields\s*",
+           subMatchers = [
+                    SM(r"\s*atom\s*(?P<x_exciting_atom_number>[+0-9]+)\s*(?P<x_exciting_geometry_atom_labels>[A-Za-z]+)\s*\:\s*(?P<x_exciting_geometry_atom_positions_x>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z>[-+0-9.]+)", repeats = True)
+         ])])
+           ]
+           )
           ])
     ])
 
