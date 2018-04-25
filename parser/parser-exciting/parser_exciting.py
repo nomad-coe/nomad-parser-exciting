@@ -197,6 +197,15 @@ class ExcitingParserContext(object):
 #    print("self.samplingMethod=",self.samplingMethod)
     if self.samplingMethod == "geometry_optimization":
         self.geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"][0]
+    forceX = section["x_exciting_geometry_atom_forces_x"]
+    if forceX:
+      forceY = section["x_exciting_geometry_atom_forces_y"]
+      forceZ = section["x_exciting_geometry_atom_forces_z"]
+      atoms = len(forceX)
+      atom_geometry_forces = []
+      for i in range(0,atoms):
+          atom_geometry_forces.append([forceX[i],forceY[i],forceZ[i]])
+      backend.addValue("atom_forces",atom_geometry_forces)
 #        print("geometryForceThreshold=",geometryForceThreshold)
 #        backend.addValue("geometry_optimization_threshold_force", geometryForceThreshold)
 #    else:
@@ -670,12 +679,19 @@ mainFileDescription = \
                    SM(r"\s*Maximum force magnitude\s*\(target\)\s*:\s*(?P<x_exciting_maximum_force_magnitude__hartree_bohr_1>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_geometry_optimization_threshold_force__hartree_bohr_1>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Total energy at this optimization step\s*:\s*(?P<energy_total__hartree>[-0-9.]+)"),
                    SM(startReStr = r"\s*Atomic positions at this step \s*\((?P<x_exciting_atom_position_format>[-a-zA-Z]+)\)\s*:\s*",
-                   endReStr = r"\s*Total atomic forces including IBS \(cartesian\) \:",
+#                   endReStr = r"\s*Total atomic forces including IBS \(cartesian\) \:",
+#                   weak = True,
                    sections = ["section_system","x_exciting_section_atoms_group"],
 #           endReStr = r"\s*magnetic fields\s*",
            subMatchers = [
                     SM(r"\s*atom\s*(?P<x_exciting_atom_number>[+0-9]+)\s*(?P<x_exciting_geometry_atom_labels>[A-Za-z]+)\s*\:\s*(?P<x_exciting_geometry_atom_positions_x>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_y>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_positions_z>[-+0-9.]+)", repeats = True)
-         ])])
+         ]),
+                   SM(startReStr = r"\s*Total atomic forces including IBS \(cartesian\) \:",
+                    endReStr = r"\s*Time spent in this optimization step\s*\:\s*(?P<x_exciting_geometry_dummy>[+0-9.]+)\s*seconds",
+                    subMatchers = [
+                    SM(r"\s*atom\s*[+0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_geometry_atom_forces_x__hartree_bohr_1>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_forces_y__hartree_bohr_1>[-+0-9.]+)\s*(?P<x_exciting_geometry_atom_forces_z__hartree_bohr_1>[-+0-9.]+)", repeats = True)
+         ])
+         ])
            ]
            )
           ])
@@ -712,7 +728,10 @@ cachingLevelForMetaName = {
                             "x_exciting_atom_core_forces_z":CachingLevel.Cache,
                             "x_exciting_atom_IBS_forces_x":CachingLevel.Cache,
                             "x_exciting_atom_IBS_forces_y":CachingLevel.Cache,
-                            "x_exciting_atom_IBS_forces_z":CachingLevel.Cache
+                            "x_exciting_atom_IBS_forces_z":CachingLevel.Cache,
+                            "x_exciting_geometry_atom_forces_x":CachingLevel.Cache,
+                            "x_exciting_geometry_atom_forces_y":CachingLevel.Cache,
+                            "x_exciting_geometry_atom_forces_z":CachingLevel.Cache
                           }
 if __name__ == "__main__":
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
