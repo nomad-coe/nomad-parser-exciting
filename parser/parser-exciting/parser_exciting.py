@@ -569,8 +569,11 @@ class ExcitingParserContext(object):
 #    print("start.self.atom_labels=",self.atom_labels)
     fromB = unit_conversion.convert_unit_function("bohr", "m")
     formt = section['x_exciting_atom_position_format']
-#    if self.atom_pos is not None: self.atom_pos = []
-#    if self.atom_labels is not None: self.atom_labels = []
+    if self.samplingMethod is not "geometry_optimization":
+      pass
+    else:
+      if self.atom_pos is not None: self.atom_pos = []
+      if self.atom_labels is not None: self.atom_labels = []
     self.cell_format = formt
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
 #    print("pos=",pos)
