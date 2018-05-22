@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Lorenzo Pardini
+# Copyright 2016-2018 The NOMAD Developers Group
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+#
+# Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 from builtins import object
 import setup_paths
 import numpy as np
@@ -29,6 +30,13 @@ class ExcitingParserContext(object):
 
   def __init__(self):
     self.parser = None
+#    self.mainFileUri = sys.argv[1]    #exciting !!!!!!LOCAL HOME!!!!!!!!             OKOKOKOK
+    self.mainFileUri = sys.argv[2]  #exciting !!! FOR NOMAD URI nmd:// or sbt -> zip file!!!!!!!!   OKOKKOOK
+    self.mainFilePath = None
+    self.mainFile = None
+    self.volumeCubOpt = False
+    self.volumeOpt = False
+    self.volumeCubOptIndex = 0
 
   def initialize_values(self):
     self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
@@ -57,6 +65,62 @@ class ExcitingParserContext(object):
     self.frameSequence = []
     self.samplingGIndex = 0
     self.dummy = 0
+    self.i=0
+    self.clathrates = False
+#    self.volumeOptIndex = 0
+
+  def onOpen_section_run(self, backend, gIndex, section):
+#    self.i=self.i+1
+#    print("self.i=",self.i)
+    curDir = os.getcwd()
+    mainFile = self.parser.fIn.fIn.name           #####exciting sbt -> zip filei r from NOMAD URI nmd:// ####     YES ?????????? sure???? check first    OKOKOKKO
+    self.mainFilePath = os.path.dirname(mainFile)           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
+#    self.mainFilePath = self.mainFileUri[0:-9]     #####exciting LOCAL HOME #######   YES                      OKOKOKOK
+#    print("self.mainFilePath===",self.mainFilePath)
+    os.chdir(self.mainFilePath)
+    os.chdir('../')
+#    self.i=self.i+1
+#    print("self.i=",self.i)
+#    self.volumeOptIndex = 0
+#    for root, dirs, files in os.walk('.'):
+#      if root == '.':
+#        for directory in dirs:
+#          if directory[-4:-1]==
+#        print("root=",root)
+#        print("dirs=",dirs)
+#        print("files=",files)     
+#####volume optimization for simple cubic systems########
+    if 'INFO_VOL' in os.listdir('.'):
+      self.volumeOpt = True
+#      print("self.volumeOpt=",self.volumeOpt)
+      with open('INFO_VOL') as g:
+          while 1:
+            s = g.readline()
+            if not s: break
+            s = s.strip()
+
+    else:
+      for files in os.listdir('.'):
+#      print("files=",files)
+#      backend.addValue("x_exciting_dummy2", files)
+        if files[0:7] == 'rundir-':
+          self.volumeCubOptIndex+=1
+    os.chdir(curDir)
+#    curDir = os.getcwd()
+#    dirPath = self.mainFileUri[0:-9]
+#    os.chdir(dirPath)
+#    os.chdir('../')
+#    i = 0
+#    for files in os.listdir('.'):
+#      if files[0:7] == 'rundir-':
+#        i+=1
+#      if i>1:
+#        self.volumeOpt = True
+#        optGindex = backend.openSection("section_method")
+#        print("optGindex=",optGindex)
+#        backend.addValue("x_exciting_volume_optimization", self.volumeOpt)
+#        backend.closeSection("section_method", optGindex)        
+#    os.chdir(curDir)
 
   def onOpen_section_sampling_method(self, backend, gIndex, section):
     self.secSamplingMethodIndex = gIndex
@@ -67,6 +131,36 @@ class ExcitingParserContext(object):
     
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
+    curDir = os.getcwd()
+    mainFile = self.parser.fIn.fIn.name           #####exciting sbt -> zip file or from NOMAD URI nmd:// ####     YES ?????????? sure???? check first    OKOKOKKO
+    self.mainFilePath = os.path.dirname(mainFile)           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
+#    self.mainFilePath = self.mainFileUri[0:-9]     #####exciting LOCAL HOME#######   YES                      OKOKOKOK
+#    print("self.mainFilePath===",self.mainFilePath)
+    os.chdir(self.mainFilePath)
+#    print("listdir=",os.listdir('.'))
+    if 'str.out' in os.listdir('.'):
+      self.clathrates = True
+      backend.addValue("x_exciting_clathrates", True)
+      clathrate_labels = []
+      clathrate_coordinates = []
+      with open('str.out') as g:
+          while 1:
+            s = g.readline()
+            if not s: break
+            s = s.strip()
+            s = s.split()
+            if len(s) == 4:
+#              print("s=",s[0],float(s[0]))
+              clathrate_coordinates.append([float(s[0]),float(s[1]),float(s[2])])
+              clathrate_labels.append(s[3])
+#      print("clathrate_coordinates=",clathrate_coordinates)
+      backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.asarray(clathrate_coordinates))
+      backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
+    else:
+      backend.addValue("x_exciting_clathrates", False)
+#    backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.array(clathrate_coordinates)) 
+#    backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
+    os.chdir(curDir)            
 
   def onOpen_section_single_configuration_calculation(self, backend, gIndex, section):
     if self.secSingleConfIndex is None:
@@ -84,6 +178,25 @@ class ExcitingParserContext(object):
 
   def onClose_section_run(self, backend, gIndex, section):
     self.secRunIndex = gIndex
+#    backend.addValue("x_exciting_dummy", self.volumeOptIndex)
+########### VOLUME OPTIMIZATION #########################
+#    curDir = os.getcwd()
+##    mainFile = self.parser.fIn.fIn.name           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
+##    dirPath = os.path.dirname(mainFile)           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
+#    dirPath = self.mainFileUri[0:-9]     #####exciting LOCAL HOME or from NOMAD URI nmd://  #######   YES                      OKOKOKOK
+#    os.chdir(dirPath)
+#    os.chdir('../')
+#    self.volumeOptIndex = 0
+#    for files in os.listdir('.'):
+#      if files[0:7] == 'rundir-':
+#        self.volumeOptIndex+=1
+######################independent from above#################
+    if self.volumeCubOptIndex>1:
+      self.volumeCubOpt = True
+      optGindex = backend.openSection("section_method")
+      backend.addValue("x_exciting_volume_optimization", self.volumeCubOpt)
+      backend.closeSection("section_method", optGindex)
+#    os.chdir(curDir)
 
   def onClose_x_exciting_section_geometry_optimization(self, backend, gIndex, section):
     """Trigger called when x_abinit_section_dataset is closed.
@@ -194,6 +307,30 @@ class ExcitingParserContext(object):
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
 #    print("self.samplingMethod=",self.samplingMethod)
+####################VOLUME TEST BEGIN################################
+    ext_uri = []
+#    backend.addValue("x_exciting_dummy=",self.volumeOptIndex)
+#    backend.addValue("x_exciting_dummy", self.volumeOptIndex)
+    if self.volumeCubOptIndex > 1:
+      for j in range(1, self.volumeCubOptIndex):
+        if (j<10):
+          ext_uri.append(self.mainFilePath[0:-9] + 'rundir-0' + str(j) + '/INFO.OUT')
+#          backend.addValue("x_exciting_dummy2", ext_uri[-1])
+#          print("ext_uri===",ext_uri)
+        else:
+          ext_uri.append(self.mainFilePath[0:-9] + 'rundir-' + str(j) + '/INFO.OUT')
+#          backend.addValue("x_exciting_dummy2", ext_uri[-1])
+#          print("ext_uri===",ext_uri)
+#    backend.addArrayValues("x_exciting_dummy2", np.asarray(ext_uri))
+    for ref in ext_uri:
+      refGindex = backend.openSection("section_calculation_to_calculation_refs")
+      backend.addValue("calculation_to_calculation_external_url", ref)
+      backend.addValue("calculation_to_calculation_kind", "source_calculation")
+      backend.closeSection("section_calculation_to_calculation_refs", refGindex)
+
+####################VOLUME TEST END############################
+
+
     if self.samplingMethod == "geometry_optimization":
         self.geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"][0]
     forceX = section["x_exciting_geometry_atom_forces_x"]
@@ -399,6 +536,7 @@ class ExcitingParserContext(object):
     self.secSystemDescriptionIndex = gIndex
 
     if self.atom_pos and self.cell_format[0] == 'cartesian':
+#       print("self.atom_pos=",self.atom_pos)
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
     elif self.atom_pos and self.cell_format[0] == 'lattice':
 #       print("aaaself.atom_pos=",self.atom_pos)
@@ -408,6 +546,7 @@ class ExcitingParserContext(object):
        self.atom_pos = atoms.get_positions()
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
     if self.atom_labels is not None:
+#       print("aaaself.atom_labels=",self.atom_labels)
        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
 
@@ -427,10 +566,11 @@ class ExcitingParserContext(object):
         pass
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
+#    print("start.self.atom_labels=",self.atom_labels)
     fromB = unit_conversion.convert_unit_function("bohr", "m")
     formt = section['x_exciting_atom_position_format']
-    if self.atom_pos is not None: self.atom_pos = []
-    if self.atom_labels is not None: self.atom_labels = []
+#    if self.atom_pos is not None: self.atom_pos = []
+#    if self.atom_labels is not None: self.atom_labels = []
     self.cell_format = formt
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
 #    print("pos=",pos)
@@ -439,6 +579,7 @@ class ExcitingParserContext(object):
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
     for i in range(natom):
+#      print("nattom=",natom)  
 #      print("i=",i)
 #      print("natom=",natom)
 #      print("[pos[0][i]=",pos[0][i])
@@ -457,7 +598,10 @@ class ExcitingParserContext(object):
 #    print("section['x_exciting_geometry_atom_labels']=",section['x_exciting_geometry_atom_labels'])
 #    print("self.samplingMethod[0]=",self.samplingMethod)
     if self.samplingMethod is not "geometry_optimization":
+#        print("prima=",self.atom_labels)
         self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
+#        print("self.atom_labels=",self.atom_labels)
+#        print("section['x_exciting_geometry_atom_labels']=",section['x_exciting_geometry_atom_labels'])
     else:
         self.atom_labels = self.atom_labels + section['x_exciting_geometry_atom_labels']
 #    print("self.atom_labels_dopodopo=",self.atom_labels)
@@ -465,16 +609,56 @@ class ExcitingParserContext(object):
   def onClose_section_method(self, backend, gIndex, section):
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
-      energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
-      potential_thresh = section["x_exciting_scf_threshold_potential_change_list"][0]
-      charge_thresh = section["x_exciting_scf_threshold_charge_change_list"][0]
+      try:
+        energy_thresh = section["x_exciting_scf_threshold_energy_change"][0]
+      except:
+        pass
+      try:
+        potential_thresh = section["x_exciting_scf_threshold_potential_change_list"][0]
+      except:
+        pass
+      try:
+        charge_thresh = section["x_exciting_scf_threshold_charge_change_list"][0]
+      except:
+        pass
       if section["x_exciting_scf_threshold_force_change_list"]:
         force_thresh = section["x_exciting_scf_threshold_force_change_list"][0]
-        backend.addValue('x_exciting_scf_threshold_force_change', force_thresh)
-      backend.addValue('scf_threshold_energy_change', energy_thresh)
-      backend.addValue('x_exciting_scf_threshold_potential_change', potential_thresh)
-      backend.addValue('x_exciting_scf_threshold_charge_change', charge_thresh)
-#      backend.addValue('x_exciting_scf_threshold_force_change', force_thresh)
+        try:
+          backend.addValue('x_exciting_scf_threshold_force_change', force_thresh)
+        except:
+          pass
+      try:
+        backend.addValue('scf_threshold_energy_change', energy_thresh)
+      except:
+        pass
+      try:
+        backend.addValue('x_exciting_scf_threshold_potential_change', potential_thresh)
+      except:
+        pass
+      try:
+        backend.addValue('x_exciting_scf_threshold_charge_change', charge_thresh)
+      except:
+        pass
+##########BELOW VOLUME OPTIMIZATION######################
+#    if self.volumeOptIndex>1:
+#      self.volumeOpt = True
+#      optGindex = backend.openSection("section_method")
+#      backend.addValue("x_exciting_volume_optimization", self.volumeOpt)
+#      backend.closeSection("section_method", optGindex)
+#
+#    ext_uri = []
+#    backend.addValue("x_exciting_dummy", self.volumeOptIndex)
+#    if self.volumeOptIndex > 1:
+#      for j in range(1, self.volumeOptIndex):
+#        if (j<10):
+#          ext_uri.append(self.mainFilePath[0:-9] + 'rundir-0' + str(j) + '/INFO.OUT')
+#        else:
+#          ext_uri.append(self.mainFilePath[0:-9] + 'rundir-' + str(j) + '/INFO.OUT')
+#    for ref in ext_uri:
+#      refGindex = backend.openSection("section_calculation_to_calculation_refs")
+#      backend.addValue("calculation_to_calculation_external_url", ref)
+#      backend.addValue("calculation_to_calculation_kind", "source_calculation")
+#      backend.closeSection("section_calculation_to_calculation_refs", refGindex)
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -587,6 +771,7 @@ mainFileDescription = \
                    SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration__hartree>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_potential_change_list__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Absolute change in total energy\s*\(target\)\s*:\s*(?P<x_exciting_energy_convergence_scf_iteration>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_energy_change__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
+                   SM(r"\s*Absolute change in total energy\s*\(target\)\s*\:\s*\s*\(\s*[0-9]+\.[0-9]+\s*[0-9]+\.[0-9]+\s*[0-9]+\.[0-9]+\s*\)\s*avg =\s*[0-9]+\.[0-9]+\s*\(\s*(?P<x_exciting_scf_threshold_energy_change__hartree>[0-9.]+E?[-][0-9]+)\s*\)"),
                    SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_charge_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
                    SM(r"\s*Abs. change in max-nonIBS-force\s*\(target\)\s*:\s*(?P<x_exciting_force_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_force_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)")
                   ]),
