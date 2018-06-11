@@ -47,35 +47,4 @@ object ExcitingParserSpec extends Specification {
   "test with json" >> {
     ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/GW/INFO.OUT", "json") must_== ParseResult.ParseSuccess
   }
-
-  "ExcitingParserTestGeom" >> {
-    "test with json-events" >> {
-      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/diamond-relax-carbon/relax-1/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
-    }
-  }
-
-  "test with json" >> {
-    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/diamond-relax-carbon/relax-1/INFO.OUT", "json") must_== ParseResult.ParseSuccess
-  }
-
-  "ExcitingParserTestVolume" >> {
-    "test with json-events" >> {
-      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/volume_opt-carbon/vol-opt-1/rundir-01/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
-    }
-  }
-
-  "test with json" >> {
-    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/volume_opt-carbon/vol-opt-1/rundir-01/INFO.OUT", "json") must_== ParseResult.ParseSuccess
-  }
-
-  "ExcitingParserTestClathrate" >> {
-    "test with json-events" >> {
-      ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/clathrate/INFO.OUT", "json-events") must_== ParseResult.ParseSuccess
-    }
-  }
-
-  "test with json" >> {
-    ParserRun.parse(ExcitingParser, "parsers/exciting/test/examples/clathrate/INFO.OUT", "json") must_== ParseResult.ParseSuccess
-  }
-
 }
