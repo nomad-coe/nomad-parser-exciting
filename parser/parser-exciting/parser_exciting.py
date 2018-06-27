@@ -23,6 +23,7 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_GS_input
+import exciting_parser_XS_input
 from ase import Atoms
 import logging
 
@@ -58,6 +59,7 @@ class ExcitingParserContext(object):
     self.unit_cell_vol = 0
     self.xcName = None
     self.gmaxvr = 0
+    self.rgkmax = 0
     self.energy_thresh = []
     self.samplingMethod = None
     self.secSamplingMethodIndex = None
@@ -198,6 +200,51 @@ class ExcitingParserContext(object):
       backend.closeSection("section_method", optGindex)
 #    os.chdir(curDir)
 
+####################################TEST############################
+    mainFile = self.parser.fIn.fIn.name
+    dirPath = os.path.dirname(self.parser.fIn.name)
+#    print("dirPath===",dirPath)
+    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
+    gwFile = os.path.join(dirPath, "GWINFO.OUT")
+    xsFile = os.path.join(dirPath, "INFOXS.OUT")
+    for gFile in [gw_File, gwFile]:
+      if os.path.exists(gFile):
+        gwParser = exciting_parser_gw.GWParser()
+        gwParser.parseGW(gFile, backend,
+                         dftMethodSectionGindex = self.secMethodIndex,
+                         dftSingleConfigurationGindex = self.secSingleConfIndex,
+                         xcName = self.xcName,
+                         unitCellVol = self.unit_cell_vol,
+                         gmaxvr = self.gmaxvr)
+
+        subParser = AncillaryParser(
+            fileDescription = exciting_parser_gw.buildGWMatchers(),
+            parser = self.parser,
+            cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
+            superContext = gwParser)
+        with open(gFile) as fIn:
+            subParser.parseFile(fIn)
+        break
+
+    if os.path.exists(xsFile):
+#      print("BSE!!!")
+#        if os.path.exists(inputgwFile):
+      inputXSFile = os.path.join(dirPath, "input.xml")
+      selfXSSetGIndex = backend.openSection("section_method")
+#      backend.addValue('x_exciting_electronic_structure_method', "BSE")   ########!!!!!!!!!!! So far, BSE is not a valid value for electronic_structure_method. It must be added! #########
+      backend.addValue('x_exciting_xs_starting_point', self.xcName)
+      if self.secMethodIndex is not None:
+        m2mGindex = backend.openNonOverlappingSection("section_method_to_method_refs")
+        backend.addValue("method_to_method_ref", self.secMethodIndex)
+        backend.addValue("method_to_method_kind", "starting_point")
+        backend.closeNonOverlappingSection("section_method_to_method_refs")
+        with open(inputXSFile) as f:
+          exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
+      backend.closeSection("section_method",selfXSSetGIndex)
+
+
+###########################TEST#############################
+
   def onClose_x_exciting_section_geometry_optimization(self, backend, gIndex, section):
     """Trigger called when x_abinit_section_dataset is closed.
     """
@@ -232,30 +279,35 @@ class ExcitingParserContext(object):
         backend.closeSection("section_sampling_method", gi)
     else:
         pass
-
-    mainFile = self.parser.fIn.fIn.name
-    dirPath = os.path.dirname(self.parser.fIn.name)
-    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
-    gwFile = os.path.join(dirPath, "GWINFO.OUT")
-    for gFile in [gw_File, gwFile]:
-      if os.path.exists(gFile):
-        gwParser = exciting_parser_gw.GWParser()
-        gwParser.parseGW(gFile, backend,
-                         dftMethodSectionGindex = self.secMethodIndex,
-                         dftSingleConfigurationGindex = self.secSingleConfIndex,
-                         xcName = self.xcName,
-                         unitCellVol = self.unit_cell_vol,
-                         gmaxvr = self.gmaxvr)
-
-        subParser = AncillaryParser(
-            fileDescription = exciting_parser_gw.buildGWMatchers(),
-            parser = self.parser,
-            cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
-            superContext = gwParser)
-        with open(gFile) as fIn:
-            subParser.parseFile(fIn)
-        break
-
+################################TESDT###########################
+#    mainFile = self.parser.fIn.fIn.name
+#    dirPath = os.path.dirname(self.parser.fIn.name)
+#    print("dirPath===",dirPath)
+#    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
+#    gwFile = os.path.join(dirPath, "GWINFO.OUT")
+#    bseFile = os.path.join(dirPath, "INFOXS.OUT")
+#    for gFile in [gw_File, gwFile]:
+#      if os.path.exists(gFile):
+#        gwParser = exciting_parser_gw.GWParser()
+#        gwParser.parseGW(gFile, backend,
+#                         dftMethodSectionGindex = self.secMethodIndex,
+#                         dftSingleConfigurationGindex = self.secSingleConfIndex,
+#                         xcName = self.xcName,
+#                         unitCellVol = self.unit_cell_vol,
+#                         gmaxvr = self.gmaxvr)
+#
+#        subParser = AncillaryParser(
+#            fileDescription = exciting_parser_gw.buildGWMatchers(),
+#            parser = self.parser,
+#            cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
+#            superContext = gwParser)
+#        with open(gFile) as fIn:
+#            subParser.parseFile(fIn)
+#        break
+#
+#    if os.path.exists(bseFile):
+#      print("BSE!!!")
+###########################TEST##########################
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
     latticeY = section["x_exciting_geometry_lattice_vector_y"]
@@ -531,6 +583,7 @@ class ExcitingParserContext(object):
 
     self.unit_cell_vol = section["x_exciting_unit_cell_volume"]
     self.gmaxvr = section["x_exciting_gmaxvr"]
+    self.rgkmax = section["x_exciting_rgkmax"]
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
 
     self.secSystemDescriptionIndex = gIndex
@@ -713,7 +766,7 @@ mainFileDescription = \
     SM(r"\s*k-point grid\s*:\s*(?P<x_exciting_number_kpoint_x>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_y>[-0-9.]+)\s+(?P<x_exciting_number_kpoint_z>[-0-9.]+)"),
     SM(r"\s*k-point offset\s*:\s*(?P<x_exciting_kpoint_offset_x>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_y>[-0-9.]+)\s+(?P<x_exciting_kpoint_offset_z>[-0-9.]+)"),
     SM(r"\s*Total number of k-points\s*:\s*(?P<x_exciting_number_kpoints>[-0-9.]+)"),
-    SM(r"\s*R\^MT_min \* \|G\+k\|_max \(rgkmax\)\s*:\s*(?P<x_exciting_rgkmax__bohr>[-0-9.]+)"),
+    SM(r"\s*R\^MT_min \* \|G\+k\|_max \(rgkmax\)\s*:\s*(?P<x_exciting_rgkmax>[-0-9.]+)"),
     SM(r"\s*Maximum \|G\+k\| for APW functions\s*:\s*(?P<x_exciting_gkmax__bohr_1>[-0-9.]+)"),
     SM(r"\s*Maximum \|G\| for potential and density\s*:\s*(?P<x_exciting_gmaxvr__bohr_1>[-0-9.]+)"),
     SM(r"\s*G-vector grid sizes\s*:\s*(?P<x_exciting_gvector_size_x>[-0-9.]+)\s+(?P<x_exciting_gvector_size_y>[-0-9.]+)\s+(?P<x_exciting_gvector_size_z>[-0-9.]+)"),
