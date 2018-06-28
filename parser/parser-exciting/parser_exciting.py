@@ -23,7 +23,7 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_GS_input
-import exciting_parser_XS_input
+import exciting_parser_XS_input, exciting_parser_xs
 from ase import Atoms
 import logging
 
@@ -69,6 +69,10 @@ class ExcitingParserContext(object):
     self.dummy = 0
     self.i=0
     self.clathrates = False
+    self.bsetype = None
+    self.screentype = None
+    self.tensorComp = []
+    self.excitonEnergies = []
 #    self.volumeOptIndex = 0
 
   def onOpen_section_run(self, backend, gIndex, section):
@@ -227,6 +231,11 @@ class ExcitingParserContext(object):
         break
 
     if os.path.exists(xsFile):
+      excNum = []
+      excEn = []
+      excBindEn = []
+      osclStr = []
+      transCoeff = []
 #      print("BSE!!!")
 #        if os.path.exists(inputgwFile):
       inputXSFile = os.path.join(dirPath, "input.xml")
@@ -238,10 +247,91 @@ class ExcitingParserContext(object):
         backend.addValue("method_to_method_ref", self.secMethodIndex)
         backend.addValue("method_to_method_kind", "starting_point")
         backend.closeNonOverlappingSection("section_method_to_method_refs")
+
+        for files in os.listdir(dirPath):
+            if files[0:11] == "EXCITON_BSE":
+                dummyBse = files[11:13]
+#                self.tensorComp = files[-6:-4]
+                self.tensorComp.append(files[-6:-4])
+
+                if dummyBse == 'si':
+                    self.bsetype = 'singlet'
+#                  name = "EXCITON_BSE" + self.bsetype
+                elif dummyBse == 'tr':
+                    self.bsetype = 'triplet'
+                elif dummyBse == 'RP':
+                    self.bsetype = 'RPA'
+                elif dummyBse == 'IP':
+                    self.bsetype = 'IP'
+                name = "EXCITON_BSE" + self.bsetype + '_SCR'
+                if files[len(name):len(name)+4] == 'full':
+                    self.screentype = 'full'
+                elif files[len(name):len(name)+4] == 'diag':
+                    self.screentype = 'diag'
+                elif files[len(name):len(name)+4] == 'noin':
+                    self.screentype = 'noinvdiag'
+                elif files[len(name):len(name)+4] == 'long':
+                    self.screentype = 'longrange'
+                
+        backend.addValue("x_exciting_xs_screening_type", self.screentype)
+        backend.addValue("x_exciting_xs_bse_type", self.bsetype)
+#        print("===", self.tensorComp[0])
         with open(inputXSFile) as f:
           exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
       backend.closeSection("section_method",selfXSSetGIndex)
+      numberOfComponents = len(self.tensorComp)
 
+      backend.openNonOverlappingSection("section_single_configuration_calculation")
+      if self.secSingleConfIndex is not None:
+          backend.openNonOverlappingSection("section_calculation_to_calculation_refs")
+          backend.addValue("calculation_to_calculation_ref", self.secSingleConfIndex)
+          backend.addValue("calculation_to_calculation_kind", "starting_point")
+          backend.closeNonOverlappingSection("section_calculation_to_calculation_refs")
+
+      for i in range(numberOfComponents):
+          excNum.append([])
+          excEn.append([])
+          excBindEn.append([])
+          osclStr.append([])
+          transCoeff.append([[],[]])
+          outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+          with open(outputXSFile) as g:
+              xsParser = exciting_parser_xs.XSParser()
+              xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
+#                                    dftSingleConfigurationGindex = self.secSingleConfIndex)
+#      backend.addvalue("x_exciting_xs_bse_number_of_components",numberOfComponents)
+#      backend.addvalue("x_exciting_xs_bse_number_of_excitons",len(excNum))
+      backend.addValue("x_exciting_xs_bse_exciton_energies",excEn) 
+#      print("===",excBindEn) 
+      backend.closeNonOverlappingSection("section_single_configuration_calculation")
+
+
+#              print(outputXSFile)
+
+#      for files in os.listdir(dirPath):
+#          if files[0:11] == "EXCITON_BSE":
+#              dummyBse = files[11:13]
+#              dummyTenCom = files[-6:-4]
+#              if dummyBse == 'si':
+#                  self.bsetype = 'singlet'
+##                  name = "EXCITON_BSE" + self.bsetype
+#              elif dummyBse == 'tr':
+#                  self.bsetype = 'triplet'
+#              elif dummyBse == 'RP':
+#                  self.bsetype = 'RPA'
+#              elif dummyBse == 'IP':
+#                  self.bsetype = 'IP'
+#              name = "EXCITON_BSE" + self.bsetype + '_SCR'
+#              if files[len(name):len(name)+4] == 'full':
+#                  self.screentype = 'full'
+#              elif files[len(name):len(name)+4] == 'diag':
+#                  self.screentype = 'diag'
+#              elif files[len(name):len(name)+4] == 'noin':
+#                  self.screentype = 'noinvdiag'
+#              elif files[len(name):len(name)+4] == 'long':
+#                  self.screentype = 'longrange'
+
+#              print("===",self.screentype)
 
 ###########################TEST#############################
 

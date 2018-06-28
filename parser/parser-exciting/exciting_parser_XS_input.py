@@ -49,10 +49,10 @@ class InputHandler(xml.sax.handler.ContentHandler):
 #        self.vkloffScrDum = "-1.0 -1.0 -1.0"
         self.screening = "none"
         self.bse = "none"
-        self.screentype = "full"
+#        self.screentype = "full"
 ############ BSE variables################
         self.aresbse = "True"
-        self.bsetype = "singlet"
+#        self.bsetype = "singlet"
         self.lmaxdielt = 14
         self.nstlbse = [0, 0, 0, 0]        ######## DA FARE
         self.nstlbseDum = [0, 0, 0, 0]        ######## DA FARE
@@ -193,11 +193,11 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.rgkmaxScr = attrs.getValue('rgkmax')
             except:
                 self.rgkmaxSrc = 0.0
-            try:
-                self.screentype = attrs.getValue('screentype')
-                self.backend.addValue("x_exciting_xs_screening_type", int(self.screentype))
-            except:
-                self.backend.addValue("x_exciting_xs_screening_type", self.screentype)
+#            try:
+#                self.screentype = attrs.getValue('screentype')
+#                self.backend.addValue("x_exciting_xs_screening_type", int(self.screentype))
+#            except:
+#                self.backend.addValue("x_exciting_xs_screening_type", self.screentype)
 
 #        self.aresbse = "true"
 #        self.bsetype = "singlet"
@@ -222,11 +222,11 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("x_exciting_xs_bse_antiresonant", self.aresbse)
             except:
                 self.backend.addValue("x_exciting_xs_bse_antiresonant", self.aresbse)
-            try:
-                self.bsetype = attrs.getValue('bsetype')
-                self.backend.addValue("x_exciting_xs_bse_type", self.bsetype)
-            except:
-                self.backend.addValue("x_exciting_xs_bse_type", self.bsetype)
+#            try:
+#                self.bsetype = attrs.getValue('bsetype')
+#                self.backend.addValue("x_exciting_xs_bse_type", self.bsetype)
+#            except:
+#                self.backend.addValue("x_exciting_xs_bse_type", self.bsetype)
             try:
                 self.lmaxdielt = attrs.getValue('lmaxdielt')
                 self.backend.addValue("x_exciting_xs_bse_angular_momentum_cutoff", int(self.lmaxdielt))
