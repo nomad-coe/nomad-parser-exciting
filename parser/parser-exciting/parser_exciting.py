@@ -23,7 +23,7 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_GS_input
-import exciting_parser_XS_input, exciting_parser_xs
+import exciting_parser_XS_input, exciting_parser_xs, exciting_parser_eps
 from ase import Atoms
 import logging
 
@@ -236,6 +236,13 @@ class ExcitingParserContext(object):
       excBindEn = []
       osclStr = []
       transCoeff = []
+      epsEn = []
+      sigmaEn = []
+      epsilon = []
+      sigma = []
+      lossEn = []
+      loss = []
+      lossDummy = []
 #      print("BSE!!!")
 #        if os.path.exists(inputgwFile):
       inputXSFile = os.path.join(dirPath, "input.xml")
@@ -264,6 +271,7 @@ class ExcitingParserContext(object):
                 elif dummyBse == 'IP':
                     self.bsetype = 'IP'
                 name = "EXCITON_BSE" + self.bsetype + '_SCR'
+#                nameEps = "EPSILON_BSE" + self.bsetype + '_SCR'
                 if files[len(name):len(name)+4] == 'full':
                     self.screentype = 'full'
                 elif files[len(name):len(name)+4] == 'diag':
@@ -291,18 +299,49 @@ class ExcitingParserContext(object):
       for i in range(numberOfComponents):
           excNum.append([])
           excEn.append([])
+          epsEn.append([])
+          sigmaEn.append([])
           excBindEn.append([])
           osclStr.append([])
           transCoeff.append([[],[]])
+          epsilon.append([[],[]])
+          sigma.append([[],[]])
+          lossEn.append([])
+          loss.append([[],[]])
+#          lossDummy.append([])
+
           outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+          outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+          outputSigmaFile = os.path.join(dirPath, "SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+          outputLossFile = os.path.join(dirPath, "LOSS_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
           with open(outputXSFile) as g:
               xsParser = exciting_parser_xs.XSParser()
               xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
+          with open(outputEpsFile) as g:
+              epsParser = exciting_parser_eps.EPSParser()
+              epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
+          with open(outputSigmaFile) as g:
+              sigmaParser = exciting_parser_eps.EPSParser()
+              sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
+          with open(outputLossFile) as g:
+              lossParser = exciting_parser_eps.EPSParser()
+              lossParser.parseEpsilon(outputLossFile, backend, lossEn, loss) #, dftMethodSectionGindex = self.secMethodIndex,
 #                                    dftSingleConfigurationGindex = self.secSingleConfIndex)
-#      backend.addvalue("x_exciting_xs_bse_number_of_components",numberOfComponents)
-#      backend.addvalue("x_exciting_xs_bse_number_of_excitons",len(excNum))
+      backend.addValue("x_exciting_xs_bse_number_of_components",numberOfComponents)
+      backend.addValue("x_exciting_xs_bse_number_of_excitons",len(excNum))
       backend.addValue("x_exciting_xs_bse_exciton_energies",excEn) 
-#      print("===",excBindEn) 
+      backend.addValue("x_exciting_xs_bse_exciton_binding_energies",excBindEn)
+      backend.addValue("x_exciting_xs_bse_exciton_oscillator_strength",osclStr)
+      backend.addValue("x_exciting_xs_bse_exciton_amplitude_re",transCoeff[0])
+      backend.addValue("x_exciting_xs_bse_exciton_amplitude_im",transCoeff[1])
+      backend.addValue("x_exciting_xs_bse_epsilon_energies",epsEn)
+      backend.addValue("x_exciting_xs_bse_epsilon_re",epsilon[0])
+      backend.addValue("x_exciting_xs_bse_epsilon_im",epsilon[1])
+      backend.addValue("x_exciting_xs_bse_sigma_energies",sigmaEn)
+      backend.addValue("x_exciting_xs_bse_sigma_re",sigma[0])
+      backend.addValue("x_exciting_xs_bse_sigma_im",sigma[1])
+      backend.addValue("x_exciting_xs_bse_loss_energies",lossEn)
+      backend.addValue("x_exciting_xs_bse_loss",loss[0])
       backend.closeNonOverlappingSection("section_single_configuration_calculation")
 
 

@@ -25,8 +25,14 @@ import os, sys, json, logging
 # This is the subparser for the exciting XS output
 ################################################################
 
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
-class XSParser(object):
+class EPSParser(object):
     """context for wien2k In2 parser"""
 
     def __init__(self):
@@ -38,20 +44,19 @@ class XSParser(object):
         # allows to reset values if the same superContext is used to parse different files
 #        self.initialize_values()
 
-    def parseExciton(self, excFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff):
-        with open(excFile) as g:
+    def parseEpsilon(self, epsFile, backend, epsEn, epsilon):
+        with open(epsFile) as g:
             while 1:
                 s = g.readline()
                 if not s: break
                 s = s.strip()
                 s = s.split()
-                if s[0] != "#":
-                    excNum[-1].append(int(s[0]))
-                    excEn[-1].append(float(s[1]))
-                    excBindEn[-1].append(float(s[2]))
-                    osclStr[-1].append(float(s[3]))
-                    transCoeff[-1][0].append(float(s[4]))
-                    transCoeff[-1][1].append(float(s[5]))
+                if len(s) == 0: 
+                    break
+                else:
+                    epsEn[-1].append(float(s[0]))
+                    epsilon[-1][0].append(float(s[1]))
+                    epsilon[-1][1].append(float(s[2]))
 
 def get_cachingLevelForMetaName(metaInfoEnv, CachingLvl):
     cachingLevelForMetaName = {}
