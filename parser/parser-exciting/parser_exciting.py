@@ -146,6 +146,7 @@ class ExcitingParserContext(object):
 #    print("listdir=",os.listdir('.'))
     if 'str.out' in os.listdir('.'):
       self.clathrates = True
+#      print("clathrate_vero===",self.clathrates)
       backend.addValue("x_exciting_clathrates", True)
       clathrate_labels = []
       clathrate_coordinates = []
@@ -163,6 +164,7 @@ class ExcitingParserContext(object):
       backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.asarray(clathrate_coordinates))
       backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
     else:
+#      print("clathrate_falso===",self.clathrates)
       backend.addValue("x_exciting_clathrates", False)
 #    backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.array(clathrate_coordinates)) 
 #    backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
@@ -329,6 +331,7 @@ class ExcitingParserContext(object):
 #                                    dftSingleConfigurationGindex = self.secSingleConfIndex)
       backend.addValue("x_exciting_xs_bse_number_of_components",numberOfComponents)
       backend.addValue("x_exciting_xs_bse_number_of_excitons",len(excNum))
+      backend.addValue("x_exciting_xs_bse_number_of_energy_points",len(epsEn))
       backend.addValue("x_exciting_xs_bse_exciton_energies",excEn) 
       backend.addValue("x_exciting_xs_bse_exciton_binding_energies",excBindEn)
       backend.addValue("x_exciting_xs_bse_exciton_oscillator_strength",osclStr)

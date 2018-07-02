@@ -51,7 +51,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.bse = "none"
 #        self.screentype = "full"
 ############ BSE variables################
-        self.aresbse = "True"
+        self.aresbse = True
 #        self.bsetype = "singlet"
         self.lmaxdielt = 14
         self.nstlbse = [0, 0, 0, 0]        ######## DA FARE
@@ -59,12 +59,12 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.nstlxas = [0, 0]              ######## DA FARE
         self.nstlxasDum = [0, 0]              ######## DA FARE
         self.rgkmaxBse = rgkmax[0]
-        self.sciavbd = "True"
-        self.sciavqbd = "False"
-        self.sciavqhd = "False"
-        self.sciavqwg = "False"
+        self.sciavbd = True
+        self.sciavqbd = False
+        self.sciavqhd = False
+        self.sciavqwg = False
         self.sciavtype = "spherical"
-        self.xas = "False"
+        self.xas = False
         self.xasatom = 0
         self.xasedge = "K"
         self.xasspecies = 0
@@ -98,7 +98,13 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.backend.addValue("x_exciting_xs_ngridk", self.ngridkXS)
         self.backend.addValue("x_exciting_xs_vkloff", self.vkloffXS)
         self.backend.addValue("x_exciting_xs_screening_ngridk", self.ngridkScr)
-        self.backend.addValue("x_exciting_xs_bse_number_of_bands", self.nstlbse)
+        if self.xas == False:
+            self.backend.addValue("x_exciting_xs_bse_number_of_bands", self.nstlbse)
+        else:
+            self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
+            self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
+            self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
+            self.backend.addValue("x_exciting_xs_bse_xas_number_of_bands", self.nstlxas)
 #        self.backend.addValue("x_exciting_xs_bse_xas_number_of_bands", self.nstlxas)
 
 #        for j in range(0,4):
@@ -219,14 +225,12 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.bse = "BSE"
             try:
                 self.aresbse = attrs.getValue('aresbse')
-                self.backend.addValue("x_exciting_xs_bse_antiresonant", self.aresbse)
+                if self.aresbse == "true":
+                    self.backend.addValue("x_exciting_xs_bse_antiresonant", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_bse_antiresonant", False)
             except:
-                self.backend.addValue("x_exciting_xs_bse_antiresonant", self.aresbse)
-#            try:
-#                self.bsetype = attrs.getValue('bsetype')
-#                self.backend.addValue("x_exciting_xs_bse_type", self.bsetype)
-#            except:
-#                self.backend.addValue("x_exciting_xs_bse_type", self.bsetype)
+                self.backend.addValue("x_exciting_xs_bse_antiresonant", True)
             try:
                 self.lmaxdielt = attrs.getValue('lmaxdielt')
                 self.backend.addValue("x_exciting_xs_bse_angular_momentum_cutoff", int(self.lmaxdielt))
@@ -239,24 +243,36 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
             try:
                 self.sciavbd = attrs.getValue('sciavbd')
-                self.backend.addValue("x_exciting_xs_bse_sciavbd", self.sciavbd)
+                if self.sciavqbd == "true":
+                    self.backend.addValue("x_exciting_xs_bse_sciavbd", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_bse_sciavbd", False)
             except:
-                self.backend.addValue("x_exciting_xs_bse_sciavbd", self.sciavbd)
+                self.backend.addValue("x_exciting_xs_bse_sciavbd", True)
             try:
                 self.sciavqbd = attrs.getValue('sciavqbd')
-                self.backend.addValue("x_exciting_xs_bse_sciavqbd", self.sciavqbd)
+                if self.sciavqbd == "true":
+                    self.backend.addValue("x_exciting_xs_bse_sciavqbd", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_bse_sciavqbd", False)
             except:
-                self.backend.addValue("x_exciting_xs_bse_sciavqbd", self.sciavqbd)
+                self.backend.addValue("x_exciting_xs_bse_sciavqbd", False)
             try:
                 self.sciavqhd = attrs.getValue('sciavqhd')
-                self.backend.addValue("x_exciting_xs_bse_sciavqhd", self.sciavqhd)
+                if self.sciavqhd == "true":
+                    self.backend.addValue("x_exciting_xs_bse_sciavqhd", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_bse_sciavqhd", False)
             except:
-                self.backend.addValue("x_exciting_xs_bse_sciavqhd", self.sciavqhd)
+                self.backend.addValue("x_exciting_xs_bse_sciavqhd", False)
             try:
                 self.sciavqwg = attrs.getValue('sciavqwg')
-                self.backend.addValue("x_exciting_xs_bse_sciavqwg", self.sciavqwg)
+                if self.sciavqwg == "true":
+                    self.backend.addValue("x_exciting_xs_bse_sciavqwg", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_bse_sciavqwg", False)
             except:
-                self.backend.addValue("x_exciting_xs_bse_sciavqwg", self.sciavqwg)
+                self.backend.addValue("x_exciting_xs_bse_sciavqwg", False)
             try:
                 self.sciavtype = attrs.getValue('sciavtype')
                 self.backend.addValue("x_exciting_xs_bse_sciavtype", self.sciavtype)
@@ -264,24 +280,34 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("x_exciting_xs_bse_sciavtype", self.sciavtype)
             try:
                 self.xas = attrs.getValue('xas')
-                self.backend.addValue("x_exciting_xs_bse_xas", self.xas)
+                if self.xas == "false":
+#                    print("xas===",self.xas)
+                    self.backend.addValue("x_exciting_xs_bse_xas", False)
+                else:
+#                    print("xas===",self.xas)
+                    self.backend.addValue("x_exciting_xs_bse_xas", True)
             except:
+#                print("xasdefault===",self.xas)
                 self.backend.addValue("x_exciting_xs_bse_xas", self.xas)
             try:
-                self.xasatom = attrs.getValue('xasatom')
-                self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
+                self.xasatom = int(attrs.getValue('xasatom'))
+#                self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
             except:
-                self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
+                pass
+#                self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
             try:
                 self.xasedge = attrs.getValue('xasedge')
-                self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
+#                self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
             except:
-                self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
+                pass
+#                self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
             try:
-                self.xasspecies = attrs.getValue('xasspecies')
-                self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
+                self.xasspecies = int(attrs.getValue('xasspecies'))
+#                self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
             except:
-                self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
+                pass
+#                self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
+#            if self.xas == False:
             try:
                 dummy = attrs.getValue('nstlbse')
                 self.nstlbseDum = dummy.split()
@@ -292,6 +318,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.nstlxasDum = dummy.split()
             except:
                 self.nstlxasDum = [0, 0]
+#            else:
+#                pass
 #            try:
 #                dummy = attrs.getValue('vkloff')
 #                self.vkloffSrcDum = dummy.split()lmaxdielt
