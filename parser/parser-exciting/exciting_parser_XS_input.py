@@ -21,6 +21,7 @@ from nomadcore.unit_conversion import unit_conversion
 
 class InputHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, rgkmax):
+#        self.xsType = None
         self.rgkmax = rgkmax[0]
         self.rgkmaxScr = rgkmax[0]
 #        print("self.rgkmax===",self.rgkmax)
@@ -48,16 +49,16 @@ class InputHandler(xml.sax.handler.ContentHandler):
 #        self.vkloffScr = [-1.0, -1.0, -1.0]
 #        self.vkloffScrDum = "-1.0 -1.0 -1.0"
         self.screening = "none"
-        self.bse = "none"
+        self.bse = False
 #        self.screentype = "full"
 ############ BSE variables################
         self.aresbse = True
 #        self.bsetype = "singlet"
         self.lmaxdielt = 14
-        self.nstlbse = [0, 0, 0, 0]        ######## DA FARE
-        self.nstlbseDum = [0, 0, 0, 0]        ######## DA FARE
-        self.nstlxas = [0, 0]              ######## DA FARE
-        self.nstlxasDum = [0, 0]              ######## DA FARE
+        self.nstlbse = [0, 0, 0, 0]        
+        self.nstlbseDum = [0, 0, 0, 0]        
+        self.nstlxas = [0, 0]             
+        self.nstlxasDum = [0, 0]             
         self.rgkmaxBse = rgkmax[0]
         self.sciavbd = True
         self.sciavqbd = False
@@ -68,6 +69,16 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.xasatom = 0
         self.xasedge = "K"
         self.xasspecies = 0
+        self.tddft = False
+        self.acon = "false"
+        self.ahc = "false"
+        self.drude = [0.0, 0.0]
+        self.fxcbsesplit = 0.00001
+        self.fxctype = "RPA"
+        self.lmaxalda = 3
+        self.nwacont = 0
+        self.tetra = False
+        self.tetradf = "false"
 
 #        self.xstype = "BSE"
 
@@ -79,6 +90,12 @@ class InputHandler(xml.sax.handler.ContentHandler):
 #            self.backend.addValue("gw_number_of_frequencies", self.nomeg)
  #       self.backend.addValue("gw_basis_set", "mixed")
 #        self.backend.addValue("gw_qp_equation_treatment", "linearization")
+
+        if self.tetradf == "true":
+            self.backend.addValue("x_exciting_xs_tetra", True)
+        else:
+            self.backend.addValue("x_exciting_xs_tetra", False)
+
         for j in range(0,3):
 
             self.ngridq[j] = int(self.ngridqDum[j])
@@ -98,9 +115,9 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.backend.addValue("x_exciting_xs_ngridk", self.ngridkXS)
         self.backend.addValue("x_exciting_xs_vkloff", self.vkloffXS)
         self.backend.addValue("x_exciting_xs_screening_ngridk", self.ngridkScr)
-        if self.xas == False:
+        if self.bse == True:
             self.backend.addValue("x_exciting_xs_bse_number_of_bands", self.nstlbse)
-        else:
+        elif self.xas == True:
             self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
             self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
             self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
@@ -124,18 +141,21 @@ class InputHandler(xml.sax.handler.ContentHandler):
         else:
             self.backend.addValue("x_exciting_xs_screening_rgkmax", float(self.rgkmaxScr))
 
-        if self.bse != "none" and self.rgkmaxBse == 0.0:
-            self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
-        else:
-            self.backend.addValue("x_exciting_xs_bse_rgkmax", float(self.rgkmaxBse))
+        if self.bse == True: 
+            if self.rgkmaxBse == 0.0:
+                self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
+            else:
+                self.backend.addValue("x_exciting_xs_bse_rgkmax", float(self.rgkmaxBse))
 
     def startElement(self, name, attrs):
+#        xsType = None
         if name == "xs":
 #            self.inputSectionGIndex = self.backend.openSection("section_system")
             self.inXSInput = True
             xstype = attrs.getValue('xstype')
             self.backend.addValue("x_exciting_xs_xstype", xstype)
             self.backend.addValue('x_exciting_electronic_structure_method', xstype)
+#            print("xstyppe===",xstype)
 
             try:
                 self.broad = attrs.getValue('broad')
@@ -199,11 +219,11 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.rgkmaxScr = attrs.getValue('rgkmax')
             except:
                 self.rgkmaxSrc = 0.0
-#            try:
-#                self.screentype = attrs.getValue('screentype')
-#                self.backend.addValue("x_exciting_xs_screening_type", int(self.screentype))
-#            except:
-#                self.backend.addValue("x_exciting_xs_screening_type", self.screentype)
+            try:
+                self.screentype = attrs.getValue('screentype')
+                self.backend.addValue("x_exciting_xs_screening_type", int(self.screentype))
+            except:
+                self.backend.addValue("x_exciting_xs_screening_type", self.screentype)
 
 #        self.aresbse = "true"
 #        self.bsetype = "singlet"
@@ -222,7 +242,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
 #        self.xasspecies = 0
 
         elif name == "BSE":
-            self.bse = "BSE"
+            self.bse = True
+#            xsType = "BSE"
             try:
                 self.aresbse = attrs.getValue('aresbse')
                 if self.aresbse == "true":
@@ -238,9 +259,10 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("x_exciting_xs_bse_angular_momentum_cutoff", self.lmaxdielt)
             try:
                 self.rgkmaxBse = attrs.getValue('rgkmax')
-                self.backend.addValue("x_exciting_xs_bse_rgkmax", float(self.rgkmax))
+#                self.backend.addValue("x_exciting_xs_bse_rgkmax", float(self.rgkmax))
             except:
-                self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
+                pass
+#                self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
             try:
                 self.sciavbd = attrs.getValue('sciavbd')
                 if self.sciavqbd == "true":
@@ -318,104 +340,107 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.nstlxasDum = dummy.split()
             except:
                 self.nstlxasDum = [0, 0]
-#            else:
-#                pass
-#            try:
-#                dummy = attrs.getValue('vkloff')
-#                self.vkloffSrcDum = dummy.split()lmaxdielt
-#            except:
-#                self.vkloffSrcDum = "0.0 0.0 0.0"
 
-#            try:
-#                self.fgrid = attrs.getValue('fgrid')
-#                self.backend.addValue("gw_frequency_grid_type", self.fgrid)
-#            except:
-#                self.fgrid = "gaule2"
-#                self.backend.addValue("gw_frequency_grid_type", self.fgrid)
-#            try:
-#                self.nomeg = attrs.getValue('nomeg')
-#                self.backend.addValue("gw_number_of_frequencies", int(self.nomeg))
-#            except:
-#                self.nomeg = 16
-#                self.backend.addValue("gw_number_of_frequencies", self.nomeg)
-#
-#        elif name == "selfenergy":
-#            self.selfenergy = "selfenergy"
-#            try:
- #               self.npol = attrs.getValue('npol')
- #               self.backend.addValue("gw_self_energy_c_number_of_poles", int(self.npol))
- #           except:
- #               self.npol = 0
- #               self.backend.addValue("gw_self_energy_c_number_of_poles", self.npol)
- #           try:
- #               self.snempty = attrs.getValue('nempty')
- #               self.backend.addValue("gw_self_energy_c_number_of_empty_states", int(self.snempty))
- #           except:
- #               self.snempty = 0
- #               self.backend.addValue("gw_self_energy_c_number_of_empty_states", self.snempty)
- #           try:
- #               self.singularity = attrs.getValue('singularity')
-#                self.backend.addValue("gw_self_energy_singularity_treatment", self.singularity)
-#            except:
-#                self.singularity = 'mpd'
-#                self.backend.addValue("gw_self_energy_singularity_treatment", self.singularity)
-#            try:
-#                self.actype = attrs.getValue('actype')
-#                self.backend.addValue("gw_self_energy_c_analytical_continuation", self.actype)
-#            except:
- #               self.actype = 'pade'
- #               self.backend.addValue("gw_self_energy_c_analytical_continuation", self.actype)
-#
-#        elif name == "mixbasis":
-##            self.mixbasis = "mixbasis"
-#            try:
-#                self.lmaxmb = attrs.getValue('lmaxmb')
-#                self.backend.addValue("gw_mixed_basis_lmax", int(self.lmaxmb))
-#            except:
-#                self.lmaxmb = 3
-#                self.backend.addValue("gw_mixed_basis_lmax", self.lmaxmb)
-#            try:
-#                self.epsmb = attrs.getValue('epsmb')
-#                self.backend.addValue("gw_mixed_basis_tolerance", float(self.epsmb))
-#            except:
-#                self.epsmb = 0.0001
-#                self.backend.addValue("gw_mixed_basis_tolerance", self.epsmb)
-#            try:
-#                self.gmb = attrs.getValue('gmb')
-#                self.backend.addValue("gw_mixed_basis_gmax", float(self.gmb)*self.gmaxvr)
-#            except:
-#                self.gmb = 1.0
-#                self.backend.addValue("gw_mixed_basis_gmax", self.gmb*self.gmaxvr)
-#
-#        elif name == "barecoul":
-#            self.barecoul = "barecoul"
-#            try:
-#                self.pwm = attrs.getValue('pwm')
-#                self.backend.addValue("gw_bare_coulomb_gmax", float(self.pwm)*float(self.gmb)*self.gmaxvr)
-#            except:
-#                self.pwm = 2.0
-#                self.backend.addValue("gw_bare_coulomb_gmax", self.pwm*float(self.gmb)*self.gmaxvr)
-#            try:
-#                self.cutofftype = attrs.getValue('cutofftype')
-#                self.backend.addValue("gw_bare_coulomb_cutofftype", self.cutofftype)
-#            except:
-#                self.cutofftype = "none"
- #               self.backend.addValue("gw_bare_coulomb_cutofftype", self.cutofftype)
-#
-#        elif name == "scrcoul":
-#            self.scrcoul = "scrcoul"
-#            try:
-#                self.sciavtype = attrs.getValue('sciavtype')
-#                self.backend.addValue("gw_screened_coulomb_volume_average",self.sciavtype)
-#            except:
-#                self.sciavtype = "isotropic"
-#                self.backend.addValue("gw_screened_coulomb_volume_average",self.sciavtype)
-#            try:
-#                self.scrtype = attrs.getValue('scrtype')
-#                self.backend.addValue("gw_screened_Coulomb", self.scrtype)
-#            except:
-#                self.scrtype = "rpa"
-#                self.backend.addValue("gw_screened_Coulomb", self.scrtype)
+        elif name == "tddft":
+            self.tddft = True
+
+            try:
+                self.acon = attrs.getValue('acont')
+                if self.acon == "true":
+                    self.backend.addValue("x_exciting_xs_tddft_analytic_continuation", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_tddft_analytic_continuation", False)
+            except:
+                    self.backend.addValue("x_exciting_xs_tddft_analytic_continuation", False)
+            try:
+                self.ahc = attrs.getValue('ahc')
+                if self.ahc == "true":
+                    self.backend.addValue("x_exciting_xs_tddft_anomalous_Hall_conductivity", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_tddft_anomalous_Hall_conductivity", False)
+            except:
+                    self.backend.addValue("x_exciting_xs_tddft_anomalous_Hall_conductivity", False)
+            try:
+                self.aresdf = attrs.getValue('aresdf')
+                if self.aresdf == "true":
+                    self.backend.addValue("x_exciting_xs_tddft_anti_resonant_dielectric", True)
+                elif self.aresdf == "false":
+                    self.backend.addValue("x_exciting_xs_tddft_anti_resonant_dielectric", False)
+            except:
+                    self.backend.addValue("x_exciting_xs_tddft_anti_resonant_dielectric", True)
+            try:
+                self.aresfxc = attrs.getValue('aresfxc')
+                if self.aresfxc == "true":
+                    self.backend.addValue("x_exciting_xs_tddft_anti_resonant_xc_kernel", True)
+                elif self.aresfxc == "false":
+                    self.backend.addValue("x_exciting_xs_tddft_anti_resonant_xc_kernel", False)
+            except:
+                    self.backend.addValue("x_exciting_xs_tddft_anti_resonant_xc_kernel", True)
+            try:
+                dummy = attrs.getValue('drude')
+                self.drude = dummy.split()
+                for j in range (0,2):
+                    self.drude[j] = float(self.drude[j])
+                self.backend.addValue("x_exciting_xs_tddft_drude", self.drude)
+            except:
+                self.backend.addValue("x_exciting_xs_tddft_drude", self.drude)
+            try:
+                self.fxcbsesplit = attrs.getValue('fxcbsesplit')
+                self.backend.addValue("x_exciting_xs_tddft_split_parameter", self.fromH(float(self.fxcbsesplit)))
+            except:
+                self.backend.addValue("x_exciting_xs_tddft_split_parameter", self.fromH(self.fxcbsesplit))
+            try:
+                self.fxctype = attrs.getValue('fxctype')
+                self.backend.addValue("x_exciting_xs_tddft_xc_kernel", self.fxctype)
+            except:
+                self.backend.addValue("x_exciting_xs_tddft_xc_kernel", self.fxctype)
+            try:
+                intraband = attrs.getValue('intraband')
+                if intraband == "true":
+                    self.backend.addValue("x_exciting_xs_tddft_finite_q_intraband_contribution", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_tddft_finite_q_intraband_contribution", False)
+            except:
+                    self.backend.addValue("x_exciting_xs_tddft_finite_q_intraband_contribution", False)
+            try:
+                kerndiag = attrs.getValue('kerndiag')
+                if kerndiag == "true":
+                    self.backend.addValue("x_exciting_xs_tddft_diagonal_xc_kernel", True)
+                else:
+                    self.backend.addValue("x_exciting_xs_tddft_diagonal_xc_kernel", False)
+            except:
+                    self.backend.addValue("x_exciting_xs_tddft_diagonal_xc_kernel", False)
+            try:
+                self.lmaxalda = attrs.getValue('lmaxalda')
+                self.backend.addValue("x_exciting_xs_tddft_lmax_alda", int(self.lmaxalda))
+            except:
+                self.backend.addValue("x_exciting_xs_tddft_lmax_alda", self.lmaxalda)
+            try:
+                mdfqtype = attrs.getValue('mdfqtype')
+                if mdfqtype == "0":
+                    self.backend.addValue("x_exciting_xs_tddft_macroscopic_dielectric_function_q_treatment", int(mdfqtype))
+                else:
+                    self.backend.addValue("x_exciting_xs_tddft_macroscopic_dielectric_function_q_treatment", int(mdfqtype))
+            except:
+                    mdfqtype = 0
+                    self.backend.addValue("x_exciting_xs_tddft_macroscopic_dielectric_function_q_treatment", int(mdfqtype))
+            try:
+                self.nwacont = attrs.getValue('nwacont')
+                self.backend.addValue("x_exciting_xs_tddft_analytic_continuation_number_of_intervals", int(self.nwacont))
+            except:
+                self.backend.addValue("x_exciting_xs_tddft_analytic_continuation_number_of_intervals", self.nwacont)
+
+        elif name == "tetra":
+            self.tetra = True
+            try:
+                self.tetradf = attrs.getValue('tetradf')
+#                if self.tetradf == "true":
+#                    selfbackend.addValue("x_exciting_xs_tetra", True)
+#                else:
+#                    self.backend.addValue("x_exciting_xs_tetra", False)
+            except:
+                self.tetradf == "false"
+#                    self.backend.addValue("x_exciting_xs_tetra", False)
 
     def endElement(self, name):
         pass

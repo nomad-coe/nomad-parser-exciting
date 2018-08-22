@@ -1,17 +1,16 @@
-# Copyright 2015-2018 Fawzi Mohamed, Ankit Kariryaa, Lauri Himanen
-# 
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-# 
+# Copyright 2016-2018 The NOMAD Developers Group
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 # Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 from builtins import object
@@ -27,6 +26,13 @@ import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, excitin
 import exciting_parser_XS_input, exciting_parser_xs, exciting_parser_eps
 from ase import Atoms
 import logging
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 class ExcitingParserContext(object):
 
@@ -50,6 +56,7 @@ class ExcitingParserContext(object):
     self.initialize_values()
 #    self.atom_pos = []
 #    self.atom_labels = []
+    self.XSSetGIndex = None
     self.secMethodIndex = None  
     self.secSystemIndex = None
     self.secSingleConfIndex = None
@@ -74,6 +81,12 @@ class ExcitingParserContext(object):
     self.screentype = None
     self.tensorComp = []
     self.excitonEnergies = []
+    self.xsTetra = False
+    self.xsAC = False
+    self.xsNAR = False
+    self.xstype = None
+    self.tddftKernel = None
+#    self.xsType = None
 #    self.volumeOptIndex = 0
 
   def onOpen_section_run(self, backend, gIndex, section):
@@ -246,20 +259,36 @@ class ExcitingParserContext(object):
       lossEn = []
       loss = []
       lossDummy = []
+      xstype = "TDDFT"
+      self.xstype = "TDDFT"
+      fromeV = unit_conversion.convert_unit_function("eV", "J")
 #      print("BSE!!!")
 #        if os.path.exists(inputgwFile):
       inputXSFile = os.path.join(dirPath, "input.xml")
-      selfXSSetGIndex = backend.openSection("section_method")
+      self.XSSetGIndex = backend.openSection("section_method")
+      with open(inputXSFile) as f:
+        exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
+#        xstype = section["x_exciting_xs_type"]
+#        print("xstype===",xstype)
+#        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
 #      backend.addValue('x_exciting_electronic_structure_method', "BSE")   ########!!!!!!!!!!! So far, BSE is not a valid value for electronic_structure_method. It must be added! #########
-      backend.addValue('x_exciting_xs_starting_point', self.xcName)
+#        teste = section["x_exciting_xs_tetra"]
+#        print("teste===",teste)
+#      backend.addValue('x_exciting_xs_starting_point', self.xcName)
+#      teste = section["x_exciting_xs_tetra"]
+#      print("teste===",teste)
       if self.secMethodIndex is not None:
         m2mGindex = backend.openNonOverlappingSection("section_method_to_method_refs")
         backend.addValue("method_to_method_ref", self.secMethodIndex)
         backend.addValue("method_to_method_kind", "starting_point")
         backend.closeNonOverlappingSection("section_method_to_method_refs")
 
+#        xstype = section["x_exciting_xs_type"]
+#        print("xstype===",xstype)
         for files in os.listdir(dirPath):
             if files[0:11] == "EXCITON_BSE":
+                xstype = "BSE"
+                self.xstype = "BSE"
                 dummyBse = files[11:13]
 #                self.tensorComp = files[-6:-4]
                 self.tensorComp.append(files[-6:-4])
@@ -283,15 +312,27 @@ class ExcitingParserContext(object):
                     self.screentype = 'noinvdiag'
                 elif files[len(name):len(name)+4] == 'long':
                     self.screentype = 'longrange'
-                
-        backend.addValue("x_exciting_xs_screening_type", self.screentype)
-        backend.addValue("x_exciting_xs_bse_type", self.bsetype)
+#            else:
+#                xstype = "TDDFT"    
+#        print("xstype===",xstype)
+#      teste = section["x_exciting_xs_tetra"]
+#      print("teste===",teste)
+        if xstype == "BSE":
+            numberOfComponents = len(self.tensorComp)
+#            backend.addValue("x_exciting_xs_screening_type", self.screentype)
+            backend.addValue("x_exciting_xs_bse_type", self.bsetype)
 #        print("===", self.tensorComp[0])
-        with open(inputXSFile) as f:
-          exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
-      backend.closeSection("section_method",selfXSSetGIndex)
-      numberOfComponents = len(self.tensorComp)
-
+#        with open(inputXSFile) as f:
+#          exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
+#            teste = section["x_exciting_xs_tetra"]
+#            print("teste===",teste)
+#      teste = section["x_exciting_xs_tetra"]
+#      print("teste===",teste)
+      backend.closeSection("section_method",self.XSSetGIndex)
+#      teste = section["x_exciting_xs_tetra"]
+#      print("teste===",teste)
+#      numberOfComponents = len(self.tensorComp)
+#      print("xstype=====",xstype)
       backend.openNonOverlappingSection("section_single_configuration_calculation")
       if self.secSingleConfIndex is not None:
           backend.openNonOverlappingSection("section_calculation_to_calculation_refs")
@@ -299,98 +340,295 @@ class ExcitingParserContext(object):
           backend.addValue("calculation_to_calculation_kind", "starting_point")
           backend.closeNonOverlappingSection("section_calculation_to_calculation_refs")
 
-      for i in range(numberOfComponents):
-          excNum.append([])
-          excEn.append([])
-          epsEn.append([])
-          sigmaEn.append([])
-          excBindEn.append([])
-          osclStr.append([])
-          transCoeff.append([[],[]])
-          epsilon.append([[],[]])
-          sigma.append([[],[]])
-          lossEn.append([])
-          loss.append([[],[]])
+      if xstype == "BSE":
+          for i in range(numberOfComponents):
+              excNum.append([])
+              excEn.append([])
+              epsEn.append([])
+              sigmaEn.append([])
+              excBindEn.append([])
+              osclStr.append([])
+              transCoeff.append([[],[]])
+              epsilon.append([[],[]])
+              sigma.append([[],[]])
+              lossEn.append([])
+              loss.append([[],[]])
 #          lossDummy.append([])
 
-          outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-          outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-          outputSigmaFile = os.path.join(dirPath, "SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-          outputLossFile = os.path.join(dirPath, "LOSS_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-          with open(outputXSFile) as g:
-              xsParser = exciting_parser_xs.XSParser()
-              xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
-          with open(outputEpsFile) as g:
-              epsParser = exciting_parser_eps.EPSParser()
-              epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
-          with open(outputSigmaFile) as g:
-              sigmaParser = exciting_parser_eps.EPSParser()
-              sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
-          with open(outputLossFile) as g:
-              lossParser = exciting_parser_eps.EPSParser()
-              lossParser.parseEpsilon(outputLossFile, backend, lossEn, loss) #, dftMethodSectionGindex = self.secMethodIndex,
+              outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+              outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+              outputSigmaFile = os.path.join(dirPath, "SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+              outputLossFile = os.path.join(dirPath, "LOSS_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+              with open(outputXSFile) as g:
+                  xsParser = exciting_parser_xs.XSParser()
+                  xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
+              with open(outputEpsFile) as g:
+                  epsParser = exciting_parser_eps.EPSParser()
+                  epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
+              with open(outputSigmaFile) as g:
+                  sigmaParser = exciting_parser_eps.EPSParser()
+                  sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
+              with open(outputLossFile) as g:
+                  lossParser = exciting_parser_eps.EPSParser()
+                  lossParser.parseEpsilon(outputLossFile, backend, lossEn, loss) #, dftMethodSectionGindex = self.secMethodIndex,
 #                                    dftSingleConfigurationGindex = self.secSingleConfIndex)
-      backend.addValue("x_exciting_xs_bse_number_of_components",numberOfComponents)
-      backend.addValue("x_exciting_xs_bse_number_of_excitons",len(excNum))
-      backend.addValue("x_exciting_xs_bse_number_of_energy_points",len(epsEn))
-      backend.addValue("x_exciting_xs_bse_exciton_energies",excEn) 
-      backend.addValue("x_exciting_xs_bse_exciton_binding_energies",excBindEn)
-      backend.addValue("x_exciting_xs_bse_exciton_oscillator_strength",osclStr)
-      backend.addValue("x_exciting_xs_bse_exciton_amplitude_re",transCoeff[0])
-      backend.addValue("x_exciting_xs_bse_exciton_amplitude_im",transCoeff[1])
-      backend.addValue("x_exciting_xs_bse_epsilon_energies",epsEn)
-      backend.addValue("x_exciting_xs_bse_epsilon_re",epsilon[0])
-      backend.addValue("x_exciting_xs_bse_epsilon_im",epsilon[1])
-      backend.addValue("x_exciting_xs_bse_sigma_energies",sigmaEn)
-      backend.addValue("x_exciting_xs_bse_sigma_re",sigma[0])
-      backend.addValue("x_exciting_xs_bse_sigma_im",sigma[1])
-      backend.addValue("x_exciting_xs_bse_loss_energies",lossEn)
-      backend.addValue("x_exciting_xs_bse_loss",loss[0])
+          backend.addValue("x_exciting_xs_bse_number_of_components",numberOfComponents)
+          backend.addValue("x_exciting_xs_bse_number_of_excitons",len(excNum))
+          backend.addValue("x_exciting_xs_bse_number_of_energy_points",len(epsEn))
+          backend.addValue("x_exciting_xs_bse_exciton_energies",excEn) 
+          backend.addValue("x_exciting_xs_bse_exciton_binding_energies",excBindEn)
+          backend.addValue("x_exciting_xs_bse_exciton_oscillator_strength",osclStr)
+          backend.addValue("x_exciting_xs_bse_exciton_amplitude_re",transCoeff[0])
+          backend.addValue("x_exciting_xs_bse_exciton_amplitude_im",transCoeff[1])
+          backend.addValue("x_exciting_xs_bse_epsilon_energies",epsEn)
+          backend.addValue("x_exciting_xs_bse_epsilon_re",epsilon[0])
+          backend.addValue("x_exciting_xs_bse_epsilon_im",epsilon[1])
+          backend.addValue("x_exciting_xs_bse_sigma_energies",sigmaEn)
+          backend.addValue("x_exciting_xs_bse_sigma_re",sigma[0])
+          backend.addValue("x_exciting_xs_bse_sigma_im",sigma[1])
+          backend.addValue("x_exciting_xs_bse_loss_energies",lossEn)
+          backend.addValue("x_exciting_xs_bse_loss",loss[0])
+
+      if xstype == "TDDFT":
+          qLattice = []
+          qCartesian = []
+          qPlusG = []
+          qPlusGCartesian = []
+          qPlusGLattice = []
+          qpointNumber = 0
+          QFile = os.path.join(dirPath, "QPOINTS.OUT")
+          dielTensSym = []
+          dielTensNoSym = []
+          tensorComp=[]
+          dielFunctLoc=[[],[]]
+          dielFunctNoLoc=[[],[]]
+          dielFunctEne = []
+          lossFunctionLoc = []
+          lossFunctionNoLoc = []
+          sigmaLoc = [[],[]]
+          sigmaNoLoc = [[],[]]
+
+          for files in os.listdir(dirPath):
+              if files[0:9] == "SIGMA_NLF":
+                  tensorComp.append(files[-13:-11])
+#          print("tensorComp===",tensorComp)
+          if self.xsTetra and self.xsAC and not self.xsNAR:
+              ext = "TET_AC_NAR"
+          elif not self.xsTetra and self.xsAC and not self.xsNAR:
+              ext = "AC_NAR"
+          elif not self.xsTetra and not self.xsAC and not self.xsNAR:
+              ext = "NAR"
+          elif self.xsTetra and self.xsAC and self.xsNAR:
+              ext = "TET_AC"
+          elif self.xsTetra and not self.xsAC and self.xsNAR:
+              ext = "TET"
+          elif self.xsTetra and not self.xsAC and not self.xsNAR:
+              ext = "TET_NAR"
+          else:
+              ext=""
+
+#          dielTensSymIm = []
+#          dielTensNoSymIm = []
+          with open(QFile) as g:
+              while 1:
+                  s = g.readline()
+                  if not s: break
+                  s = s.strip()
+                  s = s.split()
+                  if not is_number(s[1]): 
+#                      print("s===",s)
+                      qpointNumber = int(s[0] )
+                  else:
+                      qPlusGCartesian.append([])
+                      qPlusGLattice.append([])
+                      qLattice.append([float(s[1]),float(s[2]),float(s[3])])
+                      qCartesian.append([float(s[1]),float(s[2]),float(s[3])])
+                      qPlusG.append(int(s[7]))
+              if self.xsTetra and self.xsAC and not self.xsNAR:
+                  ext = "TET_AC_NAR"
+              elif not self.xsTetra and self.xsAC and not self.xsNAR:
+                  ext = "AC_NAR"
+              elif not self.xsTetra and not self.xsAC and not self.xsNAR:
+                  ext = "NAR"
+              elif self.xsTetra and self.xsAC and self.xsNAR:
+                  ext = "TET_AC"
+              elif self.xsTetra and not self.xsAC and self.xsNAR:
+                  ext = "TET"
+              elif self.xsTetra and not self.xsAC and not self.xsNAR:
+                  ext = "TET_NAR"
+              else:
+                  ext=""
+#                      xstype = "BSE"
+#                      self.xstype = "BSE"
+#                      dummyBse = files[11:13]
+#                self.tensorComp = files[-6:-4]
+          for i in range(qpointNumber):
+              dielTensSym.append([[],[]])
+              dielTensNoSym.append([[],[]])
+              dielFunctLoc[0].append([])
+              dielFunctLoc[1].append([])
+              dielFunctNoLoc[0].append([])
+              dielFunctNoLoc[1].append([])
+              lossFunctionLoc.append([])
+              lossFunctionNoLoc.append([])
+              dielFunctEne.append([])
+              sigmaLoc[0].append([])
+              sigmaLoc[1].append([])
+              sigmaNoLoc[0].append([])
+              sigmaNoLoc[1].append([])
+#              dielTensSymIm.append([[],[]])
+
+#              dielTensNoSymIm.append([[],[]])
+              if i < 10:
+                  qExt00 = '_QMT00'+ str(i+1)
+                  qPlusGFile = os.path.join(dirPath, 'GQPOINTS' + qExt00 + '.OUT')
+                  DielNoSymFile = os.path.join(dirPath, 'DIELTENS0_NOSYM' + qExt00 + '.OUT')
+                  DielSymFile = os.path.join(dirPath, 'DIELTENS0' + qExt00 + '.OUT')
+                  with open(qPlusGFile) as g:
+                      while 1:
+                          s = g.readline()
+                          if not s: break
+                          s = s.strip()
+                          s = s.split()
+                          if is_number(s[1]): 
+                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
+                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
+                  with open(DielNoSymFile) as g:
+                      while 1:
+                          s = g.readline()
+                          if not s: break
+                          s = s.strip()
+                          s = s.split()
+                          if s and is_number(s[0]):
+                              dielTensNoSym[i][0].append([float(s[0]),float(s[1]),float(s[2])])
+                              dielTensNoSym[i][1].append([float(s[3]),float(s[4]),float(s[5])])
+                  with open(DielSymFile) as g:
+                      while 1:
+                          s = g.readline()
+                          if not s: break
+                          s = s.strip()
+                          s = s.split()
+                          if s and is_number(s[0]):
+                              dielTensSym[i][0].append([float(s[0]),float(s[1]),float(s[2])])
+                              dielTensSym[i][1].append([float(s[3]),float(s[4]),float(s[5])])
+                  for j in range(len(tensorComp)):
+                      dielFunctLoc[0][-1].append([])
+                      dielFunctLoc[1][-1].append([])
+                      dielFunctNoLoc[0][-1].append([])
+                      dielFunctNoLoc[1][-1].append([])
+                      dielFunctEne[-1].append([])
+                      lossFunctionLoc[-1].append([])
+                      lossFunctionNoLoc[-1].append([])
+                      sigmaLoc[0][-1].append([])
+                      sigmaLoc[1][-1].append([])
+                      sigmaNoLoc[0][-1].append([])
+                      sigmaNoLoc[1][-1].append([])
+#                      print("j===",j)
+#                      print("tensorComp===",tensorComp[j])
+#                      print("ext===",ext)
+#                      print("self.tddftKernel===",self.tddftKernel)
+#                      print("qExt00===",qExt00)
+#                      print("tutto===",'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                      epsilonLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                      epsilonNoLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                      lossFunctionLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                      lossFunctionNoLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                      sigmaLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                      sigmaNoLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+
+                      with open(epsilonLocalField) as g:
+                          while 1:
+                              s = g.readline()
+                              if not s: break
+                              s = s.strip()
+                              s = s.split()
+                              ene, epsRe, epsIm = fromeV(float(s[0])),float(s[1]),float(s[2])
+                              dielFunctLoc[0][-1][-1].append(epsRe)
+                              dielFunctLoc[1][-1][-1].append(epsIm)
+                              dielFunctEne[-1][-1].append(ene)
+                      with open(epsilonNoLocalField) as g:
+                          while 1:
+                              s = g.readline()
+                              if not s: break
+                              s = s.strip()
+                              s = s.split()
+                              epsRe, epsIm = float(s[1]),float(s[2])
+                              dielFunctNoLoc[0][-1][-1].append(epsRe)
+                              dielFunctNoLoc[1][-1][-1].append(epsIm)
+                      with open(lossFunctionLocalFieldFile) as g:
+                          while 1:
+                              s = g.readline()
+                              if not s: break
+                              s = s.strip()
+                              s = s.split()
+#                              print("s===",s)
+                              if s and is_number(s[0]): 
+                                  loss = float(s[1])
+                                  lossFunctionLoc[-1][-1].append(loss)
+                      with open(lossFunctionNoLocalFieldFile) as g:
+                          while 1:
+                              s = g.readline()
+                              if not s: break
+                              s = s.strip()
+                              s = s.split()
+#                              print("s===",s)
+                              if s and is_number(s[0]):
+                                  loss = float(s[1])
+                                  lossFunctionNoLoc[-1][-1].append(loss)
+                      with open(sigmaLocalFieldFile) as g:
+                          while 1:
+                              s = g.readline()
+                              if not s: break
+                              s = s.strip()
+                              s = s.split()
+                              if s and is_number(s[0]):
+                                  sigmaRe, sigmaIm = float(s[1]),float(s[2])
+                                  sigmaLoc[0][-1][-1].append(sigmaRe)
+                                  sigmaLoc[1][-1][-1].append(sigmaIm)
+                      with open(sigmaNoLocalFieldFile) as g:
+                          while 1:
+                              s = g.readline()
+                              if not s: break
+                              s = s.strip()
+                              s = s.split()
+                              if s and is_number(s[0]):
+                                  sigmaRe, sigmaIm = float(s[1]),float(s[2])
+                                  sigmaNoLoc[0][-1][-1].append(sigmaRe)
+                                  sigmaNoLoc[1][-1][-1].append(sigmaIm)
+#                              dielFunctEne[-1][-1].append(ene)
+#                              if s and is_number(s[0]):
+#                                  dielTensSym[i][0].append([float(s[0]),float(s[1]),float(s[2])])
+#                                  dielTensSym[i][1].append([float(s[3]),float(s[4]),float(s[5])])
+#          print("loss===",lossFunctionLoc)
+#              print("ext===",ext)
+#          print("dielTensSym===",dielTensSym)
+#          print("dielTensNoSym===",dielTensNoSym) 
+#                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
+#                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
+          backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
+          backend.addValue("x_exciting_xs_tddft_sigma_no_local_field",sigmaNoLoc)
+          backend.addValue("x_exciting_xs_tddft_loss_function_local_field",lossFunctionLoc)
+          backend.addValue("x_exciting_xs_tddft_loss_function_no_local_field",lossFunctionNoLoc)
+          backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
+          backend.addValue("x_exciting_xs_tddft_number_of_epsilon_values",len(dielFunctEne[0][0]))
+          backend.addValue("x_exciting_xs_tddft_epsilon_energies",dielFunctEne[0][0])
+          backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc) 
+          backend.addValue("x_exciting_xs_tddft_dielectric_function_no_local_field",dielFunctNoLoc)
+          backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
+          backend.addValue("x_exciting_xs_tddft_number_of_q_points",qpointNumber)
+          backend.addValue("x_exciting_xs_tddft_dielectric_tensor_sym",dielTensSym)
+          backend.addValue("x_exciting_xs_tddft_dielectric_tensor_no_sym",dielTensNoSym)
+
       backend.closeNonOverlappingSection("section_single_configuration_calculation")
 
-
-#              print(outputXSFile)
-
-#      for files in os.listdir(dirPath):
-#          if files[0:11] == "EXCITON_BSE":
-#              dummyBse = files[11:13]
-#              dummyTenCom = files[-6:-4]
-#              if dummyBse == 'si':
-#                  self.bsetype = 'singlet'
-##                  name = "EXCITON_BSE" + self.bsetype
-#              elif dummyBse == 'tr':
-#                  self.bsetype = 'triplet'
-#              elif dummyBse == 'RP':
-#                  self.bsetype = 'RPA'
-#              elif dummyBse == 'IP':
-#                  self.bsetype = 'IP'
-#              name = "EXCITON_BSE" + self.bsetype + '_SCR'
-#              if files[len(name):len(name)+4] == 'full':
-#                  self.screentype = 'full'
-#              elif files[len(name):len(name)+4] == 'diag':
-#                  self.screentype = 'diag'
-#              elif files[len(name):len(name)+4] == 'noin':
-#                  self.screentype = 'noinvdiag'
-#              elif files[len(name):len(name)+4] == 'long':
-#                  self.screentype = 'longrange'
-
-#              print("===",self.screentype)
-
-###########################TEST#############################
 
   def onClose_x_exciting_section_geometry_optimization(self, backend, gIndex, section):
     """Trigger called when x_abinit_section_dataset is closed.
     """
-#    print("len(self.frameSequence)=",len(self.frameSequence))
     if len(self.frameSequence) > 1:
       frameGIndex = backend.openSection("section_frame_sequence")
-#        if section["x_abinit_geometry_optimization_converged"] is not None:
-#          if section["x_abinit_geometry_optimization_converged"][-1] == "are converged":
       backend.addValue("geometry_optimization_converged", True)
-#          else:
-#            backend.addValue("geometry_optimization_converged", False)
       backend.closeSection("section_frame_sequence", frameGIndex)
-#    self.frameSequence = []
     backend.closeSection("section_sampling_method", self.samplingGIndex)
 
   def onClose_section_frame_sequence(self, backend, gIndex, section):
@@ -412,35 +650,7 @@ class ExcitingParserContext(object):
         backend.closeSection("section_sampling_method", gi)
     else:
         pass
-################################TESDT###########################
-#    mainFile = self.parser.fIn.fIn.name
-#    dirPath = os.path.dirname(self.parser.fIn.name)
-#    print("dirPath===",dirPath)
-#    gw_File = os.path.join(dirPath, "GW_INFO.OUT")
-#    gwFile = os.path.join(dirPath, "GWINFO.OUT")
-#    bseFile = os.path.join(dirPath, "INFOXS.OUT")
-#    for gFile in [gw_File, gwFile]:
-#      if os.path.exists(gFile):
-#        gwParser = exciting_parser_gw.GWParser()
-#        gwParser.parseGW(gFile, backend,
-#                         dftMethodSectionGindex = self.secMethodIndex,
-#                         dftSingleConfigurationGindex = self.secSingleConfIndex,
-#                         xcName = self.xcName,
-#                         unitCellVol = self.unit_cell_vol,
-#                         gmaxvr = self.gmaxvr)
-#
-#        subParser = AncillaryParser(
-#            fileDescription = exciting_parser_gw.buildGWMatchers(),
-#            parser = self.parser,
-#            cachingLevelForMetaName = exciting_parser_gw.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.PreOpenedIgnore),
-#            superContext = gwParser)
-#        with open(gFile) as fIn:
-#            subParser.parseFile(fIn)
-#        break
-#
-#    if os.path.exists(bseFile):
-#      print("BSE!!!")
-###########################TEST##########################
+
   def onClose_x_exciting_section_lattice_vectors(self, backend, gIndex, section):
     latticeX = section["x_exciting_geometry_lattice_vector_x"]
     latticeY = section["x_exciting_geometry_lattice_vector_y"]
@@ -793,9 +1003,15 @@ class ExcitingParserContext(object):
 #        print("section['x_exciting_geometry_atom_labels']=",section['x_exciting_geometry_atom_labels'])
     else:
         self.atom_labels = self.atom_labels + section['x_exciting_geometry_atom_labels']
-#    print("self.atom_labels_dopodopo=",self.atom_labels)
+#    print("self.self.XSSetGIndexatom_labels_dopodopo=",self.atom_labels)
 
   def onClose_section_method(self, backend, gIndex, section):
+    if gIndex == self.XSSetGIndex and self.xstype == "TDDFT":
+        self.tddftKernel = section["x_exciting_xs_tddft_xc_kernel"]
+        self.xsTetra = section["x_exciting_xs_tetra"][0]
+        self.xsAC = section["x_exciting_xs_tddft_analytic_continuation"][0]
+        self.xsNAR = section["x_exciting_xs_tddft_anti_resonant_dielectric"][0]
+#        print("teste===",self.xsTetra)
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
       try:
