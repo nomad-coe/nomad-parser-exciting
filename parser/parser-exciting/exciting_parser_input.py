@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import xml.sax
-import logging
+import logging as _logging
 import numpy as np
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 from nomadcore.unit_conversion.unit_conversion import convert_unit
 from nomadcore.unit_conversion import unit_conversion
+
+logging = _logging.getLogger('nomad.parser.exciting.input')
+
 
 class InputHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, gmaxvr):
@@ -59,7 +62,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("gw_self_energy_c_number_of_poles", int(self.npol))
             self.backend.addValue("gw_self_energy_c_number_of_empty_states", int(self.snempty))
             self.backend.addValue("gw_self_energy_singularity_treatment", self.singularity)
-            self.backend.addValue("gw_self_energy_c_analytical_continuation", self.actype)            
+            self.backend.addValue("gw_self_energy_c_analytical_continuation", self.actype)
         if self.mixbasis == "none":
             self.backend.addValue("gw_mixed_basis_lmax", self.lmaxmb)
             self.backend.addValue("gw_mixed_basis_tolerance", self.epsmb)
@@ -74,7 +77,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.backend.addValue("gw_qp_equation_treatment", "linearization")
         for j in range(0,3):
             self.ngridq[j] = int(self.ngridqDum[j])
-        self.backend.addValue("gw_ngridq", self.ngridq)        
+        self.backend.addValue("gw_ngridq", self.ngridq)
 
     def startElement(self, name, attrs):
         fromH = unit_conversion.convert_unit_function("hartree", "J")
@@ -85,7 +88,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.coreflag = attrs.getValue('coreflag')
                 self.backend.addValue("gw_core_treatment", self.coreflag)
             except:
-                self.coreflag = "all" 
+                self.coreflag = "all"
                 self.backend.addValue("gw_core_treatment", self.coreflag)
             try:
                 self.pnempty = attrs.getValue('nempty')
@@ -203,6 +206,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
 
 def parseInput(inF, backend, gmaxvr):
     handler = InputHandler(backend, gmaxvr)
-    logging.error("will parse")
+    logging.info("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")
+    logging.info("did parse")

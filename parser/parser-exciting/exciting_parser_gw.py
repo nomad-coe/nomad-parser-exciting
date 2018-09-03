@@ -19,7 +19,7 @@ from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, logging, exciting_parser_input
+import os, sys, json, exciting_parser_input
 
 ################################################################
 # This is the subparser for the exciting GW output
@@ -198,7 +198,7 @@ class GWParser(object):
             backend.addValue("dos_energies", dosEnergies)
             backend.addValue("dos_values", dosValues)
             backend.addValue("number_of_dos_values", len(dosEnergies))
-            backend.closeSection("section_dos",dosGWGIndex)        
+            backend.closeSection("section_dos",dosGWGIndex)
 
         ##################BANDSTRUCTURE#####################
 
@@ -219,7 +219,7 @@ class GWParser(object):
                     s = g.readline()
                     if not s: break
                     s = s.strip()
-                    s = s.split()                
+                    s = s.split()
                     if not self.spinTreat:
                         if len(s) == 0:
                             for i in range(0,2):
@@ -228,7 +228,7 @@ class GWParser(object):
                             for i in range(0,2):
                                 bandEnergies[i].append([])
                                 numBand = int(s[2])
-                                numK = int(s[3])          
+                                numK = int(s[3])
                         elif len(s) > 0:
                             for i in range(0,2):
                                 bandEnergies[i][-1].append(fromH(float(s[6])))
@@ -246,7 +246,7 @@ class GWParser(object):
                     if dist[i] == dist[i-1]:
                         Kindex.append(i)
                 Kindex.append(numK)
-                for i in range(0,len(Kindex)-1): 
+                for i in range(0,len(Kindex)-1):
                     segmK.append(dist[Kindex[i]:Kindex[i+1]])
 
                 for i in range(0,len(segmK)):
@@ -369,12 +369,12 @@ class GWParser(object):
  #           backend.addValue("gw_optical_gap", optical)
  #           backend.closeSection("section_single_configuration_calculation",singleGIndex)
 
-def buildGWMatchers():     
-    return SM(     
-    name = 'root',     
-    weak = True,    
+def buildGWMatchers():
+    return SM(
+    name = 'root',
+    weak = True,
     startReStr = "\=\s*Main GW output file\s*\=",
-#    sections = ["section_run"], 
+#    sections = ["section_run"],
     subMatchers = [
     SM(
       startReStr = "\-\s*frequency grid\s*\-",
@@ -386,11 +386,11 @@ def buildGWMatchers():
     ]),
     SM(
       startReStr = "\-\s*G0W0\s*\-",
-      endReStr = "\=\s*GW timing info \(seconds\)\s*\=",        
-      sections = ["section_single_configuration_calculation"],     
+      endReStr = "\=\s*GW timing info \(seconds\)\s*\=",
+      sections = ["section_single_configuration_calculation"],
       subMatchers = [
         SM(r"\s*Fermi energy\:\s*(?P<gw_fermi_energy__hartree>[-0-9.]+)"),
-        SM(r"\s* Fundamental BandGap \(eV\)\:\s*(?P<gw_fundamental_gap__eV>[0-9.]+)"),         
+        SM(r"\s* Fundamental BandGap \(eV\)\:\s*(?P<gw_fundamental_gap__eV>[0-9.]+)"),
         SM(r"\s*Direct BandGap \(eV\)\:\s*(?P<gw_fundamental_gap__eV>[0-9.]+)"),
         SM(r"\s* Optical BandGap \(eV\)\:\s*(?P<gw_optical_gap__eV>[0-9.]+)")
     ])

@@ -57,7 +57,7 @@ class ExcitingParserContext(object):
 #    self.atom_pos = []
 #    self.atom_labels = []
     self.XSSetGIndex = None
-    self.secMethodIndex = None  
+    self.secMethodIndex = None
     self.secSystemIndex = None
     self.secSingleConfIndex = None
     self.spinTreat = None
@@ -108,7 +108,7 @@ class ExcitingParserContext(object):
 #          if directory[-4:-1]==
 #        print("root=",root)
 #        print("dirs=",dirs)
-#        print("files=",files)     
+#        print("files=",files)
 #####volume optimization for simple cubic systems########
     if 'INFO_VOL' in os.listdir('.'):
       self.volumeOpt = True
@@ -139,7 +139,7 @@ class ExcitingParserContext(object):
 #        optGindex = backend.openSection("section_method")
 #        print("optGindex=",optGindex)
 #        backend.addValue("x_exciting_volume_optimization", self.volumeOpt)
-#        backend.closeSection("section_method", optGindex)        
+#        backend.closeSection("section_method", optGindex)
 #    os.chdir(curDir)
 
   def onOpen_section_sampling_method(self, backend, gIndex, section):
@@ -148,7 +148,7 @@ class ExcitingParserContext(object):
 #    print("self.secSamplingMethodIndex=",self.secSamplingMethodIndex)
     self.samplingMethod = "geometry_optimization"
 #    print("self.samplingMethod=",self.samplingMethod)
-    
+
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
     curDir = os.getcwd()
@@ -180,9 +180,9 @@ class ExcitingParserContext(object):
     else:
 #      print("clathrate_falso===",self.clathrates)
       backend.addValue("x_exciting_clathrates", False)
-#    backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.array(clathrate_coordinates)) 
+#    backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.array(clathrate_coordinates))
 #    backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
-    os.chdir(curDir)            
+    os.chdir(curDir)
 
   def onOpen_section_single_configuration_calculation(self, backend, gIndex, section):
     if self.secSingleConfIndex is None:
@@ -313,7 +313,7 @@ class ExcitingParserContext(object):
                 elif files[len(name):len(name)+4] == 'long':
                     self.screentype = 'longrange'
 #            else:
-#                xstype = "TDDFT"    
+#                xstype = "TDDFT"
 #        print("xstype===",xstype)
 #      teste = section["x_exciting_xs_tetra"]
 #      print("teste===",teste)
@@ -375,7 +375,7 @@ class ExcitingParserContext(object):
           backend.addValue("x_exciting_xs_bse_number_of_components",numberOfComponents)
           backend.addValue("x_exciting_xs_bse_number_of_excitons",len(excNum))
           backend.addValue("x_exciting_xs_bse_number_of_energy_points",len(epsEn))
-          backend.addValue("x_exciting_xs_bse_exciton_energies",excEn) 
+          backend.addValue("x_exciting_xs_bse_exciton_energies",excEn)
           backend.addValue("x_exciting_xs_bse_exciton_binding_energies",excBindEn)
           backend.addValue("x_exciting_xs_bse_exciton_oscillator_strength",osclStr)
           backend.addValue("x_exciting_xs_bse_exciton_amplitude_re",transCoeff[0])
@@ -435,7 +435,7 @@ class ExcitingParserContext(object):
                   if not s: break
                   s = s.strip()
                   s = s.split()
-                  if not is_number(s[1]): 
+                  if not is_number(s[1]):
 #                      print("s===",s)
                       qpointNumber = int(s[0] )
                   else:
@@ -490,7 +490,7 @@ class ExcitingParserContext(object):
                           if not s: break
                           s = s.strip()
                           s = s.split()
-                          if is_number(s[1]): 
+                          if is_number(s[1]):
                               qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
                               qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
                   with open(DielNoSymFile) as g:
@@ -562,7 +562,7 @@ class ExcitingParserContext(object):
                               s = s.strip()
                               s = s.split()
 #                              print("s===",s)
-                              if s and is_number(s[0]): 
+                              if s and is_number(s[0]):
                                   loss = float(s[1])
                                   lossFunctionLoc[-1][-1].append(loss)
                       with open(lossFunctionNoLocalFieldFile) as g:
@@ -602,7 +602,7 @@ class ExcitingParserContext(object):
 #          print("loss===",lossFunctionLoc)
 #              print("ext===",ext)
 #          print("dielTensSym===",dielTensSym)
-#          print("dielTensNoSym===",dielTensNoSym) 
+#          print("dielTensNoSym===",dielTensNoSym)
 #                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
 #                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
           backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
@@ -612,7 +612,7 @@ class ExcitingParserContext(object):
           backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
           backend.addValue("x_exciting_xs_tddft_number_of_epsilon_values",len(dielFunctEne[0][0]))
           backend.addValue("x_exciting_xs_tddft_epsilon_energies",dielFunctEne[0][0])
-          backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc) 
+          backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc)
           backend.addValue("x_exciting_xs_tddft_dielectric_function_no_local_field",dielFunctNoLoc)
           backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
           backend.addValue("x_exciting_xs_tddft_number_of_q_points",qpointNumber)
@@ -687,7 +687,7 @@ class ExcitingParserContext(object):
         }
     if xcNr == 100:
         dirPath = os.path.dirname(self.parser.fIn.name)
-        inputGSFile = os.path.join(dirPath, "input.xml") 
+        inputGSFile = os.path.join(dirPath, "input.xml")
         with open(inputGSFile) as f:
             exciting_parser_GS_input.parseInput(f, backend)
     else:
@@ -798,7 +798,7 @@ class ExcitingParserContext(object):
     dosFile = os.path.join(dirPath, "dos.xml")
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
-    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
+    eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
 #    logging.error("done BASE onClose_section_single_configuration_calculation")
 
     if os.path.exists(dosFile):
@@ -819,7 +819,7 @@ class ExcitingParserContext(object):
           while 1:
             s = g.readline()
             if not s: break
-            s = s.strip()              
+            s = s.strip()
             if len(s) < 20:
               if "nstsv" in s.split():
                  nstsv = int(s.split()[0])
@@ -900,7 +900,7 @@ class ExcitingParserContext(object):
             else:
               values[-1].append(float(st[0]))
           elif len(s) < 5 and len(st) == 1:
-            number_of_bands = st[0] 
+            number_of_bands = st[0]
         mesh_size = grid[0]*grid[1]*grid[2]
         origin = all_vectors[0]
         vectors = all_vectors[1:]
@@ -947,7 +947,7 @@ class ExcitingParserContext(object):
     self.atom_labels = []
 
     excSmearingKind = section["x_exciting_smearing_type"]
- 
+
     smearing_internal_map = {
         "Gaussian": ['gaussian'],
         "Methfessel-Paxton": ['methfessel-paxton'],
@@ -978,7 +978,7 @@ class ExcitingParserContext(object):
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
     for i in range(natom):
-#      print("nattom=",natom)  
+#      print("nattom=",natom)
 #      print("i=",i)
 #      print("natom=",natom)
 #      print("[pos[0][i]=",pos[0][i])
@@ -1215,7 +1215,7 @@ mainFileDescription = \
 ##                     SM(name="total_forces",
 ##                     startReStr = r"\s*Total atomic forces including IBS \(cartesian\)\s*:",
 #                       SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_forces_z>[-0-9.]+)",
-#                          repeats = True )    
+#                          repeats = True )
 ######                     subMatchers = [
 ######                     SM(r"\s*atom\s*(?P<x_exciting_store_total_forces>[0-9]+\s*[A-Za-z]+\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+)",
 ######                          repeats = True)
@@ -1230,7 +1230,7 @@ mainFileDescription = \
 ##                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
 ##                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)")
 ##                     SM(r"\s*(?P<x_exciting_store_total_forces>\s*\:+\s*[-\d\.]+\s*[-\d\.]+\s*[-\d\.]+\s*[A-Za-z]+\s*[A-Za-z]+)"),
-##                   ] 
+##                   ]
 ##                    )
 #                   ]),
 #                 SM(name="force_components",
@@ -1248,7 +1248,7 @@ mainFileDescription = \
 #                     repeats = True,
 #                     floating = True),
 ##                   SM(r"(?P<x_exciting_store_total_forces>.*)",
-##                          repeats = True, 
+##                          repeats = True,
 #                ] )
                ]
             ),
@@ -1322,5 +1322,28 @@ cachingLevelForMetaName = {
                             "x_exciting_geometry_atom_forces_y":CachingLevel.Cache,
                             "x_exciting_geometry_atom_forces_z":CachingLevel.Cache
                           }
+
+
+class ExcitingParser():
+    """ A proper class envolop for running this parser from within python. """
+    def __init__(self, backend, **kwargs):
+        self.backend_factory = backend
+
+    def parse(self, mainfile):
+        from unittest.mock import patch
+        logging.getLogger('nomadcore').setLevel(logging.WARNING)
+        backend = self.backend_factory(metaInfoEnv)
+        with patch.object(sys, 'argv', ['<exe>', '--uri', 'nmd://uri', mainfile]):
+            mainFunction(
+                mainFileDescription,
+                metaInfoEnv,
+                parserInfo,
+                cachingLevelForMetaName = cachingLevelForMetaName,
+                superContext=ExcitingParserContext(),
+                superBackend=backend)
+
+        return backend
+
+
 if __name__ == "__main__":
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())

@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import xml.sax
-import logging
+import logging as _logging
 import numpy as np
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 from nomadcore.unit_conversion.unit_conversion import convert_unit
 from nomadcore.unit_conversion import unit_conversion
+
+logging = _logging.getLogger('nomad.parser.exciting.xs_input')
+
 
 class InputHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, rgkmax):
@@ -55,10 +58,10 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.aresbse = True
 #        self.bsetype = "singlet"
         self.lmaxdielt = 14
-        self.nstlbse = [0, 0, 0, 0]        
-        self.nstlbseDum = [0, 0, 0, 0]        
-        self.nstlxas = [0, 0]             
-        self.nstlxasDum = [0, 0]             
+        self.nstlbse = [0, 0, 0, 0]
+        self.nstlbseDum = [0, 0, 0, 0]
+        self.nstlxas = [0, 0]
+        self.nstlxasDum = [0, 0]
         self.rgkmaxBse = rgkmax[0]
         self.sciavbd = True
         self.sciavqbd = False
@@ -111,7 +114,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
         for j in range(0,2):
             self.nstlxas[j] = int (self.nstlxasDum[j])
 
-        self.backend.addValue("x_exciting_xs_ngridq", self.ngridq)        
+        self.backend.addValue("x_exciting_xs_ngridq", self.ngridq)
         self.backend.addValue("x_exciting_xs_ngridk", self.ngridkXS)
         self.backend.addValue("x_exciting_xs_vkloff", self.vkloffXS)
         self.backend.addValue("x_exciting_xs_screening_ngridk", self.ngridkScr)
@@ -141,7 +144,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
         else:
             self.backend.addValue("x_exciting_xs_screening_rgkmax", float(self.rgkmaxScr))
 
-        if self.bse == True: 
+        if self.bse == True:
             if self.rgkmaxBse == 0.0:
                 self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
             else:
@@ -447,6 +450,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
 
 def parseInput(inF, backend, gmaxvr):
     handler = InputHandler(backend, gmaxvr)
-    logging.error("will parse")
+    logging.info("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")
+    logging.info("did parse")

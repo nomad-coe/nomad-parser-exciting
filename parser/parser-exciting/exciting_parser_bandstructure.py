@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import xml.sax
-import logging
+import logging as _logging
 import numpy as np
 from nomadcore.unit_conversion import unit_conversion
+
+logging = _logging.getLogger('nomad.parser.exciting.band')
 
 class BandHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, spinTreat):
@@ -111,8 +113,8 @@ class BandHandler(xml.sax.handler.ContentHandler):
 
             j = 0
             while j < vertexNum -2:
-                bodda = kBandSegm[j+1].pop(0) 
-                kBandSegm[j].append(bodda)   
+                bodda = kBandSegm[j+1].pop(0)
+                kBandSegm[j].append(bodda)
                 j+=1
 
             kBandSegm[-1].append(kpoints[-1])
@@ -140,7 +142,7 @@ class BandHandler(xml.sax.handler.ContentHandler):
                 i+=1
 
             for i in range(0,vertexNum):
-                self.vertexCoord[i]=self.vertexCoord[i].split() 
+                self.vertexCoord[i]=self.vertexCoord[i].split()
                 for j in range(0,3):
                     self.vertexCoord[i][j] = float(self.vertexCoord[i][j])
 
@@ -205,6 +207,6 @@ class BandHandler(xml.sax.handler.ContentHandler):
 
 def parseBand(inF, backend, spinTreat):
     handler = BandHandler(backend, spinTreat)
-    logging.error("will parse")
+    logging.info("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")
+    logging.info("did parse")

@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import xml.sax
-import logging
+import logging as _logging
 import numpy as np
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 from nomadcore.unit_conversion.unit_conversion import convert_unit
 from nomadcore.unit_conversion import unit_conversion
+
+logging = _logging.getLogger('nomad.parser.exciting.dos')
+
 
 class DosHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, spinTreat, unitCellVol):
@@ -33,8 +36,8 @@ class DosHandler(xml.sax.handler.ContentHandler):
         self.dosProjSpin = []
         self.energy = []
         self.energySpin = []
-        self.speciesrn = []       
-        self.atom = []           
+        self.speciesrn = []
+        self.atom = []
         self.numDosVal = 0
         self.dosProjDummy = []
         self.dosProjDummy2 = []
@@ -53,8 +56,8 @@ class DosHandler(xml.sax.handler.ContentHandler):
             self.dosSectionGIndex = self.backend.openSection("section_dos")
             self.inDos = True
         elif name == "partialdos":
-            self.speciesrn.append(int(attrs.getValue('speciesrn'))) 
-            self.atom.append(int(attrs.getValue('atom')))         
+            self.speciesrn.append(int(attrs.getValue('speciesrn')))
+            self.atom.append(int(attrs.getValue('atom')))
             self.dosProjDummy.append([])
             self.dosProjDummy2.append([])
             if self.speciesrn [-1] == 1 and self.atom[-1] == 1:
@@ -67,7 +70,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
             elif self.inDosProj:
                 self.dosProj.append(float(attrs.getValue('dos'))/ha_per_joule)
                 self.energy.append(fromH(float(attrs.getValue('e'))))
-        elif name == "diagram": 
+        elif name == "diagram":
             if not self.speciesrn: pass
             elif self.speciesrn [-1] == 1 and self.atom[-1] == 1:
                 if not self.spinTreat:
@@ -79,7 +82,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
         elif name == "limrep":
             for i in range(0,len(self.dosProjSpin)):
                 for j in range(0,2):
-                    self.dosProjSpin[i].append([])          
+                    self.dosProjSpin[i].append([])
                     for k in range(0,len(self.speciesrn)):
                         self.dosProjDummy2[k].append([])
                         self.dosProjSpin[i][j].append([])
@@ -88,13 +91,13 @@ class DosHandler(xml.sax.handler.ContentHandler):
                     self.dosProjDummy[i] = self.dosProj[i*len(self.dosProjSpin)*self.numDosVal:(i+1)*len(self.dosProjSpin)*self.numDosVal]
                 else:
                     self.dosProjDummy[i] = self.dosProj[i*int(2*len(self.dosProjSpin))*self.numDosVal:(i+1)*int(2*len(self.dosProjSpin))*self.numDosVal]
-            for j in range(0,int(2*len(self.dosProjSpin))):       
-                for i in range (0,len(self.speciesrn)):                       
-                    self.dosProjDummy2[i][j] = self.dosProjDummy[i][j*self.numDosVal:(j+1)*self.numDosVal] 
+            for j in range(0,int(2*len(self.dosProjSpin))):
+                for i in range (0,len(self.speciesrn)):
+                    self.dosProjDummy2[i][j] = self.dosProjDummy[i][j*self.numDosVal:(j+1)*self.numDosVal]
             if not self.spinTreat:
                 for i in range(0,len(self.dosProjSpin)):
                     for j in range(0,len(self.speciesrn)):
-                        self.dosProjSpin[i][0][j] = self.dosProjDummy2[j][i]               
+                        self.dosProjSpin[i][0][j] = self.dosProjDummy2[j][i]
                         self.dosProjSpin[i][1][j] = self.dosProjDummy2[j][i]
             else:
                 for j in range(0,len(self.speciesrn)):
@@ -149,6 +152,6 @@ class DosHandler(xml.sax.handler.ContentHandler):
 
 def parseDos(inF, backend, spinTreat, unitCellVol):
     handler = DosHandler(backend, spinTreat, unitCellVol)
-    logging.error("will parse")
+    logging.info("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")
+    logging.info("did parse")

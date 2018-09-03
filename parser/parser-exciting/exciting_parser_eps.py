@@ -19,7 +19,7 @@ from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, logging
+import os, sys, json
 
 ################################################################
 # This is the subparser for the exciting XS output
@@ -51,7 +51,7 @@ class EPSParser(object):
                 if not s: break
                 s = s.strip()
                 s = s.split()
-                if len(s) == 0: 
+                if len(s) == 0:
                     break
                 else:
                     epsEn[-1].append(float(s[0]))

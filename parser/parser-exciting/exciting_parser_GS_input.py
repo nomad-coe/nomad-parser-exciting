@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import xml.sax
-import logging
+import logging as _logging
 import numpy as np
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 from nomadcore.unit_conversion.unit_conversion import convert_unit
 from nomadcore.unit_conversion import unit_conversion
+
+logging = _logging.getLogger('nomad.parser.exciting.gs_input')
+
 
 class InputHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend):
@@ -38,6 +41,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
 
 def parseInput(inF, backend):
     handler = InputHandler(backend)
-    logging.error("will parse")
+    logging.info("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")
+    logging.info("did parse")
