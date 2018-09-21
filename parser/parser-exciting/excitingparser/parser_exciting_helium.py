@@ -13,13 +13,16 @@
 # limitations under the License.
 
 from builtins import object
-import setup_paths
+import excitingparser.setup_paths
 import numpy as np
 from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure #, exciting_parser_input
+import os, sys, json
+import excitingparser.exciting_parser_dos
+import excitingparser.exciting_parser_bandstructure
+#, exciting_parser_input
 
 ################ PARSER FOR VERSION *************    LITHIUM     ****************
 
@@ -181,7 +184,7 @@ class ExcitingHeliumParserContext(object):
             else:
               values[-1].append(float(st[0]))
           elif len(s) < 5 and len(st) == 1:
-            number_of_bands = st[0]  
+            number_of_bands = st[0]
         mesh_size = grid[0]*grid[1]*grid[2]
         origin.append(all_vectors[0])
         vectors.append(all_vectors[1:])
@@ -207,7 +210,7 @@ class ExcitingHeliumParserContext(object):
         atom_forces[1].append([])
         for j in range (3,6):
           atom_forces[1][-1].append(float(f_st[i][j]))
-      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))      
+      backend.addArrayValues("x_exciting_atom_forces",np.asarray(f_st))
 
     backend.addValue("energy_total", self.enTot[-1])
 
@@ -221,7 +224,7 @@ class ExcitingHeliumParserContext(object):
     if self.atom_labels is not None:
        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
-    
+
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]

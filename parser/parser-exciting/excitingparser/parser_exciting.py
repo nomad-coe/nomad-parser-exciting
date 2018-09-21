@@ -14,7 +14,7 @@
 #
 # Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 from builtins import object
-import setup_paths
+import excitingparser.setup_paths
 import numpy as np
 from nomadcore.simple_parser import AncillaryParser, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
@@ -22,8 +22,14 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_GS_input
-import exciting_parser_XS_input, exciting_parser_xs, exciting_parser_eps
+import os, sys, json,
+import excitingparser.exciting_parser_dos
+import excitingparser.exciting_parser_bandstructure
+import excitingparser.exciting_parser_gw
+import excitingparser.exciting_parser_GS_input
+import exciting_parser_XS_input
+import excitingparser.exciting_parser_xs
+import excitingparser.exciting_parser_eps
 from ase import Atoms
 import logging
 

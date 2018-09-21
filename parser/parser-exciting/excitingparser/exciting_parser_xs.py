@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from builtins import object
-import setup_paths
+import excitingparser.setup_paths
 import xml.sax
 from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
@@ -25,14 +25,8 @@ import os, sys, json
 # This is the subparser for the exciting XS output
 ################################################################
 
-def is_number(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
 
-class EPSParser(object):
+class XSParser(object):
     """context for wien2k In2 parser"""
 
     def __init__(self):
@@ -44,19 +38,20 @@ class EPSParser(object):
         # allows to reset values if the same superContext is used to parse different files
 #        self.initialize_values()
 
-    def parseEpsilon(self, epsFile, backend, epsEn, epsilon):
-        with open(epsFile) as g:
+    def parseExciton(self, excFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff):
+        with open(excFile) as g:
             while 1:
                 s = g.readline()
                 if not s: break
                 s = s.strip()
                 s = s.split()
-                if len(s) == 0:
-                    break
-                else:
-                    epsEn[-1].append(float(s[0]))
-                    epsilon[-1][0].append(float(s[1]))
-                    epsilon[-1][1].append(float(s[2]))
+                if s[0] != "#":
+                    excNum[-1].append(int(s[0]))
+                    excEn[-1].append(float(s[1]))
+                    excBindEn[-1].append(float(s[2]))
+                    osclStr[-1].append(float(s[3]))
+                    transCoeff[-1][0].append(float(s[4]))
+                    transCoeff[-1][1].append(float(s[5]))
 
 def get_cachingLevelForMetaName(metaInfoEnv, CachingLvl):
     cachingLevelForMetaName = {}
