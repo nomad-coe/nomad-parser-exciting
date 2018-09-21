@@ -22,14 +22,14 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
-import os, sys, json,
-import excitingparser.exciting_parser_dos
-import excitingparser.exciting_parser_bandstructure
-import excitingparser.exciting_parser_gw
-import excitingparser.exciting_parser_GS_input
-import exciting_parser_XS_input
-import excitingparser.exciting_parser_xs
-import excitingparser.exciting_parser_eps
+import os, sys, json
+import excitingparser.exciting_parser_dos as exciting_parser_dos
+import excitingparser.exciting_parser_bandstructure as exciting_parser_bandstructure
+import excitingparser.exciting_parser_gw as exciting_parser_gw
+import excitingparser.exciting_parser_GS_input as exciting_parser_GS_input
+import excitingparser.exciting_parser_XS_input as exciting_parser_XS_input
+import excitingparser.exciting_parser_xs as exciting_parser_xs
+import excitingparser.exciting_parser_eps as exciting_parser_eps
 from ase import Atoms
 import logging
 
@@ -1300,7 +1300,8 @@ parserInfo = {
   "version": "1.0"
 }
 
-metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"../../../../nomad-meta-info/meta_info/nomad_meta_info/exciting.nomadmetainfo.json"))
+import nomad_meta_info
+metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(nomad_meta_info.__file__)), "exciting.nomadmetainfo.json"))
 metaInfoEnv, warnings = loadJsonFile(filePath = metaInfoPath, dependencyLoader = None, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, uri = None)
 
 cachingLevelForMetaName = {

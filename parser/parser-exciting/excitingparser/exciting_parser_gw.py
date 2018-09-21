@@ -19,7 +19,8 @@ from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, exciting_parser_input
+import os, sys, json
+import excitingparser.exciting_parser_input
 
 ################################################################
 # This is the subparser for the exciting GW output
