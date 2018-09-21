@@ -20,8 +20,8 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json
-import excitingparser.exciting_parser_dos
-import excitingparser.exciting_parser_bandstructure
+import excitingparser.exciting_parser_dos as exciting_parser_dos
+import excitingparser.exciting_parser_bandstructure as exciting_parser_bandstructure
 #, exciting_parser_input
 
 ################ PARSER FOR VERSION *************    LITHIUM     ****************

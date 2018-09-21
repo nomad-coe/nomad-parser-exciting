@@ -20,7 +20,7 @@ from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion import unit_conversion
 import os, sys, json
-import excitingparser.exciting_parser_input
+import excitingparser.exciting_parser_input as exciting_parser_input
 
 ################################################################
 # This is the subparser for the exciting GW output
