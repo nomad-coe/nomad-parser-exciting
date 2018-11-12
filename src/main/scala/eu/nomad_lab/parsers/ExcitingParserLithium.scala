@@ -21,11 +21,11 @@ import eu.nomad_lab.DefaultPythonInterpreter
 import org.{ json4s => jn }
 import scala.collection.breakOut
 
-object ExcitingParserHelium extends SimpleExternalParserGenerator(
-  name = "ExcitingParserHelium",
+object ExcitingParserLithium extends SimpleExternalParserGenerator(
+  name = "ExcitingParserLithium",
   parserInfo = jn.JObject(
-    ("name" -> jn.JString("ExcitingParserHelium")) ::
-      ("parserId" -> jn.JString("ExcitingParserHelium" + lab.ExcitingVersionInfo.version)) ::
+    ("name" -> jn.JString("ExcitingParserLithium")) ::
+      ("parserId" -> jn.JString("ExcitingParserLithium" + lab.ExcitingVersionInfo.version)) ::
       ("versionInfo" -> jn.JObject(
         ("nomadCoreVersion" -> jn.JObject(lab.NomadCoreVersionInfo.toMap.map {
           case (k, v) => k -> jn.JString(v.toString)
@@ -40,11 +40,11 @@ object ExcitingParserHelium extends SimpleExternalParserGenerator(
   mainFileRe = """\s*\+-----------------------------------+\+\s*
 \s*\|\s*EXCITING\s(?<version>Lithium\s*\S*) started\s*\|\s*
 (?:\s*\|\sversion hash id:\s*(?<hashId>\S+)\s*\|)?""".r,
-  cmd = Seq(DefaultPythonInterpreter.pythonExe(), "${envDir}/parsers/exciting/parser/parser-exciting/parser_exciting_helium.py",
+  cmd = Seq(DefaultPythonInterpreter.pythonExe(), "${envDir}/parsers/exciting/parser/parser-exciting/parser_exciting_lithium.py",
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   mainFileMatchPriority = 5,
   resList = Seq(
-    "parser-exciting/parser_exciting_helium.py",
+    "parser-exciting/parser_exciting_lithium.py",
     "parser-exciting/exciting_parser_dos.py",
     "parser-exciting/exciting_parser_bandstructure.py",
     "parser-exciting/exciting_parser_input.py",

@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#############################################
+# this is the subparser for the GW input file
+#############################################
+
 import xml.sax
 import logging
 import numpy as np
@@ -79,7 +83,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
     def startElement(self, name, attrs):
         fromH = unit_conversion.convert_unit_function("hartree", "J")
         if name == "gw":
-#            self.inputSectionGIndex = self.backend.openSection("section_system")
             self.inGWInput = True
             try:
                 self.coreflag = attrs.getValue('coreflag')

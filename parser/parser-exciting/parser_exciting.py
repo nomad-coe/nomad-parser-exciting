@@ -22,8 +22,8 @@ from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.unit_conversion import unit_conversion
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
-import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_GS_input
-import exciting_parser_XS_input, exciting_parser_xs, exciting_parser_eps
+import os, sys, json, exciting_parser_dos,exciting_parser_bandstructure, exciting_parser_gw, exciting_parser_gs_input
+import exciting_parser_xs_input, exciting_parser_xs, exciting_parser_eps
 from ase import Atoms
 import logging
 
@@ -38,8 +38,8 @@ class ExcitingParserContext(object):
 
   def __init__(self):
     self.parser = None
-#    self.mainFileUri = sys.argv[1]    #exciting !!!!!!LOCAL HOME!!!!!!!!             OKOKOKOK
-    self.mainFileUri = sys.argv[2]  #exciting !!! FOR NOMAD URI nmd:// or sbt -> zip file!!!!!!!!   OKOKKOOK
+#    self.mainFileUri = sys.argv[1]    # to test on local machine: uncomment this line and comment the one below
+    self.mainFileUri = sys.argv[2]     # see the line above
     self.mainFilePath = None
     self.mainFile = None
     self.volumeCubOpt = False
@@ -54,8 +54,6 @@ class ExcitingParserContext(object):
   def startedParsing(self, path, parser):
     self.parser=parser
     self.initialize_values()
-#    self.atom_pos = []
-#    self.atom_labels = []
     self.XSSetGIndex = None
     self.secMethodIndex = None  
     self.secSystemIndex = None
@@ -86,33 +84,17 @@ class ExcitingParserContext(object):
     self.xsNAR = False
     self.xstype = None
     self.tddftKernel = None
-#    self.xsType = None
-#    self.volumeOptIndex = 0
 
   def onOpen_section_run(self, backend, gIndex, section):
-#    self.i=self.i+1
-#    print("self.i=",self.i)
     curDir = os.getcwd()
-    mainFile = self.parser.fIn.fIn.name           #####exciting sbt -> zip filei r from NOMAD URI nmd:// ####     YES ?????????? sure???? check first    OKOKOKKO
-    self.mainFilePath = os.path.dirname(mainFile)           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
-#    self.mainFilePath = self.mainFileUri[0:-9]     #####exciting LOCAL HOME #######   YES                      OKOKOKOK
-#    print("self.mainFilePath===",self.mainFilePath)
+    mainFile = self.parser.fIn.fIn.name             # see below
+    self.mainFilePath = os.path.dirname(mainFile)   # see below
+#    self.mainFilePath = self.mainFileUri[0:-9]     #  to test on local machine: uncomment this line and comment the two lines above
     os.chdir(self.mainFilePath)
     os.chdir('../')
-#    self.i=self.i+1
-#    print("self.i=",self.i)
-#    self.volumeOptIndex = 0
-#    for root, dirs, files in os.walk('.'):
-#      if root == '.':
-#        for directory in dirs:
-#          if directory[-4:-1]==
-#        print("root=",root)
-#        print("dirs=",dirs)
-#        print("files=",files)     
 #####volume optimization for simple cubic systems########
     if 'INFO_VOL' in os.listdir('.'):
       self.volumeOpt = True
-#      print("self.volumeOpt=",self.volumeOpt)
       with open('INFO_VOL') as g:
           while 1:
             s = g.readline()
@@ -121,46 +103,25 @@ class ExcitingParserContext(object):
 
     else:
       for files in os.listdir('.'):
-#      print("files=",files)
-#      backend.addValue("x_exciting_dummy2", files)
         if files[0:7] == 'rundir-':
           self.volumeCubOptIndex+=1
     os.chdir(curDir)
-#    curDir = os.getcwd()
-#    dirPath = self.mainFileUri[0:-9]
-#    os.chdir(dirPath)
-#    os.chdir('../')
-#    i = 0
-#    for files in os.listdir('.'):
-#      if files[0:7] == 'rundir-':
-#        i+=1
-#      if i>1:
-#        self.volumeOpt = True
-#        optGindex = backend.openSection("section_method")
-#        print("optGindex=",optGindex)
-#        backend.addValue("x_exciting_volume_optimization", self.volumeOpt)
-#        backend.closeSection("section_method", optGindex)        
-#    os.chdir(curDir)
 
   def onOpen_section_sampling_method(self, backend, gIndex, section):
     self.secSamplingMethodIndex = gIndex
     backend.addValue("sampling_method", "geometry_optimization")
-#    print("self.secSamplingMethodIndex=",self.secSamplingMethodIndex)
     self.samplingMethod = "geometry_optimization"
-#    print("self.samplingMethod=",self.samplingMethod)
     
   def onOpen_section_system(self, backend, gIndex, section):
     self.secSystemIndex = gIndex
     curDir = os.getcwd()
-    mainFile = self.parser.fIn.fIn.name           #####exciting sbt -> zip file or from NOMAD URI nmd:// ####     YES ?????????? sure???? check first    OKOKOKKO
-    self.mainFilePath = os.path.dirname(mainFile)           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
-#    self.mainFilePath = self.mainFileUri[0:-9]     #####exciting LOCAL HOME#######   YES                      OKOKOKOK
-#    print("self.mainFilePath===",self.mainFilePath)
+    mainFile = self.parser.fIn.fIn.name             # see below
+    self.mainFilePath = os.path.dirname(mainFile)   # see below
+#    self.mainFilePath = self.mainFileUri[0:-9]     #  to test on local machine: uncomment this line and comment the two lines above
     os.chdir(self.mainFilePath)
-#    print("listdir=",os.listdir('.'))
+# special treatment for Clathrates from CELL
     if 'str.out' in os.listdir('.'):
       self.clathrates = True
-#      print("clathrate_vero===",self.clathrates)
       backend.addValue("x_exciting_clathrates", True)
       clathrate_labels = []
       clathrate_coordinates = []
@@ -171,17 +132,12 @@ class ExcitingParserContext(object):
             s = s.strip()
             s = s.split()
             if len(s) == 4:
-#              print("s=",s[0],float(s[0]))
               clathrate_coordinates.append([float(s[0]),float(s[1]),float(s[2])])
               clathrate_labels.append(s[3])
-#      print("clathrate_coordinates=",clathrate_coordinates)
       backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.asarray(clathrate_coordinates))
       backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
     else:
-#      print("clathrate_falso===",self.clathrates)
       backend.addValue("x_exciting_clathrates", False)
-#    backend.addArrayValues("x_exciting_clathrates_atom_coordinates", np.array(clathrate_coordinates)) 
-#    backend.addValue("x_exciting_clathrates_atom_labels", clathrate_labels)
     os.chdir(curDir)            
 
   def onOpen_section_single_configuration_calculation(self, backend, gIndex, section):
@@ -194,25 +150,10 @@ class ExcitingParserContext(object):
       self.secMethodIndex = gIndex
 
   def onOpen_x_exciting_section_geometry_optimization(self, backend, gIndex, section):
-#    """Trigger called when x_abinit_section_dataset is opened.
-#    """
     self.samplingGIndex = backend.openSection("section_sampling_method")
 
   def onClose_section_run(self, backend, gIndex, section):
     self.secRunIndex = gIndex
-#    backend.addValue("x_exciting_dummy", self.volumeOptIndex)
-########### VOLUME OPTIMIZATION #########################
-#    curDir = os.getcwd()
-##    mainFile = self.parser.fIn.fIn.name           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
-##    dirPath = os.path.dirname(mainFile)           #####exciting sbt -> zip file####     YES ?????????? sure???? check first    OKOKOKKO
-#    dirPath = self.mainFileUri[0:-9]     #####exciting LOCAL HOME or from NOMAD URI nmd://  #######   YES                      OKOKOKOK
-#    os.chdir(dirPath)
-#    os.chdir('../')
-#    self.volumeOptIndex = 0
-#    for files in os.listdir('.'):
-#      if files[0:7] == 'rundir-':
-#        self.volumeOptIndex+=1
-######################independent from above#################
     if self.volumeCubOptIndex>1:
       self.volumeCubOpt = True
       optGindex = backend.openSection("section_method")
@@ -220,10 +161,8 @@ class ExcitingParserContext(object):
       backend.closeSection("section_method", optGindex)
 #    os.chdir(curDir)
 
-####################################TEST############################
     mainFile = self.parser.fIn.fIn.name
     dirPath = os.path.dirname(self.parser.fIn.name)
-#    print("dirPath===",dirPath)
     gw_File = os.path.join(dirPath, "GW_INFO.OUT")
     gwFile = os.path.join(dirPath, "GWINFO.OUT")
     xsFile = os.path.join(dirPath, "INFOXS.OUT")
@@ -245,6 +184,12 @@ class ExcitingParserContext(object):
         with open(gFile) as fIn:
             subParser.parseFile(fIn)
         break
+##############################################################################################################################################
+######################################################### IMPORTANT NOTE #####################################################################
+# All the excited-states -BSE, TDDFT- metadata start with x_exciting_xs_... So far, oct 29, 2018, the metadata sintax has not been yet updated
+# and it is not possible to push them as common metadata. So, they are still defined as code-specific metadata in exciting.nomadmetainfo.json.
+# In the future, they will have to be moved to common.nomadmetainfo.json and the names changed into x_xs_... (same fashion as x_gw_...).
+##############################################################################################################################################
 
     if os.path.exists(xsFile):
       excNum = []
@@ -262,40 +207,25 @@ class ExcitingParserContext(object):
       xstype = "TDDFT"
       self.xstype = "TDDFT"
       fromeV = unit_conversion.convert_unit_function("eV", "J")
-#      print("BSE!!!")
-#        if os.path.exists(inputgwFile):
       inputXSFile = os.path.join(dirPath, "input.xml")
       self.XSSetGIndex = backend.openSection("section_method")
       with open(inputXSFile) as f:
-        exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
-#        xstype = section["x_exciting_xs_type"]
-#        print("xstype===",xstype)
-#        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
-#      backend.addValue('x_exciting_electronic_structure_method', "BSE")   ########!!!!!!!!!!! So far, BSE is not a valid value for electronic_structure_method. It must be added! #########
-#        teste = section["x_exciting_xs_tetra"]
-#        print("teste===",teste)
-#      backend.addValue('x_exciting_xs_starting_point', self.xcName)
-#      teste = section["x_exciting_xs_tetra"]
-#      print("teste===",teste)
+        exciting_parser_xs_input.parseInput(f, backend, self.rgkmax)
       if self.secMethodIndex is not None:
         m2mGindex = backend.openNonOverlappingSection("section_method_to_method_refs")
         backend.addValue("method_to_method_ref", self.secMethodIndex)
         backend.addValue("method_to_method_kind", "starting_point")
         backend.closeNonOverlappingSection("section_method_to_method_refs")
 
-#        xstype = section["x_exciting_xs_type"]
-#        print("xstype===",xstype)
         for files in os.listdir(dirPath):
             if files[0:11] == "EXCITON_BSE":
                 xstype = "BSE"
                 self.xstype = "BSE"
                 dummyBse = files[11:13]
-#                self.tensorComp = files[-6:-4]
                 self.tensorComp.append(files[-6:-4])
 
                 if dummyBse == 'si':
                     self.bsetype = 'singlet'
-#                  name = "EXCITON_BSE" + self.bsetype
                 elif dummyBse == 'tr':
                     self.bsetype = 'triplet'
                 elif dummyBse == 'RP':
@@ -303,7 +233,6 @@ class ExcitingParserContext(object):
                 elif dummyBse == 'IP':
                     self.bsetype = 'IP'
                 name = "EXCITON_BSE" + self.bsetype + '_SCR'
-#                nameEps = "EPSILON_BSE" + self.bsetype + '_SCR'
                 if files[len(name):len(name)+4] == 'full':
                     self.screentype = 'full'
                 elif files[len(name):len(name)+4] == 'diag':
@@ -312,27 +241,10 @@ class ExcitingParserContext(object):
                     self.screentype = 'noinvdiag'
                 elif files[len(name):len(name)+4] == 'long':
                     self.screentype = 'longrange'
-#            else:
-#                xstype = "TDDFT"    
-#        print("xstype===",xstype)
-#      teste = section["x_exciting_xs_tetra"]
-#      print("teste===",teste)
         if xstype == "BSE":
             numberOfComponents = len(self.tensorComp)
-#            backend.addValue("x_exciting_xs_screening_type", self.screentype)
             backend.addValue("x_exciting_xs_bse_type", self.bsetype)
-#        print("===", self.tensorComp[0])
-#        with open(inputXSFile) as f:
-#          exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
-#            teste = section["x_exciting_xs_tetra"]
-#            print("teste===",teste)
-#      teste = section["x_exciting_xs_tetra"]
-#      print("teste===",teste)
       backend.closeSection("section_method",self.XSSetGIndex)
-#      teste = section["x_exciting_xs_tetra"]
-#      print("teste===",teste)
-#      numberOfComponents = len(self.tensorComp)
-#      print("xstype=====",xstype)
       backend.openNonOverlappingSection("section_single_configuration_calculation")
       if self.secSingleConfIndex is not None:
           backend.openNonOverlappingSection("section_calculation_to_calculation_refs")
@@ -353,7 +265,6 @@ class ExcitingParserContext(object):
               sigma.append([[],[]])
               lossEn.append([])
               loss.append([[],[]])
-#          lossDummy.append([])
 
               outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
               outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
@@ -411,7 +322,6 @@ class ExcitingParserContext(object):
           for files in os.listdir(dirPath):
               if files[0:9] == "SIGMA_NLF":
                   tensorComp.append(files[-13:-11])
-#          print("tensorComp===",tensorComp)
           if self.xsTetra and self.xsAC and not self.xsNAR:
               ext = "TET_AC_NAR"
           elif not self.xsTetra and self.xsAC and not self.xsNAR:
@@ -427,8 +337,6 @@ class ExcitingParserContext(object):
           else:
               ext=""
 
-#          dielTensSymIm = []
-#          dielTensNoSymIm = []
           with open(QFile) as g:
               while 1:
                   s = g.readline()
@@ -436,7 +344,6 @@ class ExcitingParserContext(object):
                   s = s.strip()
                   s = s.split()
                   if not is_number(s[1]): 
-#                      print("s===",s)
                       qpointNumber = int(s[0] )
                   else:
                       qPlusGCartesian.append([])
@@ -458,10 +365,6 @@ class ExcitingParserContext(object):
                   ext = "TET_NAR"
               else:
                   ext=""
-#                      xstype = "BSE"
-#                      self.xstype = "BSE"
-#                      dummyBse = files[11:13]
-#                self.tensorComp = files[-6:-4]
           for i in range(qpointNumber):
               dielTensSym.append([[],[]])
               dielTensNoSym.append([[],[]])
@@ -476,9 +379,7 @@ class ExcitingParserContext(object):
               sigmaLoc[1].append([])
               sigmaNoLoc[0].append([])
               sigmaNoLoc[1].append([])
-#              dielTensSymIm.append([[],[]])
 
-#              dielTensNoSymIm.append([[],[]])
               if i < 10:
                   qExt00 = '_QMT00'+ str(i+1)
                   qPlusGFile = os.path.join(dirPath, 'GQPOINTS' + qExt00 + '.OUT')
@@ -523,12 +424,6 @@ class ExcitingParserContext(object):
                       sigmaLoc[1][-1].append([])
                       sigmaNoLoc[0][-1].append([])
                       sigmaNoLoc[1][-1].append([])
-#                      print("j===",j)
-#                      print("tensorComp===",tensorComp[j])
-#                      print("ext===",ext)
-#                      print("self.tddftKernel===",self.tddftKernel)
-#                      print("qExt00===",qExt00)
-#                      print("tutto===",'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
                       epsilonLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
                       epsilonNoLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
                       lossFunctionLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
@@ -561,7 +456,6 @@ class ExcitingParserContext(object):
                               if not s: break
                               s = s.strip()
                               s = s.split()
-#                              print("s===",s)
                               if s and is_number(s[0]): 
                                   loss = float(s[1])
                                   lossFunctionLoc[-1][-1].append(loss)
@@ -571,7 +465,6 @@ class ExcitingParserContext(object):
                               if not s: break
                               s = s.strip()
                               s = s.split()
-#                              print("s===",s)
                               if s and is_number(s[0]):
                                   loss = float(s[1])
                                   lossFunctionNoLoc[-1][-1].append(loss)
@@ -595,16 +488,7 @@ class ExcitingParserContext(object):
                                   sigmaRe, sigmaIm = float(s[1]),float(s[2])
                                   sigmaNoLoc[0][-1][-1].append(sigmaRe)
                                   sigmaNoLoc[1][-1][-1].append(sigmaIm)
-#                              dielFunctEne[-1][-1].append(ene)
-#                              if s and is_number(s[0]):
-#                                  dielTensSym[i][0].append([float(s[0]),float(s[1]),float(s[2])])
-#                                  dielTensSym[i][1].append([float(s[3]),float(s[4]),float(s[5])])
-#          print("loss===",lossFunctionLoc)
-#              print("ext===",ext)
-#          print("dielTensSym===",dielTensSym)
-#          print("dielTensNoSym===",dielTensNoSym) 
-#                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
-#                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
+
           backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
           backend.addValue("x_exciting_xs_tddft_sigma_no_local_field",sigmaNoLoc)
           backend.addValue("x_exciting_xs_tddft_loss_function_local_field",lossFunctionLoc)
@@ -638,13 +522,7 @@ class ExcitingParserContext(object):
     backend.addArrayValues("frame_sequence_local_frames_ref", np.array(self.frameSequence))
     backend.addValue("frame_sequence_to_sampling_ref", self.samplingGIndex)
 
-#    print("self.samplingMethod=",self.samplingMethod)
     if self.samplingMethod == "geometry_optimization":
-#        gix = backend.openSection("section_sampling_method")
-#        backend.addValue("XC_functional_name", xcName)
-#        backend.closeSection("section_sampling_method", gix)
-#        geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"]
-#        print("geometryForceThreshold=",self.geometryForceThreshold)
         gi = backend.openSection("section_sampling_method")
         backend.addValue("geometry_optimization_threshold_force", self.geometryForceThreshold)
         backend.closeSection("section_sampling_method", gi)
@@ -689,7 +567,7 @@ class ExcitingParserContext(object):
         dirPath = os.path.dirname(self.parser.fIn.name)
         inputGSFile = os.path.join(dirPath, "input.xml") 
         with open(inputGSFile) as f:
-            exciting_parser_GS_input.parseInput(f, backend)
+            exciting_parser_gs_input.parseInput(f, backend)
     else:
         for xcName in xc_internal_map[xcNr]:
           self.xcName = xcName
@@ -698,33 +576,22 @@ class ExcitingParserContext(object):
           backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-#    logging.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
-#    print("self.samplingMethod=",self.samplingMethod)
-####################VOLUME TEST BEGIN################################
+####################VOLUME OPTIMIZATION BEGIN################################
     ext_uri = []
-#    backend.addValue("x_exciting_dummy=",self.volumeOptIndex)
-#    backend.addValue("x_exciting_dummy", self.volumeOptIndex)
     if self.volumeCubOptIndex > 1:
       for j in range(1, self.volumeCubOptIndex):
         if (j<10):
           ext_uri.append(self.mainFilePath[0:-9] + 'rundir-0' + str(j) + '/INFO.OUT')
-#          backend.addValue("x_exciting_dummy2", ext_uri[-1])
-#          print("ext_uri===",ext_uri)
         else:
           ext_uri.append(self.mainFilePath[0:-9] + 'rundir-' + str(j) + '/INFO.OUT')
-#          backend.addValue("x_exciting_dummy2", ext_uri[-1])
-#          print("ext_uri===",ext_uri)
-#    backend.addArrayValues("x_exciting_dummy2", np.asarray(ext_uri))
     for ref in ext_uri:
       refGindex = backend.openSection("section_calculation_to_calculation_refs")
       backend.addValue("calculation_to_calculation_external_url", ref)
       backend.addValue("calculation_to_calculation_kind", "source_calculation")
       backend.closeSection("section_calculation_to_calculation_refs", refGindex)
-
-####################VOLUME TEST END############################
-
+####################VOLUME OPTIMIZATION END############################
 
     if self.samplingMethod == "geometry_optimization":
         self.geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"][0]
@@ -737,11 +604,6 @@ class ExcitingParserContext(object):
       for i in range(0,atoms):
           atom_geometry_forces.append([forceX[i],forceY[i],forceZ[i]])
       backend.addValue("atom_forces",atom_geometry_forces)
-#        print("geometryForceThreshold=",geometryForceThreshold)
-#        backend.addValue("geometry_optimization_threshold_force", geometryForceThreshold)
-#    else:
-#        pass
-#
 ##############TO DO. FIX FORCES#####################
 #    forceX = section["x_exciting_atom_forces_x"]
 #    if forceX:
@@ -799,14 +661,18 @@ class ExcitingParserContext(object):
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")    
-#    logging.error("done BASE onClose_section_single_configuration_calculation")
 
+######### DOS ##################
     if os.path.exists(dosFile):
       with open(dosFile) as f:
         exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol)
+
+####### Band structure ##########
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
+
+####### Eigenvalues ############
     if os.path.exists(eigvalFile):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
@@ -932,17 +798,13 @@ class ExcitingParserContext(object):
     self.secSystemDescriptionIndex = gIndex
 
     if self.atom_pos and self.cell_format[0] == 'cartesian':
-#       print("self.atom_pos=",self.atom_pos)
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
     elif self.atom_pos and self.cell_format[0] == 'lattice':
-#       print("aaaself.atom_pos=",self.atom_pos)
-#       print("aaaself.atom_labels=",self.atom_labels)
        atoms = Atoms(self.atom_labels, self.atom_pos, cell=[(1, 0, 0),(0, 1, 0),(0, 0, 1)])
        atoms.set_cell(self.sim_cell, scale_atoms=True)
        self.atom_pos = atoms.get_positions()
        backend.addArrayValues('atom_positions', np.asarray(self.atom_pos))
     if self.atom_labels is not None:
-#       print("aaaself.atom_labels=",self.atom_labels)
        backend.addArrayValues('atom_labels', np.asarray(self.atom_labels))
     self.atom_labels = []
 
@@ -962,7 +824,6 @@ class ExcitingParserContext(object):
         pass
 
   def onClose_x_exciting_section_atoms_group(self, backend, gIndex, section):
-#    print("start.self.atom_labels=",self.atom_labels)
     fromB = unit_conversion.convert_unit_function("bohr", "m")
     formt = section['x_exciting_atom_position_format']
     if self.samplingMethod is not "geometry_optimization":
@@ -972,38 +833,19 @@ class ExcitingParserContext(object):
       if self.atom_labels is not None: self.atom_labels = []
     self.cell_format = formt
     pos = [section['x_exciting_geometry_atom_positions_' + i] for i in ['x', 'y', 'z']]
-#    print("pos=",pos)
     pl = [len(comp) for comp in pos]
     natom = pl[0]
     if pl[1] != natom or pl[2] != natom:
       raise Exception("invalid number of atoms in various components %s" % pl)
     for i in range(natom):
-#      print("nattom=",natom)  
-#      print("i=",i)
-#      print("natom=",natom)
-#      print("[pos[0][i]=",pos[0][i])
-#      print("[pos[1][i]=",pos[1][i])
-#      print("[pos[2][i]=",pos[2][i])
-#      print("self.atom_pos=",self.atom_pos)
       if formt[0] == 'cartesian':
         self.atom_pos.append([fromB(pos[0][i]), fromB(pos[1][i]), fromB(pos[2][i])])
       else:
-#        print("self.atom_labels_prima=",self.atom_labels)
-#        print("self.atom_pos_prima=",self.atom_pos)
         self.atom_pos.append([pos[0][i], pos[1][i], pos[2][i]])
-#        print("self.atom_pos_dopo=",self.atom_pos)
-#        print("self.atom_labels_dopo=",self.atom_labels)
-#    print("natom=",natom)
-#    print("section['x_exciting_geometry_atom_labels']=",section['x_exciting_geometry_atom_labels'])
-#    print("self.samplingMethod[0]=",self.samplingMethod)
     if self.samplingMethod is not "geometry_optimization":
-#        print("prima=",self.atom_labels)
         self.atom_labels = self.atom_labels + (section['x_exciting_geometry_atom_labels'] * natom)
-#        print("self.atom_labels=",self.atom_labels)
-#        print("section['x_exciting_geometry_atom_labels']=",section['x_exciting_geometry_atom_labels'])
     else:
         self.atom_labels = self.atom_labels + section['x_exciting_geometry_atom_labels']
-#    print("self.self.XSSetGIndexatom_labels_dopodopo=",self.atom_labels)
 
   def onClose_section_method(self, backend, gIndex, section):
     if gIndex == self.XSSetGIndex and self.xstype == "TDDFT":
@@ -1011,7 +853,6 @@ class ExcitingParserContext(object):
         self.xsTetra = section["x_exciting_xs_tetra"][0]
         self.xsAC = section["x_exciting_xs_tddft_analytic_continuation"][0]
         self.xsNAR = section["x_exciting_xs_tddft_anti_resonant_dielectric"][0]
-#        print("teste===",self.xsTetra)
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
       try:
@@ -1044,26 +885,6 @@ class ExcitingParserContext(object):
         backend.addValue('x_exciting_scf_threshold_charge_change', charge_thresh)
       except:
         pass
-##########BELOW VOLUME OPTIMIZATION######################
-#    if self.volumeOptIndex>1:
-#      self.volumeOpt = True
-#      optGindex = backend.openSection("section_method")
-#      backend.addValue("x_exciting_volume_optimization", self.volumeOpt)
-#      backend.closeSection("section_method", optGindex)
-#
-#    ext_uri = []
-#    backend.addValue("x_exciting_dummy", self.volumeOptIndex)
-#    if self.volumeOptIndex > 1:
-#      for j in range(1, self.volumeOptIndex):
-#        if (j<10):
-#          ext_uri.append(self.mainFilePath[0:-9] + 'rundir-0' + str(j) + '/INFO.OUT')
-#        else:
-#          ext_uri.append(self.mainFilePath[0:-9] + 'rundir-' + str(j) + '/INFO.OUT')
-#    for ref in ext_uri:
-#      refGindex = backend.openSection("section_calculation_to_calculation_refs")
-#      backend.addValue("calculation_to_calculation_external_url", ref)
-#      backend.addValue("calculation_to_calculation_kind", "source_calculation")
-#      backend.closeSection("section_calculation_to_calculation_refs", refGindex)
 
 mainFileDescription = \
     SM(name = "root matcher",
@@ -1205,6 +1026,7 @@ mainFileDescription = \
                      SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge>[-0-9.]+)"),
                      SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
                    ]) #,
+#         ########### BELOW TO BE FIXED ####################
 #                SM(name="final_forces",
 ##                  startReStr = r"\| Writing atomic positions and forces\s*\-",
 #                  startReStr = r"\s*Total atomic forces including IBS \(cartesian\) \s*:",

@@ -19,15 +19,13 @@ from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion import unit_conversion
-import os, sys, json, logging, exciting_parser_input
+import os, sys, json, logging, exciting_parser_gw_input
 
 ################################################################
 # This is the subparser for the exciting GW output
 ################################################################
 
-
 class GWParser(object):
-    """context for wien2k In2 parser"""
 
     def __init__(self):
         self.spinTreat = None
@@ -40,11 +38,8 @@ class GWParser(object):
     def startedParsing(self, path, parser):
         """called when parsing starts"""
         self.parser = parser
-        # allows to reset values if the same superContext is used to parse different files
-#        self.initialize_values()
 
     def parseGW(self, gwFile, backend,  dftMethodSectionGindex, dftSingleConfigurationGindex, xcName, unitCellVol,gmaxvr):
-#        logging.error("GW onClose_section_single_configuration_calculation")
         self.gmaxvr = float(gmaxvr[0])
         self.unitCellVol = float(unitCellVol[0])
         backend.openNonOverlappingSection("section_single_configuration_calculation")
@@ -62,8 +57,8 @@ class GWParser(object):
         else:
             pass
         dosGWFile = os.path.join(dirPath, "TDOS-QP.OUT")
-        bandCarbGWFile = os.path.join(dirPath, "bandstructure-qp.dat")
-        bandBorGWFile = os.path.join(dirPath, "BAND-QP.OUT")
+        bandCarbGWFile = os.path.join(dirPath, "bandstructure-qp.dat")   # carbon exciting
+        bandBorGWFile = os.path.join(dirPath, "BAND-QP.OUT")             # boron exciting
         vertexGWFile = os.path.join(dirPath, "BANDLINES.OUT")
         vertexLabGWFile = os.path.join(dirPath, "bandstructure.xml")
         selfCorGWFile = os.path.join(dirPath, "SELFC.DAT")
@@ -93,7 +88,7 @@ class GWParser(object):
                 backend.addValue("method_to_method_kind", "starting_point")
                 backend.closeNonOverlappingSection("section_method_to_method_refs")
                 with open(inputgwFile) as f:
-                    exciting_parser_input.parseInput(f, backend, self.gmaxvr)
+                    exciting_parser_gw_input.parseInput(f, backend, self.gmaxvr)
             backend.closeSection("section_method",selfGWSetGIndex)
 
         if os.path.exists(vertexGWFile):
@@ -341,47 +336,18 @@ class GWParser(object):
 
             backend.closeSection("section_k_band",bandGWGIndex)
         backend.closeNonOverlappingSection("section_single_configuration_calculation")
-#        logging.error("done GW onClose_section_single_configuration_calculation")
-
-#    def onOpen_section_method(self, backend, gIndex, section):
-#        fava = section["gw_frequency_number"]
-#        print("fava=",fava)
-
-#    def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-#        if dftSingleConfigurationGindex is not None:
-##        if self.secSingleConfIndex is None:
-##            self.secSingleConfIndex = gIndex
-##            singleGIndex = backend.openSection("section_single_configuration_calculation")
-#            fermi = section["gw_fermi_energy"]
-#            fundamental = section["gw_fundamental_gap"]
-#            optical = section["gw_optical_gap"]
-#            backend.addValue("gw_fermi_energy", fermi)
-#            backend.addValue("gw_fundamental_gap", fundamental)
-#            backend.addValue("gw_optical_gap", optical)
-##            backend.closeSection("section_single_configuration_calculation",singleGIndex)
-#        else:
-#            singleGIndex = backend.openSection("section_single_configuration_calculation")
-#            fermi = section["gw_fermi_energy"]
-#            fundamental = section["gw_fundamental_gap"]
-#            optical = section["gw_optical_gap"]
-#            backend.addValue("gw_fermi_energy", fermi)
-#            backend.addValue("gw_fundamental_gap", fundamental)
- #           backend.addValue("gw_optical_gap", optical)
- #           backend.closeSection("section_single_configuration_calculation",singleGIndex)
 
 def buildGWMatchers():     
     return SM(     
     name = 'root',     
     weak = True,    
     startReStr = "\=\s*Main GW output file\s*\=",
-#    sections = ["section_run"], 
     subMatchers = [
     SM(
       startReStr = "\-\s*frequency grid\s*\-",
       endReStr = "\-\s*Peak memory estimate \(Mb, per process\)\:\s*\-",
       sections = ["section_method"],
       subMatchers = [
-#        SM(r"\s*Type\:\s*\<\s*(?P<gw_dummy>[-a-zA-Z]+)\s*\>"),
         SM(r"\s*(?P<gw_frequency_number>[0-9]+)\s*(?P<gw_frequency_values__hartree>[0-9]\.[0-9]*([E]?[-]?[-0-9]+))\s*(?P<gw_frequency_weights>[0-9]\.[0-9]*([E]?[-]?[-0-9]+))", repeats = True)
     ]),
     SM(

@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+######################################################
+# this is the subparser for the XS output (BSE, TDDFT)
+######################################################
+
 import xml.sax
 import logging
 import numpy as np
@@ -21,10 +25,8 @@ from nomadcore.unit_conversion import unit_conversion
 
 class InputHandler(xml.sax.handler.ContentHandler):
     def __init__(self, backend, rgkmax):
-#        self.xsType = None
         self.rgkmax = rgkmax[0]
         self.rgkmaxScr = rgkmax[0]
-#        print("self.rgkmax===",self.rgkmax)
         self.backend = backend
         self.inputSectionGIndex = -1
         self.inXSInput = False
@@ -46,14 +48,10 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.scissor = 0.0
         self.vkloffXS = [0.0, 0.0, 0.0]
         self.vkloffXSDum = [0.0, 0.0, 0.0]
-#        self.vkloffScr = [-1.0, -1.0, -1.0]
-#        self.vkloffScrDum = "-1.0 -1.0 -1.0"
         self.screening = "none"
+######### BELOW XS VARIABLES ###########
         self.bse = False
-#        self.screentype = "full"
-############ BSE variables################
         self.aresbse = True
-#        self.bsetype = "singlet"
         self.lmaxdielt = 14
         self.nstlbse = [0, 0, 0, 0]        
         self.nstlbseDum = [0, 0, 0, 0]        
@@ -80,16 +78,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.tetra = False
         self.tetradf = "false"
 
-#        self.xstype = "BSE"
-
     def endDocument(self):
-#        pass
-#        if self.freqgrid == "none":
-#            self.backend.addValue("gw_max_frequency", self.freqmax)
-#            self.backend.addValue("gw_frequency_grid_type", self.fgrid)
-#            self.backend.addValue("gw_number_of_frequencies", self.nomeg)
- #       self.backend.addValue("gw_basis_set", "mixed")
-#        self.backend.addValue("gw_qp_equation_treatment", "linearization")
 
         if self.tetradf == "true":
             self.backend.addValue("x_exciting_xs_tetra", True)
@@ -102,9 +91,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.ngridkXS[j] = int(self.ngridkXSDum[j])
             self.vkloffXS[j] = float(self.vkloffXSDum[j])
             self.ngridkScr[j] = int(self.ngridkScrDum[j])
-#            self.nstlbse[j] = int (self.nstlbseDum[j])
-#            self.nstlxas[j] = int (self.nstlxasDum[j])
-#            self.vkloffScr[j] = float(self.vkloffScrDum[j])
 
         for j in range(0,4):
             self.nstlbse[j] = int (self.nstlbseDum[j])
@@ -122,14 +108,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
             self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
             self.backend.addValue("x_exciting_xs_bse_xas_number_of_bands", self.nstlxas)
-#        self.backend.addValue("x_exciting_xs_bse_xas_number_of_bands", self.nstlxas)
-
-#        for j in range(0,4):
-#            self.nstlbse[j] = int (self.nstlbseDum[j])
-#        for j in range(0,2):
-#            self.nstlxas[j] = int (self.nstlxasDum[j])
-
-#        self.backend.addValue("x_exciting_xs_screeninig_vkloff", self.vkloffScr)
 
         if self.rgkmaxXs == 0.0:
             self.backend.addValue("x_exciting_xs_rgkmax", self.rgkmax)
@@ -148,14 +126,14 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("x_exciting_xs_bse_rgkmax", float(self.rgkmaxBse))
 
     def startElement(self, name, attrs):
-#        xsType = None
         if name == "xs":
-#            self.inputSectionGIndex = self.backend.openSection("section_system")
             self.inXSInput = True
             xstype = attrs.getValue('xstype')
+            # IMPORTANT: so far, there is no way to define an xs calculation type. I have introduced a
+            # code-specific metadata, i.e. x_exciting_xs_type, that will have to be changed in the future.
+            # BSE or TDDFT could go into "electronic_structure_method"
             self.backend.addValue("x_exciting_xs_xstype", xstype)
             self.backend.addValue('x_exciting_electronic_structure_method', xstype)
-#            print("xstyppe===",xstype)
 
             try:
                 self.broad = attrs.getValue('broad')
@@ -212,7 +190,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
             try:
                 dummy = attrs.getValue('ngridk')
                 self.ngridkScrDum = dummy.split()
-#                print("dummo===",self.ngridkScrDum)
             except:
                 self.ngridkScrDum = [0, 0, 0]
             try:
@@ -225,25 +202,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
             except:
                 self.backend.addValue("x_exciting_xs_screening_type", self.screentype)
 
-#        self.aresbse = "true"
-#        self.bsetype = "singlet"
-#        self.lmaxdielt = 14
-#        self.nstlbse = [0, 0, 0, 0]
-#        self.nstlxas = [0, 0]
-#        self.rgkmaxBse = rgkmax[0]
-#        self.sciavbd = "true"
-#        self.sciavqbd = "false"
-#        self.sciavqhd = "false"
-#        self.sciavqwg = "false"
-#        self.sciavtype = "spherical"
-#        self.xas = "false"
-#        self.xasatom = 0
-#        self.xasedge = "K"
-#        self.xasspecies = 0
-
         elif name == "BSE":
             self.bse = True
-#            xsType = "BSE"
             try:
                 self.aresbse = attrs.getValue('aresbse')
                 if self.aresbse == "true":
@@ -259,10 +219,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("x_exciting_xs_bse_angular_momentum_cutoff", self.lmaxdielt)
             try:
                 self.rgkmaxBse = attrs.getValue('rgkmax')
-#                self.backend.addValue("x_exciting_xs_bse_rgkmax", float(self.rgkmax))
             except:
                 pass
-#                self.backend.addValue("x_exciting_xs_bse_rgkmax", self.rgkmax)
             try:
                 self.sciavbd = attrs.getValue('sciavbd')
                 if self.sciavqbd == "true":
@@ -303,33 +261,23 @@ class InputHandler(xml.sax.handler.ContentHandler):
             try:
                 self.xas = attrs.getValue('xas')
                 if self.xas == "false":
-#                    print("xas===",self.xas)
                     self.backend.addValue("x_exciting_xs_bse_xas", False)
                 else:
-#                    print("xas===",self.xas)
                     self.backend.addValue("x_exciting_xs_bse_xas", True)
             except:
-#                print("xasdefault===",self.xas)
                 self.backend.addValue("x_exciting_xs_bse_xas", self.xas)
             try:
                 self.xasatom = int(attrs.getValue('xasatom'))
-#                self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
             except:
                 pass
-#                self.backend.addValue("x_exciting_xs_bse_xasatom", self.xasatom)
             try:
                 self.xasedge = attrs.getValue('xasedge')
-#                self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
             except:
                 pass
-#                self.backend.addValue("x_exciting_xs_bse_xasedge", self.xasedge)
             try:
                 self.xasspecies = int(attrs.getValue('xasspecies'))
-#                self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
             except:
                 pass
-#                self.backend.addValue("x_exciting_xs_bse_xasspecies", self.xasspecies)
-#            if self.xas == False:
             try:
                 dummy = attrs.getValue('nstlbse')
                 self.nstlbseDum = dummy.split()
@@ -434,13 +382,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.tetra = True
             try:
                 self.tetradf = attrs.getValue('tetradf')
-#                if self.tetradf == "true":
-#                    selfbackend.addValue("x_exciting_xs_tetra", True)
-#                else:
-#                    self.backend.addValue("x_exciting_xs_tetra", False)
             except:
                 self.tetradf == "false"
-#                    self.backend.addValue("x_exciting_xs_tetra", False)
 
     def endElement(self, name):
         pass

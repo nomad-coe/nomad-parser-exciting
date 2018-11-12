@@ -22,7 +22,7 @@ from nomadcore.unit_conversion import unit_conversion
 import os, sys, json, logging
 
 ################################################################
-# This is the subparser for the exciting XS output
+# This is the subparser for the epsilon tensor in the XS output
 ################################################################
 
 def is_number(s):
@@ -33,16 +33,12 @@ def is_number(s):
         return False
 
 class EPSParser(object):
-    """context for wien2k In2 parser"""
 
     def __init__(self):
         pass
 
     def startedParsing(self, path, parser):
-        """called when parsing starts"""
         self.parser = parser
-        # allows to reset values if the same superContext is used to parse different files
-#        self.initialize_values()
 
     def parseEpsilon(self, epsFile, backend, epsEn, epsilon):
         with open(epsFile) as g:

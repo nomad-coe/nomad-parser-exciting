@@ -35,7 +35,6 @@ class BandHandler(xml.sax.handler.ContentHandler):
     def endDocument(self):
             self.inBand = False
             self.backend.closeSection("section_k_band",self.bandSectionGIndex)
-#            self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
             self.bandSectionGIndex = -1
             self.normBandSectionGIndex = -1
 
@@ -43,7 +42,6 @@ class BandHandler(xml.sax.handler.ContentHandler):
         if name == "bandstructure":
             self.bandSectionGIndex = self.backend.openSection("section_k_band")
             self.backend.addValue("band_structure_kind","electronic")
-#            self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
             self.inBand = True
         elif name == "band":
             self.energy.append([])

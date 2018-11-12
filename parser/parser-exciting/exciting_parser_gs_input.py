@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+######################################################
+# this is the subparser for the groundstate input file
+######################################################
+
 import xml.sax
 import logging
 import numpy as np
@@ -24,7 +28,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.backend = backend
 
     def startElement(self, name, attrs):
-        if name == "libxc":        #libXC
+        if name == "libxc":       
             correlation = attrs.getValue("correlation")[3:]
             exchange = attrs.getValue("exchange")[3:]
             xcName = [correlation, exchange]
