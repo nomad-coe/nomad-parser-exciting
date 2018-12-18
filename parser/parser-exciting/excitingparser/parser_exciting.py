@@ -1355,6 +1355,9 @@ class ExcitingParser():
 
     def setup_logger(self, new_logger):
         if hasattr(new_logger, 'bind'):
+            # tell tests about received logger
+            new_logger.debug('received logger')
+
             # only do this for struct logs
             from excitingparser import parser_exciting, exciting_parser_XS_input, \
                 exciting_parser_GS_input, exciting_parser_dos, exciting_parser_bandstructure
