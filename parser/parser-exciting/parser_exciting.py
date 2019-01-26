@@ -519,8 +519,8 @@ class ExcitingParserContext(object):
     """Trigger called when section_framce_sequence is closed.
     """
     backend.addValue("number_of_frames_in_sequence", len(self.frameSequence))
-    backend.addArrayValues("frame_sequence_local_frames_ref", np.array(self.frameSequence))
-    backend.addValue("frame_sequence_to_sampling_ref", self.samplingGIndex)
+    backend.addArrayValues("frame_sequence_to_frames_ref", np.array(self.frameSequence))
+    backend.addValue("frame_sequence_to_sampling_method_ref", self.samplingGIndex)
 
     if self.samplingMethod == "geometry_optimization":
         gi = backend.openSection("section_sampling_method")
@@ -571,12 +571,12 @@ class ExcitingParserContext(object):
     else:
         for xcName in xc_internal_map[xcNr]:
           self.xcName = xcName
-          gi = backend.openSection("section_XC_functionals")
-          backend.addValue("XC_functional_name", xcName)
-          backend.closeSection("section_XC_functionals", gi)
+          gi = backend.openSection("section_xc_functionals")
+          backend.addValue("xc_functional_name", xcName)
+          backend.closeSection("section_xc_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-    backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+    backend.addValue('single_configuration_calculation_to_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
 ####################VOLUME OPTIMIZATION BEGIN################################
     ext_uri = []
@@ -603,7 +603,9 @@ class ExcitingParserContext(object):
       atom_geometry_forces = []
       for i in range(0,atoms):
           atom_geometry_forces.append([forceX[i],forceY[i],forceZ[i]])
+      fId = backend.openSection('section_atom_forces')
       backend.addValue("atom_forces",atom_geometry_forces)
+      backend.closeSection('section_atom_forces', fId)
 ##############TO DO. FIX FORCES#####################
 #    forceX = section["x_exciting_atom_forces_x"]
 #    if forceX:
@@ -618,15 +620,15 @@ class ExcitingParserContext(object):
 #      print("forceCoreX===",forceCoreX)
 ##      print("forceCoreY===",forceCoreY)
 #      print("forceCoreZ===",forceCoreZ)
-#      forceIBSX = section["x_exciting_atom_IBS_forces_x"]
-#      forceIBSY = section["x_exciting_atom_IBS_forces_y"]
-#      forceIBSZ = section["x_exciting_atom_IBS_forces_z"]
+#      forceIBSX = section["x_exciting_atom_ibs_forces_x"]
+#      forceIBSY = section["x_exciting_atom_ibs_forces_y"]
+#      forceIBSZ = section["x_exciting_atom_ibs_forces_z"]
 #      print("forceIBSX===",forceIBSX)
 #      print("forceIBSY===",forceIBSY)
 #      print("forceIBSZ===",forceIBSZ)
-#      forceHFX = section["x_exciting_atom_HF_forces_x"]
-#      forceHFY = section["x_exciting_atom_HF_forces_y"]
-#      forceHFZ = section["x_exciting_atom_HF_forces_z"]
+#      forceHFX = section["x_exciting_atom_hf_forces_x"]
+#      forceHFY = section["x_exciting_atom_hf_forces_y"]
+#      forceHFZ = section["x_exciting_atom_hf_forces_z"]
 #      fConv = convert_unit_function("hartree/bohr", "N")
 #      atoms = len(forceX)
 #      atom_forces = []
@@ -652,8 +654,8 @@ class ExcitingParserContext(object):
 #        atom_HF_forces.append([fConv(forceHFX[i]),fConv(forceHFY[i]),fConv(forceHFZ[i])])
 #      backend.addValue("atom_forces",atom_forces)
 #      backend.addValue("x_exciting_atom_core_forces",atom_core_forces)
-#      backend.addValue("x_exciting_atom_IBS_forces",atom_IBS_forces)
-#      backend.addValue("x_exciting_atom_HF_forces",atom_HF_forces)
+#      backend.addValue("x_exciting_atom_ibs_forces",atom_IBS_forces)
+#      backend.addValue("x_exciting_atom_hf_forces",atom_HF_forces)
 #    print("atom_forces=",atom_forces)
 #
     dirPath = os.path.dirname(self.parser.fIn.name)
@@ -927,7 +929,7 @@ mainFileDescription = \
          ]) #,
 #        SM(startReStr = r"\s*magnetic fields\s*\((?P<x_exciting_magnetic_field_format>[-a-zA-Z]+)\)\s*:\s*",
 #           subMatchers = [
-#                    SM(r"\s*(?P<x_exciting_MT_external_magnetic_field_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_MT_external_magnetic_field_x>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_y>[-+0-9.]+)\s*(?P<x_exciting_MT_external_magnetic_field_z>[-+0-9.]+)", repeats = True)
+#                    SM(r"\s*(?P<x_exciting_mt_external_magnetic_field_atom_number>[+0-9]+)\s*:\s*(?P<x_exciting_mt_external_magnetic_field_x>[-+0-9.]+)\s*(?P<x_exciting_mt_external_magnetic_field_y>[-+0-9.]+)\s*(?P<x_exciting_mt_external_magnetic_field_z>[-+0-9.]+)", repeats = True)
 #         ])
     ]),
     SM(r"\s*Total number of atoms per unit cell\s*:\s*(?P<x_exciting_number_of_atoms>[-0-9.]+)"),
@@ -980,7 +982,7 @@ mainFileDescription = \
                    SM(r"\s*Sum of eigenvalues\s*:\s*(?P<energy_sum_eigenvalues_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Effective potential energy\s*:\s*(?P<x_exciting_effective_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Coulomb potential energy\s*:\s*(?P<x_exciting_coulomb_potential_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*xc potential energy\s*:\s*(?P<energy_XC_potential_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*xc potential energy\s*:\s*(?P<energy_xc_potential_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Hartree energy\s*:\s*(?P<x_exciting_hartree_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Electron-nuclear energy\s*:\s*(?P<x_exciting_electron_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<x_exciting_nuclear_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
@@ -992,7 +994,7 @@ mainFileDescription = \
                    SM(r"\s*core leakage\s*:\s*(?P<x_exciting_core_leakage_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*valence\s*:\s*(?P<x_exciting_valence_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge_scf_iteration>[-0-9.]+)"),
-                   SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_mt_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Wall time \(seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration__hartree>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_potential_change_list__hartree>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
@@ -1014,7 +1016,7 @@ mainFileDescription = \
                      SM(r"\s*Sum of eigenvalues\s*:\s*(?P<energy_sum_eigenvalues__hartree>[-0-9.]+)"),
                      SM(r"\s*Effective potential energy\s*:\s*(?P<x_exciting_effective_potential_energy__hartree>[-0-9.]+)"),
                      SM(r"\s*Coulomb potential energy\s*:\s*(?P<x_exciting_coulomb_potential_energy__hartree>[-0-9.]+)"),
-                     SM(r"\s*xc potential energy\s*:\s*(?P<energy_XC_potential__hartree>[-0-9.]+)"),
+                     SM(r"\s*xc potential energy\s*:\s*(?P<energy_xc_potential__hartree>[-0-9.]+)"),
                      SM(r"\s*Hartree energy\s*:\s*(?P<x_exciting_hartree_energy__hartree>[-0-9.]+)"),
                      SM(r"\s*Electron-nuclear energy\s*:\s*(?P<x_exciting_electron_nuclear_energy__hartree>[-0-9.]+)"),
                      SM(r"\s*Nuclear-nuclear energy\s*:\s*(?P<x_exciting_nuclear_nuclear_energy__hartree>[-0-9.]+)"),
@@ -1023,7 +1025,7 @@ mainFileDescription = \
                      SM(r"\s*DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*(?P<x_exciting_dos_fermi__hartree_1>[-0-9.]+)"),
                      SM(r"\s*core leakage\s*:\s*(?P<x_exciting_core_leakage>[-0-9.]+)"),
                      SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge>[-0-9.]+)"),
-                     SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge>[-0-9.]+)"),
+                     SM(r"\s*total charge in muffin-tins\s*:\s*(?P<x_exciting_total_mt_charge>[-0-9.]+)"),
                      SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
                    ]) #,
 #         ########### BELOW TO BE FIXED ####################
@@ -1060,13 +1062,13 @@ mainFileDescription = \
 #                  endReStr = r"\|\s* Groundstate module stopped\s* \*",
 #                  subMatchers = [
 ##                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
-#                   SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_HF_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_z>[-0-9.]+)\s*HF force",
+#                   SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_hf_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_hf_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_hf_forces_z>[-0-9.]+)\s*HF force",
 #                     repeats = True,
 #                     floating = True),
 #                   SM(r"\s*\:\s*(?P<x_exciting_atom_core_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_core_forces_z>[-0-9.]+)\s*core correction",
 #                     repeats = True,
 #                     floating = True),
-#                   SM(r"\s*\:\s*(?P<x_exciting_atom_IBS_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_IBS_forces_z>[-0-9.]+)\s*IBS correction",
+#                   SM(r"\s*\:\s*(?P<x_exciting_atom_ibs_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_ibs_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_ibs_forces_z>[-0-9.]+)\s*IBS correction",
 #                     repeats = True,
 #                     floating = True),
 ##                   SM(r"(?P<x_exciting_store_total_forces>.*)",
@@ -1131,15 +1133,15 @@ cachingLevelForMetaName = {
                             "x_exciting_atom_forces_x":CachingLevel.Cache,
                             "x_exciting_atom_forces_y":CachingLevel.Cache,
                             "x_exciting_atom_forces_z":CachingLevel.Cache,
-                            "x_exciting_atom_HF_forces_x":CachingLevel.Cache,
-                            "x_exciting_atom_HF_forces_y":CachingLevel.Cache,
-                            "x_exciting_atom_HF_forces_z":CachingLevel.Cache,
+                            "x_exciting_atom_hf_forces_x":CachingLevel.Cache,
+                            "x_exciting_atom_hf_forces_y":CachingLevel.Cache,
+                            "x_exciting_atom_hf_forces_z":CachingLevel.Cache,
                             "x_exciting_atom_core_forces_x":CachingLevel.Cache,
                             "x_exciting_atom_core_forces_y":CachingLevel.Cache,
                             "x_exciting_atom_core_forces_z":CachingLevel.Cache,
-                            "x_exciting_atom_IBS_forces_x":CachingLevel.Cache,
-                            "x_exciting_atom_IBS_forces_y":CachingLevel.Cache,
-                            "x_exciting_atom_IBS_forces_z":CachingLevel.Cache,
+                            "x_exciting_atom_ibs_forces_x":CachingLevel.Cache,
+                            "x_exciting_atom_ibs_forces_y":CachingLevel.Cache,
+                            "x_exciting_atom_ibs_forces_z":CachingLevel.Cache,
                             "x_exciting_geometry_atom_forces_x":CachingLevel.Cache,
                             "x_exciting_geometry_atom_forces_y":CachingLevel.Cache,
                             "x_exciting_geometry_atom_forces_z":CachingLevel.Cache

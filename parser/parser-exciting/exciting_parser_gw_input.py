@@ -73,7 +73,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("gw_bare_coulomb_cutofftype", self.cutofftype)
         if self.scrcoul == "none":
             self.backend.addValue("gw_screened_coulomb_volume_average",self.sciavtype)
-            self.backend.addValue("gw_screened_Coulomb", self.scrtype)
+            self.backend.addValue("gw_screened_coulomb", self.scrtype)
         self.backend.addValue("gw_basis_set", "mixed")
         self.backend.addValue("gw_qp_equation_treatment", "linearization")
         for j in range(0,3):
@@ -196,16 +196,14 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.backend.addValue("gw_screened_coulomb_volume_average",self.sciavtype)
             try:
                 self.scrtype = attrs.getValue('scrtype')
-                self.backend.addValue("gw_screened_Coulomb", self.scrtype)
+                self.backend.addValue("gw_screened_coulomb", self.scrtype)
             except:
                 self.scrtype = "rpa"
-                self.backend.addValue("gw_screened_Coulomb", self.scrtype)
+                self.backend.addValue("gw_screened_coulomb", self.scrtype)
 
     def endElement(self, name):
         pass
 
 def parseInput(inF, backend, gmaxvr):
     handler = InputHandler(backend, gmaxvr)
-    logging.error("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")

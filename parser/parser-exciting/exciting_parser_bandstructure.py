@@ -203,6 +203,4 @@ class BandHandler(xml.sax.handler.ContentHandler):
 
 def parseBand(inF, backend, spinTreat):
     handler = BandHandler(backend, spinTreat)
-    logging.error("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")

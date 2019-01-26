@@ -303,11 +303,11 @@ class InputHandler(xml.sax.handler.ContentHandler):
             try:
                 self.ahc = attrs.getValue('ahc')
                 if self.ahc == "true":
-                    self.backend.addValue("x_exciting_xs_tddft_anomalous_Hall_conductivity", True)
+                    self.backend.addValue("x_exciting_xs_tddft_anomalous_hall_conductivity", True)
                 else:
-                    self.backend.addValue("x_exciting_xs_tddft_anomalous_Hall_conductivity", False)
+                    self.backend.addValue("x_exciting_xs_tddft_anomalous_hall_conductivity", False)
             except:
-                    self.backend.addValue("x_exciting_xs_tddft_anomalous_Hall_conductivity", False)
+                    self.backend.addValue("x_exciting_xs_tddft_anomalous_hall_conductivity", False)
             try:
                 self.aresdf = attrs.getValue('aresdf')
                 if self.aresdf == "true":
@@ -390,6 +390,4 @@ class InputHandler(xml.sax.handler.ContentHandler):
 
 def parseInput(inF, backend, gmaxvr):
     handler = InputHandler(backend, gmaxvr)
-    logging.error("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")

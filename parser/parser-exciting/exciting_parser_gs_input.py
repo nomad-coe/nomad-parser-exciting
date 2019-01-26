@@ -33,15 +33,13 @@ class InputHandler(xml.sax.handler.ContentHandler):
             exchange = attrs.getValue("exchange")[3:]
             xcName = [correlation, exchange]
             for xc in xcName:
-                gi = self.backend.openSection("section_XC_functionals")
-                self.backend.addValue("XC_functional_name", xc)
-                self.backend.closeSection("section_XC_functionals", gi)
+                gi = self.backend.openSection("section_xc_functionals")
+                self.backend.addValue("xc_functional_name", xc)
+                self.backend.closeSection("section_xc_functionals", gi)
 
     def endElement(self, name):
         pass
 
 def parseInput(inF, backend):
     handler = InputHandler(backend)
-    logging.error("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")

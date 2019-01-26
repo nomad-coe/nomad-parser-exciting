@@ -149,6 +149,4 @@ class DosHandler(xml.sax.handler.ContentHandler):
 
 def parseDos(inF, backend, spinTreat, unitCellVol):
     handler = DosHandler(backend, spinTreat, unitCellVol)
-    logging.error("will parse")
     xml.sax.parse(inF, handler)
-    logging.error("did parse")

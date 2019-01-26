@@ -74,12 +74,12 @@ class ExcitingHeliumParserContext(object):
         406: ['HYB_GGA_XC_PBEH']
         }
     for xcName in xc_internal_map[xcNr]:
-      gi = backend.openSection("section_XC_functionals")
-      backend.addValue("XC_functional_name", xcName)
-      backend.closeSection("section_XC_functionals", gi)
+      gi = backend.openSection("section_xc_functionals")
+      backend.addValue("xc_functional_name", xcName)
+      backend.closeSection("section_xc_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-    backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+    backend.addValue('single_configuration_calculation_to_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
     dirPath = os.path.dirname(self.parser.fIn.name)
     dosFile = os.path.join(dirPath, "dos.xml")
@@ -327,14 +327,14 @@ mainFileDescription = \
                    SM(r"\s*electron-nuclear\s*:\s*(?P<x_exciting_electron_nuclear_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Hartree\s*:\s*(?P<x_exciting_hartree_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Madelung\s*:\s*(?P<x_exciting_madelung_energy_scf_iteration__hartree>[-0-9.]+)"),
-                   SM(r"\s*xc potential\s*:\s*(?P<energy_XC_potential_scf_iteration__hartree>[-0-9.]+)"),
+                   SM(r"\s*xc potential\s*:\s*(?P<energy_xc_potential_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*exchange\s*:\s*(?P<x_exciting_exchange_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*correlation\s*:\s*(?P<x_exciting_correlation_energy_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*total energy\s*:\s*(?P<energy_total_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Density of states at Fermi energy\s*:\s*(?P<x_exciting_dos_fermi_scf_iteration__hartree_1>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
                    SM(r"\s*core leakage\s*:\s*(?P<x_exciting_core_leakage_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
                    SM(r"\s*interstitial\s*:\s*(?P<x_exciting_interstitial_charge_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
-                   SM(r"\s*total in muffin-tins\s*:\s*(?P<x_exciting_total_MT_charge_scf_iteration>[-0-9.]+)"),
+                   SM(r"\s*total in muffin-tins\s*:\s*(?P<x_exciting_total_mt_charge_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap_scf_iteration__hartree>[-0-9.]+)"),
                    SM(r"\s*Time \(CPU seconds\)\s*:\s*(?P<x_exciting_time_scf_iteration>[-0-9.]+)"),
                    SM(r"\s*RMS change in effective potential \(target\)\s*:\s*(?P<x_exciting_effective_potential_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))"),
