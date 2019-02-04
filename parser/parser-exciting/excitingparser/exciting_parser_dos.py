@@ -13,13 +13,11 @@
 # limitations under the License.
 
 import xml.sax
-import logging as _logging
+import logging
 import numpy as np
 from nomadcore.unit_conversion.unit_conversion import convert_unit_function
 from nomadcore.unit_conversion.unit_conversion import convert_unit
 from nomadcore.unit_conversion import unit_conversion
-
-logging = _logging.getLogger('nomad.parser.exciting.dos')
 
 
 class DosHandler(xml.sax.handler.ContentHandler):
