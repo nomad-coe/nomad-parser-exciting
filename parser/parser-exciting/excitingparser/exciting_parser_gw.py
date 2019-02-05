@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from builtins import object
-import excitingparser.setup_paths
 import xml.sax
 from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM

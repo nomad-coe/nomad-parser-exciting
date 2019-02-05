@@ -14,7 +14,6 @@
 #
 # Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
 from builtins import object
-import excitingparser.setup_paths
 import numpy as np
 from nomadcore.simple_parser import AncillaryParser, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction

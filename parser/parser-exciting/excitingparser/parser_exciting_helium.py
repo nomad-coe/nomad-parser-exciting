@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from builtins import object
-import excitingparser.setup_paths
 import numpy as np
 from nomadcore.simple_parser import SimpleMatcher as SM, mainFunction
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
