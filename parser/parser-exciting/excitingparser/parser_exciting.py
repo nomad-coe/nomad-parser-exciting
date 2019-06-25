@@ -1079,13 +1079,13 @@ mainFileDescription = \
        weak = True,
        subMatchers = [
          SM(name = "header",
-         startReStr = r"\s*\|\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)\s*started\s*=",
+         startReStr = r"\s*(\||\+|\*)\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)\s*started\s*=",
          fixedStartValues={'program_name': 'exciting', 'program_basis_set_type': '(L)APW+lo' },
             sections = ["section_run", "section_method"],
          subMatchers = [
 	   SM(name = 'input',
-              startReStr = r"\|\sStarting initialization",
-              endReStr = r"\|\sEnding initialization",
+              startReStr = r"(\||\+|\*)\sStarting initialization",
+              endReStr = r"(\||\+|\*)\sEnding initialization",
               sections = ['section_system'],
               subMatchers = [
                 SM(startReStr = r"\sLattice vectors \(cartesian\) :",
@@ -1149,12 +1149,12 @@ mainFileDescription = \
     SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
             SM(name = "single configuration iteration",
-              startReStr = r"\|\s*Self-consistent loop started\s*\+",
+              startReStr = r"(\||\+|\*)\s*Self-consistent loop started\s*\+",
               sections = ["section_single_configuration_calculation"],
               repeats = True,
               subMatchers = [
                 SM(name = "scfi totE",
-                 startReStr =r"\|\s*SCF iteration number\s*:",
+                 startReStr =r"(\||\+|\*)\s*SCF iteration number\s*:",
                   sections = ["section_scf_iteration"],
                   repeats = True,
                   subMatchers = [
@@ -1189,8 +1189,8 @@ mainFileDescription = \
                    SM(r"\s*Abs. change in max-nonIBS-force\s*\(target\)\s*:\s*(?P<x_exciting_force_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_force_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)")
                   ]),
                 SM(name="final_quantities",
-                  startReStr = r"\| Convergence targets achieved. Performing final SCF iteration\s*\+",
-                  endReStr = r"\| Self-consistent loop stopped\s*\+",
+                  startReStr = r"(\||\+|\*) Convergence targets achieved. Performing final SCF iteration\s*\+",
+                  endReStr = r"(\||\+|\*) Self-consistent loop stopped\s*\+",
                    subMatchers = [
                      SM(r"\s*Total energy\s*:\s*(?P<energy_total__hartree>[-0-9.]+)"),
                      SM(r"\s*Fermi energy\s*:\s*(?P<x_exciting_fermi_energy__hartree>[-0-9.]+)"),
@@ -1214,9 +1214,9 @@ mainFileDescription = \
                      SM(r"\s*Estimated fundamental gap\s*:\s*(?P<x_exciting_gap__hartree>[-0-9.]+)")
                    ]) #,
 #                SM(name="final_forces",
-##                  startReStr = r"\| Writing atomic positions and forces\s*\-",
+##                  startReStr = r"(\||\+|\*) Writing atomic positions and forces\s*\-",
 #                  startReStr = r"\s*Total atomic forces including IBS \(cartesian\) \s*:",
-#                  endReStr = r"\|\s*Groundstate module stopped\s*\*",
+#                  endReStr = r"(\||\+|\*)\s*Groundstate module stopped\s*\*",
 ##                  endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
 #                  floating = True,
 #                   subMatchers = [
@@ -1243,7 +1243,7 @@ mainFileDescription = \
 #                   ]),
 #                 SM(name="force_components",
 #                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
-#                  endReStr = r"\|\s* Groundstate module stopped\s* \*",
+#                  endReStr = r"(\||\+|\*)\s* Groundstate module stopped\s* \*",
 #                  subMatchers = [
 ##                  startReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
 #                   SM(r"\s*atom\s*[0-9]+\s*[A-Za-z]+\s*\:\s*(?P<x_exciting_atom_HF_forces_x>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_y>[-0-9.]+)\s*(?P<x_exciting_atom_HF_forces_z>[-0-9.]+)\s*HF force",
@@ -1261,16 +1261,16 @@ mainFileDescription = \
                ]
             ),
             SM(name = "geometry optimization",
-              startReStr = r"\|\s*Structure-optimization module started*\s*\*",
+              startReStr = r"(\||\+|\*)\s*Structure-optimization module started*\s*\*",
               sections = ["section_sampling_method","x_exciting_section_geometry_optimization"],
 #              fixedStartValues={'sampling_method': 'geometry_optimization'},
 #              repeats = True,
               subMatchers = [
                    SM(name = "optimization steps",
-                   startReStr = r"\|\s*Optimization step\s*(?P<x_exciting_geometry_optimization_step>[-0-9]+)\s*\(method = (?P<x_exciting_geometry_optimization_method>[A-Za-z]+)\)\s*\-",
+                   startReStr = r"(\||\+|\*)\s*Optimization step\s*(?P<x_exciting_geometry_optimization_step>[-0-9]+)\s*\(method = (?P<x_exciting_geometry_optimization_method>[A-Za-z]+)\)\s*\-",
                    sections = ["section_single_configuration_calculation"],
 #                   SM(r"\s*Output level for this task is set to normal\s*"),
-#                   SM(r"\|\s*Optimization step (?P<x_exciting_geometry_optimization_step>[-0-9]+)\: Initialize optimization\s*\-"),
+#                   SM(r"(\||\+|\*)\s*Optimization step (?P<x_exciting_geometry_optimization_step>[-0-9]+)\: Initialize optimization\s*\-"),
                    repeats = True,
                    subMatchers = [
                    SM(r"\s*Maximum force magnitude\s*\(target\)\s*:\s*(?P<x_exciting_maximum_force_magnitude__hartree_bohr_1>[0-9]+\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_geometry_optimization_threshold_force__hartree_bohr_1>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)"),
