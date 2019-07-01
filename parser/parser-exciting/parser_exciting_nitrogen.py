@@ -243,12 +243,13 @@ mainFileDescription = \
        weak = True,
        subMatchers = [
          SM(name = "header",
-         startReStr = r"\s*\|\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)",
+         startReStr = rr"\s*(\||\+|\*)\s*EXCITING\s*(?<version>[-a-zA-Z0-9]+)",
          fixedStartValues={'program_name': 'exciting', 'program_basis_set_type': '(L)APW+lo' },
             sections = ["section_run", "section_method"],
          subMatchers = [
 	   SM(name = 'input',
-              startReStr = r"\|\sGround\-state run starting from atomic densities",
+              startReStr = rstartReStr = r"(\||\+|\*)\sGround\-state run starting from atomic densities",
+,
 #              endReStr = r"\|\sEnding initialization",
               sections = ['section_system'],
               subMatchers = [
@@ -308,12 +309,12 @@ mainFileDescription = \
     SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
             SM(name = "single configuration iteration",
-              startReStr = r"\|\s*Self-consistent loop started",
+              startReStr = r"(\||\+|\*)\s*Self-consistent loop started",
               sections = ["section_single_configuration_calculation"],
               repeats = True,
               subMatchers = [
                 SM(name = "scfi totE",
-                 startReStr =r"\|\s*.+teration number\s*:",
+                 startReStr =r"(\||\+|\*)\s*.+teration number\s*:",
                   sections = ["section_scf_iteration"],
                   repeats = True,
                   subMatchers = [
@@ -342,7 +343,7 @@ mainFileDescription = \
                    SM(r"\s*Charge distance\s*\(target\)\s*:\s*(?P<x_exciting_charge_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))")
                   ]),
                 SM(name="final_forces",
-                  startReStr = r"\| Writing atomic positions and forces\s*\-",
+                  startReStr = r"(\||\+|\*) Writing atomic positions and forces\s*\-",
                   endReStr = r"\s* Atomic force components including IBS \(cartesian\)\s*:",
                    subMatchers = [
                      SM(name="total_forces",

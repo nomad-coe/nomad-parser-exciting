@@ -38,8 +38,8 @@ class ExcitingParserContext(object):
 
   def __init__(self):
     self.parser = None
-#    self.mainFileUri = sys.argv[1]    # to test on local machine: uncomment this line and comment the one below
-    self.mainFileUri = sys.argv[2]     # see the line above
+    self.mainFileUri = sys.argv[1]    # to test on local machine: uncomment this line and comment the one below
+    # self.mainFileUri = sys.argv[2]     # see the line above
     self.mainFilePath = None
     self.mainFile = None
     self.volumeCubOpt = False
@@ -849,7 +849,7 @@ class ExcitingParserContext(object):
 
   def onClose_section_method(self, backend, gIndex, section):
     if gIndex == self.XSSetGIndex and self.xstype == "TDDFT":
-        self.tddftKernel = section["x_exciting_xs_tddft_xc_kernel"]
+        self.tddftKernel = section["x_exciting_xs_tddft_XC_kernel"]
         self.xsTetra = section["x_exciting_xs_tetra"][0]
         self.xsAC = section["x_exciting_xs_tddft_analytic_continuation"][0]
         self.xsNAR = section["x_exciting_xs_tddft_anti_resonant_dielectric"][0]
@@ -892,12 +892,12 @@ mainFileDescription = \
        weak = True,
        subMatchers = [
          SM(name = "header",
-         startReStr = r"\s*\|\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)\s*started\s*=",
+         startReStr = r"\s*(\||\+|\*)\s*EXCITING\s*(?P<program_version>[-a-zA-Z0-9]+)\s*started\s*=",
          fixedStartValues={'program_name': 'exciting', 'program_basis_set_type': '(L)APW+lo' },
             sections = ["section_run", "section_method"],
          subMatchers = [
 	   SM(name = 'input',
-              startReStr = r"\|\sStarting initialization",
+              startReStr = r"(\||\+|\*)\sStarting initialization",
               endReStr = r"\|\sEnding initialization",
               sections = ['section_system'],
               subMatchers = [
@@ -962,12 +962,12 @@ mainFileDescription = \
     SM(r"\s*Using\s*(?P<x_exciting_potential_mixing>[-a-zA-Z\s*]+)\s*potential mixing")
     ]),
             SM(name = "single configuration iteration",
-              startReStr = r"\|\s*Self-consistent loop started\s*\+",
+              startReStr = r"(\||\+|\*)\s*Self-consistent loop started\s*\+",
               sections = ["section_single_configuration_calculation"],
               repeats = True,
               subMatchers = [
                 SM(name = "scfi totE",
-                 startReStr =r"\|\s*SCF iteration number\s*:",
+                 startReStr =r"(\||\+|\*)\s*SCF iteration number\s*:",
                   sections = ["section_scf_iteration"],
                   repeats = True,
                   subMatchers = [
@@ -1002,8 +1002,8 @@ mainFileDescription = \
                    SM(r"\s*Abs. change in max-nonIBS-force\s*\(target\)\s*:\s*(?P<x_exciting_force_convergence_scf_iteration>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\s*\(\s*(?P<x_exciting_scf_threshold_force_change_list>[0-9]\.[0-9]*([E]?[-]?[0-9]+))\)")
                   ]),
                 SM(name="final_quantities",
-                  startReStr = r"\| Convergence targets achieved. Performing final SCF iteration\s*\+",
-                  endReStr = r"\| Self-consistent loop stopped\s*\+",
+                  startReStr = r"(\||\+|\*) Convergence targets achieved. Performing final SCF iteration\s*\+",
+                  endReStr = r"(\||\+|\*) Self-consistent loop stopped\s*\+",
                    subMatchers = [
                      SM(r"\s*Total energy\s*:\s*(?P<energy_total__hartree>[-0-9.]+)"),
                      SM(r"\s*Fermi energy\s*:\s*(?P<x_exciting_fermi_energy__hartree>[-0-9.]+)"),
@@ -1075,13 +1075,13 @@ mainFileDescription = \
                ]
             ),
             SM(name = "geometry optimization",
-              startReStr = r"\|\s*Structure-optimization module started*\s*\*",
+              startReStr = r"(\||\+|\*)\s*Structure-optimization module started*\s*\*",
               sections = ["section_sampling_method","x_exciting_section_geometry_optimization"],
 #              fixedStartValues={'sampling_method': 'geometry_optimization'},
 #              repeats = True,
               subMatchers = [
                    SM(name = "optimization steps",
-                   startReStr = r"\|\s*Optimization step\s*(?P<x_exciting_geometry_optimization_step>[-0-9]+)\s*\(method = (?P<x_exciting_geometry_optimization_method>[A-Za-z]+)\)\s*\-",
+                   startReStr = r"(\||\+|\*)\s*Optimization step\s*(?P<x_exciting_geometry_optimization_step>[-0-9]+)\s*\(method = (?P<x_exciting_geometry_optimization_method>[A-Za-z]+)\)\s*\-",
                    sections = ["section_single_configuration_calculation"],
 #                   SM(r"\s*Output level for this task is set to normal\s*"),
 #                   SM(r"\|\s*Optimization step (?P<x_exciting_geometry_optimization_step>[-0-9]+)\: Initialize optimization\s*\-"),

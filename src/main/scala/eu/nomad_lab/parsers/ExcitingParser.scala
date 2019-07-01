@@ -37,9 +37,8 @@ object ExcitingParser extends SimpleExternalParserGenerator(
       )) :: Nil
   ),
   mainFileTypes = Seq("text/.*"),
-  mainFileRe = """\s*=================================================+\s*
-\s*\|\s*EXCITING\s(?<version>\S*) started\s*=
-(?:\s*\|\sversion hash id:\s*(?<hashId>\S*)\s*=)?""".r,
+  mainFileRe = """\s*(\||\+|\*)\s*EXCITING\s*(?<version>[-a-zA-Z0-9]+)\s*started\s*=
+        (?<hashId>\s*)""".r,
   cmd = Seq(DefaultPythonInterpreter.pythonExe(), "${envDir}/parsers/exciting/parser/parser-exciting/parser_exciting.py",
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   resList = Seq(
