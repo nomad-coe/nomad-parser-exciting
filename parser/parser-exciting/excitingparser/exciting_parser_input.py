@@ -101,10 +101,6 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.ngridqDum = dummy.split()
             except:
                 self.ngridqDum = [1, 1, 1]
-<<<<<<< HEAD
-=======
-
->>>>>>> nitrogen
         elif name == "freqgrid":
             self.freqgrid = "freqgrid"
             try:

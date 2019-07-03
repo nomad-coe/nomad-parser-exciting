@@ -14,6 +14,7 @@
 
 from builtins import object
 import xml.sax
+import logging
 from nomadcore.simple_parser import mainFunction, CachingLevel
 from nomadcore.simple_parser import SimpleMatcher as SM
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
@@ -137,7 +138,7 @@ class GWParser(object):
                     s = s.strip()
                     if "k-point" in s.split():
                         qpGWKpoint.append([])
-                        for i in range(0,2):
+                        for i in range(0, 2):
                             Vxc[i].append([])
                             Sx[i].append([])
                             Sc[i].append([])
@@ -159,11 +160,17 @@ class GWParser(object):
                                 pass
                             else:
                                 for i in range(0,2):
-                                    Sx[i][-1].append(fromH(float(s[4])))
-                                    Sc[i][-1].append(fromH(float(s[5])))
-                                    qpE[i][-1].append(fromH(float(s[3])))
-                                    Znk[i][-1].append(float(s[9]))
-                                    Vxc[i][-1].append(fromH(float(s[6])))
+                                    try:
+                                        qpE[i][-1].append(fromH(float(s[3])))
+                                        Sx[i][-1].append(fromH(float(s[4])))
+                                        Sc[i][-1].append(fromH(float(s[5])))
+                                        Vxc[i][-1].append(fromH(float(s[6])))
+                                        Znk[i][-1].append(float(s[9]))
+                                    except IndexError as e:
+                                        logging.warning(
+                                            "IndexError: gw parser list index out"
+                                            " of range")
+
         backend.addValue("eigenvalues_kpoints", qpGWKpoint)
         backend.addValue("number_of_eigenvalues", len(qpE[0]))
         backend.addValue("number_of_eigenvalues_kpoints", len(qpGWKpoint))
