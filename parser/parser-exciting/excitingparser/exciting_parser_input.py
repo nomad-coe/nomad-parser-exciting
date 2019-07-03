@@ -73,7 +73,9 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("gw_screened_Coulomb", self.scrtype)
         self.backend.addValue("gw_basis_set", "mixed")
         self.backend.addValue("gw_qp_equation_treatment", "linearization")
-        for j in range(0,3):
+        for j in range(0, 3):
+            # This is causing an error: Invalid literal for int()
+            # with base 10.
             self.ngridq[j] = int(self.ngridqDum[j])
         self.backend.addValue("gw_ngridq", self.ngridq)
 
@@ -99,6 +101,10 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 self.ngridqDum = dummy.split()
             except:
                 self.ngridqDum = [1, 1, 1]
+<<<<<<< HEAD
+=======
+
+>>>>>>> nitrogen
         elif name == "freqgrid":
             self.freqgrid = "freqgrid"
             try:
