@@ -41,8 +41,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.sciavtype = "isotropic"
         self.cutofftype = "none"
         self.pwm = 2.0
-        self.ngridqDum = "2 2 2"
-        self.ngridq = [2,2,2]
+        self.ngridqDum = [1, 1, 1]
+        self.ngridq = [1, 1, 1]
         self.nomeg = 16
 
         self.freqgrid = "none"
@@ -73,7 +73,9 @@ class InputHandler(xml.sax.handler.ContentHandler):
             self.backend.addValue("gw_screened_Coulomb", self.scrtype)
         self.backend.addValue("gw_basis_set", "mixed")
         self.backend.addValue("gw_qp_equation_treatment", "linearization")
-        for j in range(0,3):
+        for j in range(0, 3):
+            # This is causing an error: Invalid literal for int()
+            # with base 10.
             self.ngridq[j] = int(self.ngridqDum[j])
         self.backend.addValue("gw_ngridq", self.ngridq)
 
@@ -98,7 +100,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 dummy = attrs.getValue('ngridq')
                 self.ngridqDum = dummy.split()
             except:
-                self.ngridqDum = "2 2 2"
+                self.ngridqDum = [1, 1, 1]
 
         elif name == "freqgrid":
             self.freqgrid = "freqgrid"
