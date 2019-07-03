@@ -41,8 +41,8 @@ class InputHandler(xml.sax.handler.ContentHandler):
         self.sciavtype = "isotropic"
         self.cutofftype = "none"
         self.pwm = 2.0
-        self.ngridqDum = "2 2 2"
-        self.ngridq = [2,2,2]
+        self.ngridqDum = [1, 1, 1]
+        self.ngridq = [1, 1, 1]
         self.nomeg = 16
 
         self.freqgrid = "none"
@@ -98,8 +98,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
                 dummy = attrs.getValue('ngridq')
                 self.ngridqDum = dummy.split()
             except:
-                self.ngridqDum = "2 2 2"
-
+                self.ngridqDum = [1, 1, 1]
         elif name == "freqgrid":
             self.freqgrid = "freqgrid"
             try:
