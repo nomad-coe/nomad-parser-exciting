@@ -132,8 +132,10 @@ class GWParser(object):
                 qpE = [[],[]]
                 Znk = [[],[]]
                 fromH = unit_conversion.convert_unit_function("hartree", "J")
+                lines_remaining_in_file = os.path.getsize(eigvalGWFile)
                 while 1:
                     s = g.readline()
+                    lines_remaining_in_file -= len(s)
                     if not s: break
                     s = s.strip()
                     if "k-point" in s.split():
@@ -166,10 +168,14 @@ class GWParser(object):
                                         Sc[i][-1].append(fromH(float(s[5])))
                                         Vxc[i][-1].append(fromH(float(s[6])))
                                         Znk[i][-1].append(float(s[9]))
-                                    except IndexError as e:
-                                        logging.warning(
-                                            "IndexError: gw parser list index out"
-                                            " of range")
+                                    except IndexError:
+                                        if not lines_remaining_in_file:
+                                            logging.warning(
+                                                "Last line of GW evalqp file incomplete.")
+                                        else:
+                                            logging.error(
+                                                "Non-last line of GW evalqp file"
+                                                " incomplete.")
 
         backend.addValue("eigenvalues_kpoints", qpGWKpoint)
         backend.addValue("number_of_eigenvalues", len(qpE[0]))
