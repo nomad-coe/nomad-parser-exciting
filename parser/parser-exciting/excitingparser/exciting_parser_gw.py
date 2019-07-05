@@ -126,6 +126,8 @@ class GWParser(object):
             eigvalGWGIndex = backend.openSection("section_eigenvalues")
             with open(eigvalGWFile) as g:
                 qpGWKpoint=[]
+                # For full names of these variables look below where
+                # they are added to backaend.
                 Vxc = [[],[]]
                 Sx = [[],[]]
                 Sc = [[],[]]
@@ -161,7 +163,7 @@ class GWParser(object):
                             if self.spinTreat:
                                 pass
                             else:
-                                for i in range(0,2):
+                                for i in range(0, 2):
                                     try:
                                         qpE[i][-1].append(fromH(float(s[3])))
                                         Sx[i][-1].append(fromH(float(s[4])))
@@ -170,7 +172,7 @@ class GWParser(object):
                                         Znk[i][-1].append(float(s[9]))
                                     except IndexError:
                                         if not lines_remaining_in_file:
-                                            logging.warning(
+                                            logging.error(
                                                 "Last line of GW evalqp file incomplete.")
                                         else:
                                             logging.error(
