@@ -179,17 +179,17 @@ class BandHandler(xml.sax.handler.ContentHandler):
                         self.bandEnergies[0][i].append(self.energySpin[0][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
                         self.bandEnergies[1][i].append(self.energySpin[1][i][numkPointsPerSemIncr[j]:numkPointsPerSemIncr[j+1]])
                 for i in range (0,vertexNum-1):
-                   self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
-                   for j in range(0,bands):
-                       for k in range(0,numkPointsPerSegmL[i]):
+                    self.normBandSectionGIndex = self.backend.openSection("section_k_band_segment")
+                    for j in range(0,bands2):
+                        for k in range(0,numkPointsPerSegmL[i]):
                             bandEnergiesBE[i][0][k].append(self.bandEnergies[0][j][i][k])
                             bandEnergiesBE[i][1][k].append(self.bandEnergies[1][j][i][k])
-                   self.backend.addValue("band_k_points",bandKpoints[i])
-                   self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
-                   self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
-                   self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
-                   self.backend.addValue("band_energies",bandEnergiesBE[i])
-                   self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
+                    self.backend.addValue("band_k_points",bandKpoints[i])
+                    self.backend.addValue("band_segm_start_end",self.vertexCoord[i:i+2])
+                    self.backend.addValue("number_of_k_points_per_segment",numkPointsPerSegmL[i])
+                    self.backend.addValue("band_segm_labels",self.vertexLabels[i:i+2])
+                    self.backend.addValue("band_energies",bandEnergiesBE[i])
+                    self.backend.closeSection("section_k_band_segment",self.normBandSectionGIndex)
 
     def startElementNS(self, name, qname, attrs):
         attrDict={}
