@@ -272,8 +272,11 @@ class ExcitingParserContext(object):
 #        if os.path.exists(inputgwFile):
       inputXSFile = os.path.join(dirPath, "input.xml")
       self.XSSetGIndex = backend.openSection("section_method")
-      with open(inputXSFile) as f:
-        exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
+      try:  # tmk:
+        with open(inputXSFile) as f:
+          exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
+      except IOError:
+        logging.error("File not found: %s" % (inputXSFile))
 #        xstype = section["x_exciting_xs_type"]
 #        print("xstype===",xstype)
 #        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
@@ -468,6 +471,12 @@ class ExcitingParserContext(object):
 #                      self.xstype = "BSE"
 #                      dummyBse = files[11:13]
 #                self.tensorComp = files[-6:-4]
+
+          # WARNING: the following entries don't exist in Exciting Metainfo!!
+          #backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
+          #backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
+          #backend.addValue("x_exciting_xs_tddft_number_of_q_points",qpointNumber)
+
           for i in range(qpointNumber):
               dielTensSym.append([[],[]])
               dielTensNoSym.append([[],[]])
@@ -530,20 +539,18 @@ class ExcitingParserContext(object):
                       sigmaNoLoc[0][-1].append([])
                       sigmaNoLoc[1][-1].append([])
 #                      print("j===",j)
-#                      print("tensorComp===",tensorComp[j])
+
 #                      print("ext===",ext)
 #                      print("self.tddftKernel===",self.tddftKernel)
 #                      print("qExt00===",qExt00)
 #                      print("tutto===",'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
-                      epsilonLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
-                      epsilonNoLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
-                      lossFunctionLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
-                      lossFunctionNoLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
-                      sigmaLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
-                      sigmaNoLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
 
-                      with open(epsilonLocalField) as g:
-                          while 1:
+                      if self.tddftKernel is not None:
+                        ########
+                        try:
+                          epsilonLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                          with open(epsilonLocalField) as g:
+                            while 1:
                               s = g.readline()
                               if not s: break
                               s = s.strip()
@@ -552,8 +559,17 @@ class ExcitingParserContext(object):
                               dielFunctLoc[0][-1][-1].append(epsRe)
                               dielFunctLoc[1][-1][-1].append(epsIm)
                               dielFunctEne[-1][-1].append(ene)
-                      with open(epsilonNoLocalField) as g:
-                          while 1:
+                          backend.addValue("x_exciting_xs_tddft_number_of_epsilon_values",len(dielFunctEne[0][0]))
+                          backend.addValue("x_exciting_xs_tddft_epsilon_energies",dielFunctEne[0][0])
+                          backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc)
+                        except IOError:
+                          logging.error("File not processable: %s" % (epsilonLocalField))
+
+                        #########
+                        try:
+                          epsilonNoLocalField = os.path.join(dirPath, 'EPSILON_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                          with open(epsilonNoLocalField) as g:
+                            while 1:
                               s = g.readline()
                               if not s: break
                               s = s.strip()
@@ -561,46 +577,78 @@ class ExcitingParserContext(object):
                               epsRe, epsIm = float(s[1]),float(s[2])
                               dielFunctNoLoc[0][-1][-1].append(epsRe)
                               dielFunctNoLoc[1][-1][-1].append(epsIm)
-                      with open(lossFunctionLocalFieldFile) as g:
-                          while 1:
+                          backend.addValue("x_exciting_xs_tddft_dielectric_function_no_local_field",dielFunctNoLoc)
+                        except IOError:
+                          logging.error("File not processable: %s" % (epsilonNoLocalField))
+
+                        #########
+                        try:
+                          lossFunctionLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                          with open(lossFunctionLocalFieldFile) as g:
+                            while 1:
                               s = g.readline()
                               if not s: break
                               s = s.strip()
                               s = s.split()
-#                              print("s===",s)
+                              #print("s===",s)
                               if s and is_number(s[0]):
-                                  loss = float(s[1])
-                                  lossFunctionLoc[-1][-1].append(loss)
-                      with open(lossFunctionNoLocalFieldFile) as g:
-                          while 1:
+                                loss = float(s[1])
+                                lossFunctionLoc[-1][-1].append(loss)
+                          backend.addValue("x_exciting_xs_tddft_loss_function_local_field",lossFunctionLoc)
+                        except IOError:
+                          logging.error("File not processable: %s" % (lossFunctionLocalFieldFile))
+
+                        #########
+                        try:
+                          lossFunctionNoLocalFieldFile = os.path.join(dirPath, 'LOSS_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                          with open(lossFunctionNoLocalFieldFile) as g:
+                            while 1:
                               s = g.readline()
                               if not s: break
                               s = s.strip()
                               s = s.split()
-#                              print("s===",s)
+                              # print("s===",s)
                               if s and is_number(s[0]):
-                                  loss = float(s[1])
-                                  lossFunctionNoLoc[-1][-1].append(loss)
-                      with open(sigmaLocalFieldFile) as g:
-                          while 1:
+                                loss = float(s[1])
+                                lossFunctionNoLoc[-1][-1].append(loss)
+                          backend.addValue("x_exciting_xs_tddft_loss_function_no_local_field",lossFunctionNoLoc)
+                        except IOError:
+                          logging.error("File not processable: %s" % (lossFunctionNoLocalFieldFile))
+
+                        #########
+                        sigmaLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                        try:
+                          with open(sigmaLocalFieldFile) as g:
+                            while 1:
                               s = g.readline()
                               if not s: break
                               s = s.strip()
                               s = s.split()
                               if s and is_number(s[0]):
-                                  sigmaRe, sigmaIm = float(s[1]),float(s[2])
-                                  sigmaLoc[0][-1][-1].append(sigmaRe)
-                                  sigmaLoc[1][-1][-1].append(sigmaIm)
-                      with open(sigmaNoLocalFieldFile) as g:
-                          while 1:
+                                sigmaRe, sigmaIm = float(s[1]),float(s[2])
+                                sigmaLoc[0][-1][-1].append(sigmaRe)
+                                sigmaLoc[1][-1][-1].append(sigmaIm)
+                          backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
+                        except IOError:
+                          logging.error("File not processable: %s" % (sigmaLocalFieldFile))
+                        #
+                        #########
+                        sigmaNoLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
+                        try:
+                          with open(sigmaNoLocalFieldFile) as g:
+                            while 1:
                               s = g.readline()
                               if not s: break
                               s = s.strip()
                               s = s.split()
                               if s and is_number(s[0]):
-                                  sigmaRe, sigmaIm = float(s[1]),float(s[2])
-                                  sigmaNoLoc[0][-1][-1].append(sigmaRe)
-                                  sigmaNoLoc[1][-1][-1].append(sigmaIm)
+                                sigmaRe, sigmaIm = float(s[1]),float(s[2])
+                                sigmaNoLoc[0][-1][-1].append(sigmaRe)
+                                sigmaNoLoc[1][-1][-1].append(sigmaIm)
+                          backend.addValue("x_exciting_xs_tddft_sigma_no_local_field",sigmaNoLoc)
+                        except IOError:
+                          logging.error("File not processable: %s" % (sigmaLocalFieldFile))
+
 #                              dielFunctEne[-1][-1].append(ene)
 #                              if s and is_number(s[0]):
 #                                  dielTensSym[i][0].append([float(s[0]),float(s[1]),float(s[2])])
@@ -611,19 +659,10 @@ class ExcitingParserContext(object):
 #          print("dielTensNoSym===",dielTensNoSym)
 #                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
 #                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
-          backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
-          backend.addValue("x_exciting_xs_tddft_sigma_no_local_field",sigmaNoLoc)
-          backend.addValue("x_exciting_xs_tddft_loss_function_local_field",lossFunctionLoc)
-          backend.addValue("x_exciting_xs_tddft_loss_function_no_local_field",lossFunctionNoLoc)
-          backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
-          backend.addValue("x_exciting_xs_tddft_number_of_epsilon_values",len(dielFunctEne[0][0]))
-          backend.addValue("x_exciting_xs_tddft_epsilon_energies",dielFunctEne[0][0])
-          backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc)
-          backend.addValue("x_exciting_xs_tddft_dielectric_function_no_local_field",dielFunctNoLoc)
-          backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
-          backend.addValue("x_exciting_xs_tddft_number_of_q_points",qpointNumber)
-          backend.addValue("x_exciting_xs_tddft_dielectric_tensor_sym",dielTensSym)
-          backend.addValue("x_exciting_xs_tddft_dielectric_tensor_no_sym",dielTensNoSym)
+
+          #WARNING: the following entries don't exist in the Excitinv Metainfo!!
+          #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_sym",dielTensSym)
+          #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_no_sym",dielTensNoSym)
 
       backend.closeNonOverlappingSection("section_single_configuration_calculation")
 
@@ -1015,10 +1054,23 @@ class ExcitingParserContext(object):
 
   def onClose_section_method(self, backend, gIndex, section):
     if gIndex == self.XSSetGIndex and self.xstype == "TDDFT":
-        self.tddftKernel = section["x_exciting_xs_tddft_xc_kernel"]
-        self.xsTetra = section["x_exciting_xs_tetra"][0]
-        self.xsAC = section["x_exciting_xs_tddft_analytic_continuation"][0]
-        self.xsNAR = section["x_exciting_xs_tddft_anti_resonant_dielectric"][0]
+        # tmk: if 'input.xml' is missing, then the next are 'NoneType'
+        try:
+          self.tddftKernel = section["x_exciting_xs_tddft_xc_kernel"]
+        except:
+          pass
+        try:
+          self.xsTetra = section["x_exciting_xs_tetra"][0]
+        except:
+          pass
+        try:
+          self.xsAC = section["x_exciting_xs_tddft_analytic_continuation"][0]
+        except:
+          pass
+        try:
+          self.xsNAR = section["x_exciting_xs_tddft_anti_resonant_dielectric"][0]
+        except:
+          pass
 #        print("teste===",self.xsTetra)
     if gIndex == self.secMethodIndex:
       backend.addValue('electronic_structure_method', "DFT")
