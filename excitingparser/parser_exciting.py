@@ -1354,10 +1354,6 @@ parserInfo = {
   "version": "1.0"
 }
 
-import nomad_meta_info
-metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(nomad_meta_info.__file__)), "exciting.nomadmetainfo.json"))
-metaInfoEnv, warnings = loadJsonFile(filePath = metaInfoPath, dependencyLoader = None, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, uri = None)
-
 cachingLevelForMetaName = {
                             "x_exciting_geometry_lattice_vector_x":CachingLevel.Cache,
                             "x_exciting_geometry_lattice_vector_y":CachingLevel.Cache,
@@ -1394,18 +1390,14 @@ class ExcitingParser():
         from unittest.mock import patch
         logging.info('exciting parser started')
         logging.getLogger('nomadcore').setLevel(logging.WARNING)
-        backend = self.backend_factory(metaInfoEnv)
+        backend = self.backend_factory('exciting.nomadmetainfo.json')
         with patch.object(sys, 'argv', ['<exe>', '--uri', 'nmd://uri', mainfile]):
             mainFunction(
                 mainFileDescription,
-                metaInfoEnv,
+                None,
                 parserInfo,
                 cachingLevelForMetaName = cachingLevelForMetaName,
                 superContext=ExcitingParserContext(),
                 superBackend=backend)
 
         return backend
-
-
-if __name__ == "__main__":
-    mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
