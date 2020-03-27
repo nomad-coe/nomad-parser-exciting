@@ -32,6 +32,7 @@ import excitingparser.exciting_parser_eps as exciting_parser_eps
 from ase import Atoms
 import logging
 
+debug_print = False  # <<<<
 
 def is_number(s):
     try:
@@ -471,11 +472,13 @@ class ExcitingParserContext(object):
 #                      self.xstype = "BSE"
 #                      dummyBse = files[11:13]
 #                self.tensorComp = files[-6:-4]
-
+          if debug_print:
+            print("tensorComp:", tensorComp)
+            print("qpointNumber:", qpointNumber)
           # WARNING: the following entries don't exist in Exciting Metainfo!!
           #backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
           #backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
-          #backend.addValue("x_exciting_xs_tddft_number_of_q_points",qpointNumber)
+          #backend.addValue("s",qpointNumber)
 
           for i in range(qpointNumber):
               dielTensSym.append([[],[]])
@@ -660,7 +663,11 @@ class ExcitingParserContext(object):
 #                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
 #                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
 
-          #WARNING: the following entries don't exist in the Excitinv Metainfo!!
+
+          if debug_print:
+            print("dielTensSym", dielTensSym, "\n")
+            print("dielTensNoSym", dielTensNoSym)
+          #WARNING: the following entries don't exist in the Exciting Metainfo!!
           #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_sym",dielTensSym)
           #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_no_sym",dielTensNoSym)
 
@@ -857,6 +864,8 @@ class ExcitingParserContext(object):
     if os.path.exists(eigvalFile):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
+          if debug_print:
+            print("## Processing eigvalFile: ", eigvalFile)
           eigvalKpoint=[]
           eigvalVal=[]
           eigvalOcc=[]
@@ -867,6 +876,8 @@ class ExcitingParserContext(object):
             s = g.readline()
             if not s: break
             s = s.strip()
+            if debug_print:
+              print("## len(s):s = {:4d}:'{}'" .format(len(s), s))
             if len(s) < 20:
               if "nstsv" in s.split():
                  nstsv = int(s.split()[0])
@@ -874,16 +885,30 @@ class ExcitingParserContext(object):
               elif "nkpt" in s.split():
                  nkpt = int(s.split()[0])
               continue
-            elif len(s) > 50:
-              eigvalVal.append([])
-              eigvalOcc.append([])
-              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
-            else:
-              try: int(s[0])
+            elif len(s) > 50 and ('k-point,' in s.split()):
+              try:
+                int(s[0])  # assert this line is not a header string
               except ValueError:
+                if debug_print:
+                  print("########## len(s):s ", len(s), ':', s)
                 continue
               else:
-                n, e, occ = s.split()
+                eigvalVal.append([])
+                eigvalOcc.append([])
+                eigvalKpoint.append([float(x) for x in s.split()[1:4]])
+                #print("## PERRON", s.split()[1:4] )
+
+            else:
+              try:
+                int(s[0])
+              except ValueError:
+                if debug_print:
+                  print("########## len(s):s ", len(s), ':', s)
+                continue
+              else:
+                if debug_print:
+                  print("## s:", s)
+                n, e, occ = s.split()[0:3]  # FIXME: some eiEIGg files might contain 4 more columns
                 eigvalVal[-1].append(fromH(float(e)))
                 eigvalOcc[-1].append(float(occ))
           if not self.spinTreat:
