@@ -903,24 +903,27 @@ class ExcitingParserContext(object):
                 int(s[0])
               except ValueError:
                 if debug_print:
-                  print("########## len(s):s ", len(s), ':', s)
+                  print("## len(s)={}, s = {} " .format(len(s), s)
                 continue
               else:
-                n, e, occ = s.split()[0:3]  # FIXME: some EIG files might contain 4 more columns
+                # FIXME: some EIG files might contain 4 more columns
+                n, e, occ = s.split()[0:3]
                 #---------
                 try:  # eigenvalues 'e' could be wrongly formatted
                   enew = float(e)
                 except Exception as ex:
                   if 'E' not in e.upper():
                     pieces = e.split('-')
-                    assert len(pieces) == 2, "Only two pieces expected"
+                    if (len(pieces) != 2):
+                      raise ex
                     try:
                         pieces = [ float(ii) for ii in pieces ]
                     except:
                         raise ex
                     mantissa, exponent = pieces
                     enew = mantissa * 10**(-1 * exponent)
-                    logging.warning("In-house float conversion of string '{}'" .format(e))
+                    logging.warning("In-house conversion '{}' -> {}" .format(e, enew))
+                    print ('e , enew = ', e, enew)
               #---------
                 if debug_print:
                   print("## s:: n, e, enew, occ = ", s, "::", n, e, enew, occ)
