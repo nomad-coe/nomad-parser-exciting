@@ -906,10 +906,26 @@ class ExcitingParserContext(object):
                   print("########## len(s):s ", len(s), ':', s)
                 continue
               else:
+                n, e, occ = s.split()[0:3]  # FIXME: some EIG files might contain 4 more columns
+                #---------
+                try:  # eigenvalues 'e' could be wrongly formatted
+                  enew = float(e)
+                except Exception as ex:
+                  if 'E' not in e.upper():
+                    pieces = e.split('-')
+                    assert len(pieces) == 2, "Only two pieces expected"
+                    try:
+                        pieces = [ float(ii) for ii in pieces ]
+                    except:
+                        raise ex
+                    mantissa, exponent = pieces
+                    enew = mantissa * 10**(-1 * exponent)
+                    logging.warning("In-house float conversion of string '{}'" .format(e))
+              #---------
                 if debug_print:
-                  print("## s:", s)
-                n, e, occ = s.split()[0:3]  # FIXME: some eiEIGg files might contain 4 more columns
-                eigvalVal[-1].append(fromH(float(e)))
+                  print("## s:: n, e, enew, occ = ", s, "::", n, e, enew, occ)
+
+                eigvalVal[-1].append(fromH(enew))
                 eigvalOcc[-1].append(float(occ))
           if not self.spinTreat:
             for i in range(0,nkpt):
