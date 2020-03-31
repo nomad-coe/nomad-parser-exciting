@@ -32,6 +32,8 @@ import excitingparser.exciting_parser_eps as exciting_parser_eps
 from ase import Atoms
 import logging
 
+logger = logging.getLogger("nomad.ExcitingParser")
+
 debug_print = False  # <<<<
 
 def is_number(s):
@@ -277,7 +279,7 @@ class ExcitingParserContext(object):
         with open(inputXSFile) as f:
           exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
       except IOError:
-        logging.error("File not found: %s" % (inputXSFile))
+        logger.error("File not found: %s" % (inputXSFile))
 #        xstype = section["x_exciting_xs_type"]
 #        print("xstype===",xstype)
 #        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
@@ -566,7 +568,7 @@ class ExcitingParserContext(object):
                           backend.addValue("x_exciting_xs_tddft_epsilon_energies",dielFunctEne[0][0])
                           backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (epsilonLocalField))
+                          logger.error("File not processable: %s" % (epsilonLocalField))
 
                         #########
                         try:
@@ -599,7 +601,7 @@ class ExcitingParserContext(object):
                                 lossFunctionLoc[-1][-1].append(loss)
                           backend.addValue("x_exciting_xs_tddft_loss_function_local_field",lossFunctionLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (lossFunctionLocalFieldFile))
+                          logger.error("File not processable: %s" % (lossFunctionLocalFieldFile))
 
                         #########
                         try:
@@ -616,7 +618,7 @@ class ExcitingParserContext(object):
                                 lossFunctionNoLoc[-1][-1].append(loss)
                           backend.addValue("x_exciting_xs_tddft_loss_function_no_local_field",lossFunctionNoLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (lossFunctionNoLocalFieldFile))
+                          logger.error("File not processable: %s" % (lossFunctionNoLocalFieldFile))
 
                         #########
                         sigmaLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
@@ -633,7 +635,7 @@ class ExcitingParserContext(object):
                                 sigmaLoc[1][-1][-1].append(sigmaIm)
                           backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (sigmaLocalFieldFile))
+                          logger.error("File not processable: %s" % (sigmaLocalFieldFile))
                         #
                         #########
                         sigmaNoLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
@@ -650,7 +652,7 @@ class ExcitingParserContext(object):
                                 sigmaNoLoc[1][-1][-1].append(sigmaIm)
                           backend.addValue("x_exciting_xs_tddft_sigma_no_local_field",sigmaNoLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (sigmaLocalFieldFile))
+                          logger.error("File not processable: %s" % (sigmaLocalFieldFile))
 
 #                              dielFunctEne[-1][-1].append(ene)
 #                              if s and is_number(s[0]):
@@ -750,7 +752,7 @@ class ExcitingParserContext(object):
           backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-#    logging.error("BASE onClose_section_single_configuration_calculation")
+#    logger.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
 #    print("self.samplingMethod=",self.samplingMethod)
@@ -853,7 +855,7 @@ class ExcitingParserContext(object):
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
-#    logging.error("done BASE onClose_section_single_configuration_calculation")
+#    logger.error("done BASE onClose_section_single_configuration_calculation")
 
     if os.path.exists(dosFile):
       with open(dosFile) as f:
@@ -896,17 +898,17 @@ class ExcitingParserContext(object):
                 eigvalVal.append([])
                 eigvalOcc.append([])
                 eigvalKpoint.append([float(x) for x in s.split()[1:4]])
-                #print("## PERRON", s.split()[1:4] )
 
             else:
               try:
                 int(s[0])
               except ValueError:
-                if debug_print:
-                  print("## len(s)={}, s = {} " .format(len(s), s)
+                # ignore headers by neglecting lines that
+                # don't start with an integer
                 continue
               else:
-                # FIXME: some EIG files might contain 4 more columns
+                # FIXME: EIG files with 'partial chg density' have 7 columns
+                # FIXME: and we need to process them
                 n, e, occ = s.split()[0:3]
                 #---------
                 try:  # eigenvalues 'e' could be wrongly formatted
@@ -922,12 +924,10 @@ class ExcitingParserContext(object):
                         raise ex
                     mantissa, exponent = pieces
                     enew = mantissa * 10**(-1 * exponent)
-                    logging.warning("In-house conversion '{}' -> {}" .format(e, enew))
-                    print ('e , enew = ', e, enew)
-              #---------
+                    logger.warning("In-house conversion '{}' -> {}" .format(e, enew))
                 if debug_print:
-                  print("## s:: n, e, enew, occ = ", s, "::", n, e, enew, occ)
-
+                  print("## s = \"{}\"  =>\t {} \t {}\t\t {}" .format(s, n, enew, occ))
+                #---------
                 eigvalVal[-1].append(fromH(enew))
                 eigvalOcc[-1].append(float(occ))
           if not self.spinTreat:
