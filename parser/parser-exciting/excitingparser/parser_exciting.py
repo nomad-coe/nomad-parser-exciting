@@ -779,11 +779,18 @@ class ExcitingParserContext(object):
 
 ####################VOLUME TEST END############################
 
-# NOMAD-FAIRD Edit, we see that the suscript on
-# section["x_exciting_geometry_optimization_threshold_force"] is
-# giving an error saying this object is not suscribtable.
     if self.samplingMethod == "geometry_optimization":
-        self.geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"][0]
+      ivalue = section["x_exciting_geometry_optimization_threshold_force"]
+      if ivalue is None:
+        # then use default value
+        self.geometryForceThreshold = self.geometryForceThreshold
+        logger.warning("Found suspicious value for geometry optimization "
+          "threshold force. Hint: inspect INFO.OUT")
+      else:
+        try:
+          self.geometryForceThreshold = ivalue[0]
+        except:
+          raise
     forceX = section["x_exciting_geometry_atom_forces_x"]
     if forceX:
       forceY = section["x_exciting_geometry_atom_forces_y"]
