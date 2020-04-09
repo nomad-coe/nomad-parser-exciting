@@ -34,8 +34,6 @@ import logging
 
 logger = logging.getLogger("nomad.ExcitingParser")
 
-debug_print = [False, True][0]  # <<<<
-
 def is_number(s):
     try:
         float(s)
@@ -474,9 +472,6 @@ class ExcitingParserContext(object):
 #                      self.xstype = "BSE"
 #                      dummyBse = files[11:13]
 #                self.tensorComp = files[-6:-4]
-          if debug_print:
-            print("tensorComp:", tensorComp)
-            print("qpointNumber:", qpointNumber)
           # WARNING: the following entries don't exist in Exciting Metainfo!!
           #backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
           #backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
@@ -666,9 +661,6 @@ class ExcitingParserContext(object):
 #                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
 
 
-          if debug_print:
-            print("dielTensSym", dielTensSym, "\n")
-            print("dielTensNoSym", dielTensNoSym)
           #WARNING: the following entries don't exist in the Exciting Metainfo!!
           #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_sym",dielTensSym)
           #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_no_sym",dielTensNoSym)
@@ -873,8 +865,6 @@ class ExcitingParserContext(object):
     if os.path.exists(eigvalFile):
       eigvalGIndex = backend.openSection("section_eigenvalues")
       with open(eigvalFile) as g:
-          if debug_print:
-            print("## Processing eigvalFile: ", eigvalFile)
           eigvalKpoint=[]
           eigvalVal=[]
           eigvalOcc=[]
@@ -885,8 +875,6 @@ class ExcitingParserContext(object):
             s = g.readline()
             if not s: break
             s = s.strip()
-            if debug_print:
-              print("## len(s):s = {:4d}:'{}'" .format(len(s), s))
             if len(s) < 20:
               if "nstsv" in s.split():
                  nstsv = int(s.split()[0])
@@ -898,8 +886,6 @@ class ExcitingParserContext(object):
               try:
                 int(s[0])  # assert this line is not a header string
               except ValueError:
-                if debug_print:
-                  print("########## len(s):s ", len(s), ':', s)
                 continue
               else:
                 eigvalVal.append([])
@@ -932,8 +918,6 @@ class ExcitingParserContext(object):
                     mantissa, exponent = pieces
                     enew = mantissa * 10**(-1 * exponent)
                     logger.warning("In-house conversion '{}' -> {}" .format(e, enew))
-                if debug_print:
-                  print("## s = \"{}\"  =>\t {} \t {}\t\t {}" .format(s, n, enew, occ))
                 #---------
                 eigvalVal[-1].append(fromH(enew))
                 eigvalOcc[-1].append(float(occ))
