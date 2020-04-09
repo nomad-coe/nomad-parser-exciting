@@ -34,7 +34,7 @@ import logging
 
 logger = logging.getLogger("nomad.ExcitingParser")
 
-debug_print = False  # <<<<
+debug_print = [False, True][0]  # <<<<
 
 def is_number(s):
     try:
@@ -785,7 +785,7 @@ class ExcitingParserContext(object):
         # then use default value
         self.geometryForceThreshold = self.geometryForceThreshold
         logger.warning("Found suspicious value for geometry optimization "
-          "threshold force. Hint: inspect INFO.OUT")
+          "threshold force. Hint: inspect INFO.OUT, is it complete?")
       else:
         try:
           self.geometryForceThreshold = ivalue[0]
@@ -1026,6 +1026,9 @@ class ExcitingParserContext(object):
     self.gmaxvr = section["x_exciting_gmaxvr"]
     self.rgkmax = section["x_exciting_rgkmax"]
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
+
+    # next line fixes normalizer error "no lattice vectors but pbc"
+    backend.addArrayValues("lattice_vectors", self.sim_cell)
 
     self.secSystemDescriptionIndex = gIndex
 
@@ -1454,9 +1457,9 @@ class ExcitingParser():
                 cachingLevelForMetaName = cachingLevelForMetaName,
                 superContext=ExcitingParserContext(),
                 superBackend=backend)
-
         return backend
 
 
 if __name__ == "__main__":
     mainFunction(mainFileDescription, metaInfoEnv, parserInfo, cachingLevelForMetaName = cachingLevelForMetaName, superContext=ExcitingParserContext())
+
