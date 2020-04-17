@@ -32,6 +32,7 @@ import excitingparser.exciting_parser_eps as exciting_parser_eps
 from ase import Atoms
 import logging
 
+logger = logging.getLogger("nomad.ExcitingParser")
 
 def is_number(s):
     try:
@@ -276,7 +277,7 @@ class ExcitingParserContext(object):
         with open(inputXSFile) as f:
           exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
       except IOError:
-        logging.error("File not found: %s" % (inputXSFile))
+        logger.error("File not found: %s" % (inputXSFile))
 #        xstype = section["x_exciting_xs_type"]
 #        print("xstype===",xstype)
 #        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
@@ -471,11 +472,10 @@ class ExcitingParserContext(object):
 #                      self.xstype = "BSE"
 #                      dummyBse = files[11:13]
 #                self.tensorComp = files[-6:-4]
-
           # WARNING: the following entries don't exist in Exciting Metainfo!!
           #backend.addValue("x_exciting_xs_tddft_number_of_optical_components",len(tensorComp))
           #backend.addValue("x_exciting_xs_tddft_optical_component",tensorComp)
-          #backend.addValue("x_exciting_xs_tddft_number_of_q_points",qpointNumber)
+          #backend.addValue("s",qpointNumber)
 
           for i in range(qpointNumber):
               dielTensSym.append([[],[]])
@@ -563,7 +563,7 @@ class ExcitingParserContext(object):
                           backend.addValue("x_exciting_xs_tddft_epsilon_energies",dielFunctEne[0][0])
                           backend.addValue("x_exciting_xs_tddft_dielectric_function_local_field",dielFunctLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (epsilonLocalField))
+                          logger.error("File not processable: %s" % (epsilonLocalField))
 
                         #########
                         try:
@@ -596,7 +596,7 @@ class ExcitingParserContext(object):
                                 lossFunctionLoc[-1][-1].append(loss)
                           backend.addValue("x_exciting_xs_tddft_loss_function_local_field",lossFunctionLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (lossFunctionLocalFieldFile))
+                          logger.error("File not processable: %s" % (lossFunctionLocalFieldFile))
 
                         #########
                         try:
@@ -613,7 +613,7 @@ class ExcitingParserContext(object):
                                 lossFunctionNoLoc[-1][-1].append(loss)
                           backend.addValue("x_exciting_xs_tddft_loss_function_no_local_field",lossFunctionNoLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (lossFunctionNoLocalFieldFile))
+                          logger.error("File not processable: %s" % (lossFunctionNoLocalFieldFile))
 
                         #########
                         sigmaLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
@@ -630,7 +630,7 @@ class ExcitingParserContext(object):
                                 sigmaLoc[1][-1][-1].append(sigmaIm)
                           backend.addValue("x_exciting_xs_tddft_sigma_local_field",sigmaLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (sigmaLocalFieldFile))
+                          logger.error("File not processable: %s" % (sigmaLocalFieldFile))
                         #
                         #########
                         sigmaNoLocalFieldFile = os.path.join(dirPath, 'SIGMA_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT')
@@ -647,7 +647,7 @@ class ExcitingParserContext(object):
                                 sigmaNoLoc[1][-1][-1].append(sigmaIm)
                           backend.addValue("x_exciting_xs_tddft_sigma_no_local_field",sigmaNoLoc)
                         except IOError:
-                          logging.error("File not processable: %s" % (sigmaLocalFieldFile))
+                          logger.error("File not processable: %s" % (sigmaLocalFieldFile))
 
 #                              dielFunctEne[-1][-1].append(ene)
 #                              if s and is_number(s[0]):
@@ -660,7 +660,8 @@ class ExcitingParserContext(object):
 #                              qPlusGLattice[i].append([float(s[1]),float(s[2]),float(s[3])])
 #                              qPlusGCartesian[i].append([float(s[4]),float(s[5]),float(s[6])])
 
-          #WARNING: the following entries don't exist in the Excitinv Metainfo!!
+
+          #WARNING: the following entries don't exist in the Exciting Metainfo!!
           #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_sym",dielTensSym)
           #backend.addValue("x_exciting_xs_tddft_dielectric_tensor_no_sym",dielTensNoSym)
 
@@ -743,7 +744,7 @@ class ExcitingParserContext(object):
           backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-#    logging.error("BASE onClose_section_single_configuration_calculation")
+#    logger.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
 #    print("self.samplingMethod=",self.samplingMethod)
@@ -770,11 +771,18 @@ class ExcitingParserContext(object):
 
 ####################VOLUME TEST END############################
 
-# NOMAD-FAIRD Edit, we see that the suscript on
-# section["x_exciting_geometry_optimization_threshold_force"] is
-# giving an error saying this object is not suscribtable.
     if self.samplingMethod == "geometry_optimization":
-        self.geometryForceThreshold = section["x_exciting_geometry_optimization_threshold_force"][0]
+      ivalue = section["x_exciting_geometry_optimization_threshold_force"]
+      if ivalue is None:
+        # then use default value
+        self.geometryForceThreshold = self.geometryForceThreshold
+        logger.warning("Found suspicious value for geometry optimization "
+          "threshold force. Hint: inspect INFO.OUT, is it complete?")
+      else:
+        try:
+          self.geometryForceThreshold = ivalue[0]
+        except:
+          raise
     forceX = section["x_exciting_geometry_atom_forces_x"]
     if forceX:
       forceY = section["x_exciting_geometry_atom_forces_y"]
@@ -846,7 +854,7 @@ class ExcitingParserContext(object):
     bandFile = os.path.join(dirPath, "bandstructure.xml")
     fermiSurfFile = os.path.join(dirPath, "FERMISURF.bxsf")
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
-#    logging.error("done BASE onClose_section_single_configuration_calculation")
+#    logger.error("done BASE onClose_section_single_configuration_calculation")
 
     if os.path.exists(dosFile):
       with open(dosFile) as f:
@@ -874,17 +882,44 @@ class ExcitingParserContext(object):
               elif "nkpt" in s.split():
                  nkpt = int(s.split()[0])
               continue
-            elif len(s) > 50:
-              eigvalVal.append([])
-              eigvalOcc.append([])
-              eigvalKpoint.append([float(x) for x in s.split()[1:4]])
-            else:
-              try: int(s[0])
+            elif len(s) > 50 and ('k-point,' in s.split()):
+              try:
+                int(s[0])  # assert this line is not a header string
               except ValueError:
                 continue
               else:
-                n, e, occ = s.split()
-                eigvalVal[-1].append(fromH(float(e)))
+                eigvalVal.append([])
+                eigvalOcc.append([])
+                eigvalKpoint.append([float(x) for x in s.split()[1:4]])
+
+            else:
+              try:
+                int(s[0])
+              except ValueError:
+                # ignore headers by neglecting lines that
+                # don't start with an integer
+                continue
+              else:
+                # FIXME: EIG files with 'partial chg density' have 7 columns
+                # FIXME: and we need to process them
+                n, e, occ = s.split()[0:3]
+                #---------
+                try:  # eigenvalues 'e' could be wrongly formatted
+                  enew = float(e)
+                except Exception as ex:
+                  if 'E' not in e.upper():
+                    pieces = e.split('-')
+                    if (len(pieces) != 2):
+                      raise ex
+                    try:
+                        pieces = [ float(ii) for ii in pieces ]
+                    except:
+                        raise ex
+                    mantissa, exponent = pieces
+                    enew = mantissa * 10**(-1 * exponent)
+                    logger.warning("In-house conversion '{}' -> {}" .format(e, enew))
+                #---------
+                eigvalVal[-1].append(fromH(enew))
                 eigvalOcc[-1].append(float(occ))
           if not self.spinTreat:
             for i in range(0,nkpt):
@@ -975,6 +1010,9 @@ class ExcitingParserContext(object):
     self.gmaxvr = section["x_exciting_gmaxvr"]
     self.rgkmax = section["x_exciting_rgkmax"]
     backend.addArrayValues('configuration_periodic_dimensions', np.asarray([True, True, True]))
+
+    # next line fixes normalizer error "no lattice vectors but pbc"
+    backend.addArrayValues("lattice_vectors", self.sim_cell)
 
     self.secSystemDescriptionIndex = gIndex
 
@@ -1399,5 +1437,4 @@ class ExcitingParser():
                 cachingLevelForMetaName = cachingLevelForMetaName,
                 superContext=ExcitingParserContext(),
                 superBackend=backend)
-
         return backend
