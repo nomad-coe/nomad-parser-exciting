@@ -276,8 +276,10 @@ class ExcitingParserContext(object):
       try:  # tmk:
         with open(inputXSFile) as f:
           exciting_parser_XS_input.parseInput(f, backend, self.rgkmax)
-      except IOError:
-        logger.error("File not found: %s" % (inputXSFile))
+      except FileNotFoundError:
+        logger.warning("File not found: {}" .format(inputXSFile))
+      except Exception as err:
+        logger.error("Exception file.py: ", exc_info=err)
 #        xstype = section["x_exciting_xs_type"]
 #        print("xstype===",xstype)
 #        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
@@ -369,18 +371,38 @@ class ExcitingParserContext(object):
               outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
               outputSigmaFile = os.path.join(dirPath, "SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
               outputLossFile = os.path.join(dirPath, "LOSS_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-              with open(outputXSFile) as g:
-                  xsParser = exciting_parser_xs.XSParser()
-                  xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
-              with open(outputEpsFile) as g:
-                  epsParser = exciting_parser_eps.EPSParser()
-                  epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
-              with open(outputSigmaFile) as g:
-                  sigmaParser = exciting_parser_eps.EPSParser()
-                  sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
-              with open(outputLossFile) as g:
-                  lossParser = exciting_parser_eps.EPSParser()
-                  lossParser.parseEpsilon(outputLossFile, backend, lossEn, loss) #, dftMethodSectionGindex = self.secMethodIndex,
+              # - - - - -
+              try:
+                with open(outputXSFile) as g:
+                    xsParser = exciting_parser_xs.XSParser()
+                    xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
+              except FileNotFoundError:
+                logger.warning("File not found: {}" .format(outputXSFile))
+              except Exception as err:
+                logger.error("Exception on Exciting subparser", exc_info=err)
+              # - - - - -
+              try:
+                with open(outputEpsFile) as g:
+                    epsParser = exciting_parser_eps.EPSParser()
+                    epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
+              except FileNotFoundError:
+                logger.warning("File not found: {}" .format(outputEpsFile))
+              except Exception as err:
+                logger.error("Exception on Exciting subparser", exc_info=err)
+              # - - - - -
+              try:
+                with open(outputSigmaFile) as g:
+                    sigmaParser = exciting_parser_eps.EPSParser()
+                    sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
+              except FileNotFoundError:
+                logger.warning("File not found: {}" .format(outputSigmaFile))
+              except Exception as err:
+                logger.error("Exception on Exciting subparser", exc_info=err)
+
+
+              # with open(outputLossFile) as g:
+              #     lossParser = exciting_parser_eps.EPSParser()
+              #     lossParser.parseEpsilon(outputLossFile, backend, lossEn, loss) #, dftMethodSectionGindex = self.secMethodIndex,
 #                                    dftSingleConfigurationGindex = self.secSingleConfIndex)
           backend.addValue("x_exciting_xs_bse_number_of_components",numberOfComponents)
           backend.addValue("x_exciting_xs_bse_number_of_excitons",len(excNum))
@@ -1437,4 +1459,5 @@ class ExcitingParser():
                 cachingLevelForMetaName = cachingLevelForMetaName,
                 superContext=ExcitingParserContext(),
                 superBackend=backend)
+            #print("#"*50 + "\nPARSING ENDED. NORMALIZER FOLLOWS..."+"\n"*5)# tmk:
         return backend
