@@ -888,10 +888,14 @@ class ExcitingParserContext(object):
     eigvalFile = os.path.join(dirPath, "EIGVAL.OUT")
 #    logger.error("done BASE onClose_section_single_configuration_calculation")
 
-    if os.path.exists(dosFile):
+    try:
       with open(dosFile) as f:
-        # print('# Opening file: ', dosFile, os.path.isfile(dosFile))
         exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol)
+    except FileNotFoundError:
+      logger.warning("File not found: {}" .format(dosFile))
+    except Exception as err:
+      logger.error("Exception while processing file {}" .format(dosFile), exc_info=err)
+
     if os.path.exists(bandFile):
       with open(bandFile) as g:
         exciting_parser_bandstructure.parseBand(g, backend, self.spinTreat)
