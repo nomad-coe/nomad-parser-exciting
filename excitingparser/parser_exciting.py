@@ -761,8 +761,13 @@ class ExcitingParserContext(object):
     if xcNr == 100:
         dirPath = os.path.dirname(self.parser.fIn.name)
         inputGSFile = os.path.join(dirPath, "input.xml")
-        with open(inputGSFile) as f:
+        try:
+          with open(inputGSFile) as f:
             exciting_parser_GS_input.parseInput(f, backend)
+        except FileNotFoundError:
+          logger.warning("File not found: {}" .format(inputGSFile))
+        except Exception as err:
+          logger.error("Exception while processing file {}" .format(inputGSFile), exc_info=err)
     else:
         for xcName in xc_internal_map[xcNr]:
           self.xcName = xcName
