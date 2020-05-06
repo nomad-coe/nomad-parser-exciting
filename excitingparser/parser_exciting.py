@@ -279,7 +279,7 @@ class ExcitingParserContext(object):
       except FileNotFoundError:
         logger.warning("File not found: {}" .format(inputXSFile))
       except Exception as err:
-        logger.error("Exception file.py: ", exc_info=err)
+        logger.error("Exception on {}" .format(__file__), exc_info=err)
 #        xstype = section["x_exciting_xs_type"]
 #        print("xstype===",xstype)
 #        print("xsType===",exciting_parser_XS_input.InputHandler.self.xsType)
@@ -379,7 +379,7 @@ class ExcitingParserContext(object):
               except FileNotFoundError:
                 logger.warning("File not found: {}" .format(outputXSFile))
               except Exception as err:
-                logger.error("Exception on Exciting subparser", exc_info=err)
+                logger.error("Exception on {}" .format(__file__), exc_info=err)
               # - - - - -
               try:
                 with open(outputEpsFile) as g:
@@ -397,7 +397,7 @@ class ExcitingParserContext(object):
               except FileNotFoundError:
                 logger.warning("File not found: {}" .format(outputSigmaFile))
               except Exception as err:
-                logger.error("Exception on Exciting subparser", exc_info=err)
+                logger.error("Exception on {}" .format(__file__), exc_info=err)
 
 
               # with open(outputLossFile) as g:
@@ -461,35 +461,40 @@ class ExcitingParserContext(object):
 
 #          dielTensSymIm = []
 #          dielTensNoSymIm = []
-          with open(QFile) as g:
-              while 1:
-                  s = g.readline()
-                  if not s: break
-                  s = s.strip()
-                  s = s.split()
-                  if not is_number(s[1]):
-#                      print("s===",s)
-                      qpointNumber = int(s[0] )
-                  else:
-                      qPlusGCartesian.append([])
-                      qPlusGLattice.append([])
-                      qLattice.append([float(s[1]),float(s[2]),float(s[3])])
-                      qCartesian.append([float(s[1]),float(s[2]),float(s[3])])
-                      qPlusG.append(int(s[7]))
-              if self.xsTetra and self.xsAC and not self.xsNAR:
-                  ext = "TET_AC_NAR"
-              elif not self.xsTetra and self.xsAC and not self.xsNAR:
-                  ext = "AC_NAR"
-              elif not self.xsTetra and not self.xsAC and not self.xsNAR:
-                  ext = "NAR"
-              elif self.xsTetra and self.xsAC and self.xsNAR:
-                  ext = "TET_AC"
-              elif self.xsTetra and not self.xsAC and self.xsNAR:
-                  ext = "TET"
-              elif self.xsTetra and not self.xsAC and not self.xsNAR:
-                  ext = "TET_NAR"
-              else:
-                  ext=""
+          try:
+            with open(QFile) as g:
+                while 1:
+                    s = g.readline()
+                    if not s: break
+                    s = s.strip()
+                    s = s.split()
+                    if not is_number(s[1]):
+                        qpointNumber = int(s[0] )
+                    else:
+                        qPlusGCartesian.append([])
+                        qPlusGLattice.append([])
+                        qLattice.append([float(s[1]),float(s[2]),float(s[3])])
+                        qCartesian.append([float(s[1]),float(s[2]),float(s[3])])
+                        qPlusG.append(int(s[7]))
+                if self.xsTetra and self.xsAC and not self.xsNAR:
+                    ext = "TET_AC_NAR"
+                elif not self.xsTetra and self.xsAC and not self.xsNAR:
+                    ext = "AC_NAR"
+                elif not self.xsTetra and not self.xsAC and not self.xsNAR:
+                    ext = "NAR"
+                elif self.xsTetra and self.xsAC and self.xsNAR:
+                    ext = "TET_AC"
+                elif self.xsTetra and not self.xsAC and self.xsNAR:
+                    ext = "TET"
+                elif self.xsTetra and not self.xsAC and not self.xsNAR:
+                    ext = "TET_NAR"
+                else:
+                    ext=""
+          except FileNotFoundError:
+            logger.warning("File not found: {}" .format(QFile))
+          except Exception as err:
+            logger.error("Exception on {}" .format(__file__), exc_info=err)
+          # ---- QFile closing
 #                      xstype = "BSE"
 #                      self.xstype = "BSE"
 #                      dummyBse = files[11:13]
@@ -880,6 +885,7 @@ class ExcitingParserContext(object):
 
     if os.path.exists(dosFile):
       with open(dosFile) as f:
+        # print('# Opening file: ', dosFile, os.path.isfile(dosFile))
         exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol)
     if os.path.exists(bandFile):
       with open(bandFile) as g:
@@ -1459,5 +1465,5 @@ class ExcitingParser():
                 cachingLevelForMetaName = cachingLevelForMetaName,
                 superContext=ExcitingParserContext(),
                 superBackend=backend)
-            #print("#"*50 + "\nPARSING ENDED. NORMALIZER FOLLOWS..."+"\n"*5)# tmk:
+            # print("#"*50 + "\nPARSING ENDED. NORMALIZER FOLLOWS..."+"\n"*5)# tmk:
         return backend
