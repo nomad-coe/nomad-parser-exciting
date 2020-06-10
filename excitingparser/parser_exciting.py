@@ -769,6 +769,11 @@ class ExcitingParserContext(object):
           backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+    try:
+      fermi_energy = backend.superBackend.get_value('x_exciting_fermi_energy', g_index=gIndex)
+      backend.addValue('energy_reference_fermi', fermi_energy)
+    except KeyError:
+      pass
     # logger.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
