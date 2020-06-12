@@ -1,3 +1,4 @@
+# Copyright 2016-2018 The NOMAD Developers Group
 # Copyright 2017-2018 Lorenzo Pardini
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,7 +83,7 @@ class InputHandler(xml.sax.handler.ContentHandler):
     def startElement(self, name, attrs):
         fromH = unit_conversion.convert_unit_function("hartree", "J")
         if name == "gw":
-#            self.inputSectionGIndex = self.backend.openSection("section_system")
+            # self.inputSectionGIndex = self.backend.openSection("section_system")
             self.inGWInput = True
             try:
                 self.coreflag = attrs.getValue('coreflag')

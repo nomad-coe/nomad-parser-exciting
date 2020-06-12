@@ -1,3 +1,4 @@
+# Copyright 2016-2018 The NOMAD Developers Group
 # Copyright 2017-2018 Lorenzo Pardini
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +41,9 @@ class EPSParser(object):
     def startedParsing(self, path, parser):
         """called when parsing starts"""
         self.parser = parser
-        # allows to reset values if the same superContext is used to parse different files
-#        self.initialize_values()
+        # allows to reset values if the same superContext is used
+        # to parse different files
+        # self.initialize_values()
 
     def parseEpsilon(self, epsFile, backend, epsEn, epsilon):
         with open(epsFile) as g:

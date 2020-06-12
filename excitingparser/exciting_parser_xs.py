@@ -1,3 +1,4 @@
+# Copyright 2016-2018 The NOMAD Developers Group
 # Copyright 2017-2018 Lorenzo Pardini
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +36,7 @@ class XSParser(object):
         """called when parsing starts"""
         self.parser = parser
         # allows to reset values if the same superContext is used to parse different files
-#        self.initialize_values()
+        # self.initialize_values()
 
     def parseExciton(self, excFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff):
         with open(excFile) as g:

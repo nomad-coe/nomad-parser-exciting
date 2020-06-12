@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Main author and maintainer: Lorenzo Pardini <loren.pard@gmail.com>
-# Main author and maintainer: Cuauhtemoc Salazar <temok@physik.hu-berlin.de>
+# Maintainers:
+# 2017-2018: Lorenzo Pardini <loren.pard@gmail.com>
+# 2019-2020: Cuauhtemoc Salazar
 
 from builtins import object
 import numpy as np

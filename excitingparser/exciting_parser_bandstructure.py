@@ -1,3 +1,4 @@
+# Copyright 2016-2018 The NOMAD Developers Group
 # Copyright 2017-2018 Lorenzo Pardini
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
