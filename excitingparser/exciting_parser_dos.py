@@ -22,7 +22,7 @@ from nomadcore.unit_conversion import unit_conversion
 
 
 class DosHandler(xml.sax.handler.ContentHandler):
-    def __init__(self, backend, spinTreat, unitCellVol):
+    def __init__(self, backend, spinTreat, unitCellVol, fermiEnergy):
         self.backend = backend
         self.dosSectionGIndex = -1
         self.inDos = False
@@ -41,6 +41,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
         self.dosProjDummy = []
         self.dosProjDummy2 = []
         self.unitCellVol = float(unitCellVol[0])
+        self.fermiEnergy = fermiEnergy
 
     def endDocument(self):
         self.inDosProj = False
@@ -114,7 +115,7 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.totDosSpin[0] = self.totDos[0:self.numDosVal]
                 self.totDosSpin[1] = self.totDos[0:self.numDosVal]
                 self.energySpin = self.energy[0:self.numDosVal]
-                self.backend.addValue("dos_values", self.totDosSpin)
+                self.backend.addValue("dos_values", np.array(self.totDosSpin) * self.unitCellVol)
                 self.backend.addValue("dos_energies",self.energySpin)
                 self.backend.addValue("number_of_dos_values", self.numDosVal)
                 self.backend.addValue("dos_kind","electronic")
@@ -123,9 +124,13 @@ class DosHandler(xml.sax.handler.ContentHandler):
                 self.totDosSpin[0] = self.totDos[0:self.numDosVal]
                 self.totDosSpin[1] = self.totDos[self.numDosVal:int(2*(self.numDosVal))]
                 self.energySpin = self.energy[0:self.numDosVal]
-                self.backend.addValue("dos_values", self.totDosSpin)
+                self.backend.addValue("dos_values", np.array(self.totDosSpin) * self.unitCellVol)
                 self.backend.addValue("dos_energies",self.energySpin)
                 self.backend.addValue("number_of_dos_values", self.numDosVal)
+
+            if self.fermiEnergy is not None:
+                self.backend.addValue("dos_energies_normalized", self.energySpin - self.fermiEnergy)
+
         elif name == 'partialdos':
             pass
         elif name == 'interstitialdos':
@@ -149,8 +154,8 @@ class DosHandler(xml.sax.handler.ContentHandler):
     def characters(self, content):
         pass
 
-def parseDos(inF, backend, spinTreat, unitCellVol):
-    handler = DosHandler(backend, spinTreat, unitCellVol)
+def parseDos(inF, backend, spinTreat, unitCellVol, fermiEnergy):
+    handler = DosHandler(backend, spinTreat, unitCellVol, fermiEnergy)
     logging.info("will parse")
     xml.sax.parse(inF, handler)
     logging.info("did parse")

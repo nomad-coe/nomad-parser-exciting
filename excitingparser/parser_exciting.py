@@ -770,9 +770,10 @@ class ExcitingParserContext(object):
           backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+    fermi_energy = None
     try:
-      fermi_energy = backend.superBackend.get_value('x_exciting_fermi_energy', g_index=gIndex)
-      backend.addArrayValues('energy_reference_fermi', [fermi_energy.m, fermi_energy.m])  # always two spin channels
+      fermi_energy = backend.superBackend.get_value('x_exciting_fermi_energy', g_index=gIndex).m
+      backend.addArrayValues('energy_reference_fermi', [fermi_energy, fermi_energy])  # always two spin channels
     except KeyError:
       pass
     # logger.error("BASE onClose_section_single_configuration_calculation")
@@ -890,7 +891,7 @@ class ExcitingParserContext(object):
 
     try:
       with open(dosFile) as f:
-        exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol)
+        exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol, fermi_energy)
     except FileNotFoundError:
       logger.warning("File not found: {}" .format(dosFile))
     except Exception as err:
