@@ -772,7 +772,7 @@ class ExcitingParserContext(object):
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
     try:
       fermi_energy = backend.superBackend.get_value('x_exciting_fermi_energy', g_index=gIndex)
-      backend.addValue('energy_reference_fermi', fermi_energy)
+      backend.addArrayValues('energy_reference_fermi', [fermi_energy.m, fermi_energy.m])  # always two spin channels
     except KeyError:
       pass
     # logger.error("BASE onClose_section_single_configuration_calculation")
