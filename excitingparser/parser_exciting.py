@@ -770,12 +770,18 @@ class ExcitingParserContext(object):
           backend.closeSection("section_XC_functionals", gi)
 
   def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
-    fermi_energy = None
+    # Determine the Fermi energy for this calculation.
+    energy_reference_fermi = None
     try:
-      fermi_energy = backend.superBackend.get_value('x_exciting_fermi_energy', g_index=gIndex).m
-      backend.addArrayValues('energy_reference_fermi', [fermi_energy, fermi_energy])  # always two spin channels
+        energy_reference_fermi = backend.superBackend.get_value('x_exciting_fermi_energy', g_index=gIndex).m
     except KeyError:
-      pass
+        try:
+            energy_reference_fermi = backend.superBackend.get_value('gw_fermi_energy', g_index=gIndex).m
+        except KeyError:
+            pass
+    if energy_reference_fermi is not None:
+        backend.addArrayValues('energy_reference_fermi', [energy_reference_fermi, energy_reference_fermi])  # always two spin channels
+
     # logger.error("BASE onClose_section_single_configuration_calculation")
     backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
     backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemIndex)
@@ -891,7 +897,7 @@ class ExcitingParserContext(object):
 
     try:
       with open(dosFile) as f:
-        exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol, fermi_energy)
+        exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol, energy_reference_fermi)
     except FileNotFoundError:
       logger.warning("File not found: {}" .format(dosFile))
     except Exception as err:
