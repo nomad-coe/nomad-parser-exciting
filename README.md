@@ -1,67 +1,110 @@
-# Exciting Parser
+This is a NOMAD parser for [exciting](http://exciting-code.org/). It will read exciting input and
+output files and provide all information in NOMAD's unified Metainfo based Archive format.
 
-This is the parser for [exciting](http://exciting-code.org/).
-It is part of the [NOMAD Laboratory](http://nomad-lab.eu).
-The official version lives at
+## Preparing code input and output file for uploading to NOMAD
 
-    git@gitlab.mpcdf.mpg.de:nomad-lab/parser-exciting.git
+NOMAD accepts `.zip` and `.tar.gz` archives as uploads. Each upload can contain arbitrary
+files and directories. NOMAD will automatically try to choose the right parser for you files.
+For each parser (i.e. for each supported code) there is one type of file that the respective
+parser can recognize. We call these files `mainfiles` as they typically are the main
+output file a code. For each `mainfile` that NOMAD discovers it will create an entry
+in the database that users can search, view, and download. NOMAD will associate all files
+in the same directory as files that also belong to that entry. Parsers
+might also read information from these auxillary files. This way you can add more files
+to an entry, even if the respective parser/code might not directly support it.
 
-you can browse it at
+For exciting please provide at least the files from this table if applicable to your
+calculations (remember that you can provide more files if you want):
 
-    https://gitlab.mpcdf.mpg.de/nomad-lab/parser-exciting
-
-It relies on having the nomad-meta-info and the python common repositories one level higher.
-The simplest way to have this is to check out nomad-lab-base recursively:
-
-    git clone --recursive git@gitlab.mpcdf.mpg.de:nomad-lab/nomad-lab-base.git
-
-then this will be in parsers/exciting.
-
-
-## Input Filenames
-
-Variable names & variable definitions are case sensitive
-
-Some variable names point to other variable names, e.g., `inputgwFile`. <br>
-
-Sorted by variable name
-
-ToDo:
-- split the table into two groups: necessary and optional input files.
-- search for changes of `PWD`:  `grep -H -r  "chdir"` # os.chdir()
-- A "developers" version of the filename list could look like the table below, however, the "users" version should just be a concise version of the second column, using examples instead of nested definitions. E.g.,using `EPSILON_*.OUT` instead of `'EPSILON_' + ext + ... +.'OUT'`
-
-|VARIABLE NAME |      DEFINITION|
+|Input Filename| Description|
 |--- | --- |
-|'INFO_VOL'       |    --- |
-|'str.out'        |    ---|
-|DielNoSymFile    | 'DIELTENS0_NOSYM' + qExt00 + '.OUT' |
-|DielSymFile     | 'DIELTENS0' + qExt00 + '.OUT'|
-|QFile           | "QPOINTS.OUT"|
-|bandBorGWFile   | "BAND-QP.OUT" |
-|bandCarbGWFile | "bandstructure-qp.dat" |
-|bandFile |  "bandstructure.xml" |
-|dosFile | "dos.xml"|
-|dosGWFile | "TDOS-QP.OUT"|
-|eigvalFile | "EIGVAL.OUT"|
-|eigvalGWFile | "EVALQP.DAT" or "EVALQP.TXT"|
-|**epsFile** | ???? |
-|epsilonLocalField  | 'EPSILON_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT' |
-|epsilonNoLocalField  | 'EPSILON_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT'|
-|**excFile** | ?????? |
-|fermiSurfFile  | "FERMISURF.bxsf"|
-|gFile -> gw_file | "GW_INFO.OUT"|
-|inputGSFile  |"input.xml" |
-|inputXSFile  | "input.xml"|
-|inputgwFile = [inputgw1File, inputgw2File, inputFile] | ["input-gw.xml" , "input.xml"] |
-|lossFunctionLocalFieldFile  | 'LOSS_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT'|
-|lossFunctionNoLocalFieldFile  |'LOSS_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT'|
-|outputEpsFile  |"EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT" |
-|outputSigmaFile  |"SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT" |
-|outputXSFile  | "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT"|
-|qPlusGFile  |'GQPOINTS' + qExt00 + '.OUT'|
-|sigmaLocalFieldFile  | 'SIGMA_' + ext + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT'|
-|sigmaNoLocalFieldFile |'SIGMA_' + ext + 'NLF_' + 'FXC' + self.tddftKernel[0] + '_OC' + tensorComp[j] + qExt00 + '.OUT' |
-|vertexGWFile  | "BANDLINES.OUT"|
-|vertexLabGWFile  | "bandstructure.xml"|
+|`INFO.OUT`| mainfile|
+|`BAND-QP.OUT`| |
+|`BANDLINES.OUT`| |
+|`DIELTENS0*.OUT`| |
+|`DIELTENS0_NOSYM*.OUT`| |
+|`EIGVAL.OUT`| |
+|`EPSILON_*FXC*_OC*.OUT `| |
+|`EPSILON_*NLF_FXC*_OC*.OUT`| |
+|`EPSILON_BSE*_SCR*_OC*.OUT`| |
+|`EVALQP.DAT or EVALQP.TXT`| |
+|`EXCITON_BSE*_SCR*_OC*.OUT`| |
+|`FERMISURF.bxsf`| |
+|`GQPOINTS*.OUT`| |
+|`GW_INFO.OUT`| |
+|`INFO_VOL       `| |
+|`LOSS_*FXC*_OC*.OUT`| |
+|`LOSS_*NLF_*FXC*_OC*.OUT`| |
+|`QPOINTS.OUT`| |
+|`SIGMA_*FXC*_OC*.OUT`| |
+|`SIGMA_*NLF_FXC*_OC*.OUT `| |
+|`SIGMA_BSE*_SCR*_OC*.OUT `| |
+|`TDOS-QP.OUT` | time dependent DOS|
+|`bandstructure-qp.dat`| |
+|`bandstructure.xml`| (vertexLabGWFile)|
+|`bandstructure.xml`| |
+|`dos.xml`| |
+|`input-gw.xml `| |
+|`input.xml`|(GSFile) |
+|`input.xml`| (XSFile)|
+|`str.out`| |
 
+
+To create an upload with all calculations in a directory structure:
+
+```
+zip -r <upload-file>.zip <directory>/*
+```
+
+Go to the [NOMAD upload page](https://nomad-lab.eu/prod/rae/gui/uploads) to upload files
+or find instructions about how to upload files from the command line.
+
+## Using the parser
+
+You can use NOMAD's parsers and normalizers locally on your computer. You need to install
+NOMAD's pypi package:
+
+```
+pip install nomad-lab
+```
+
+To parse code input/output from the command line, you can use NOMAD's command line
+interface (CLI) and print the processing results output to stdout:
+
+```
+nomad parse --show-archive <path-to-file>
+```
+
+To parse a file in Python, you can program something like this:
+```python
+import sys
+from nomad.cli.parse import parse, normalize_all
+
+# match and run the parser
+backend = parse(sys.argv[1])
+# run all normalizers
+normalize_all(backend)
+
+# get the 'main section' section_run as a metainfo object
+section_run = backend.resource.contents[0].section_run[0]
+
+# get the same data as JSON serializable Python dict
+python_dict = section_run.m_to_dict()
+```
+
+## Developing the parser
+
+Also install NOMAD's pypi package:
+
+```
+pip install nomad-lab
+```
+
+Clone the parser project and install it in development mode:
+
+```
+git clone https://gitlab.mpcdf.mpg.de/nomad-lab/parser-exciting parser-exciting
+pip install -e parser-exciting
+```
+
+Running the parser now, will use the parser's Python code from the clone project.
