@@ -1,10 +1,10 @@
-code-label: exciting
-code-label-style: All in LOWER case
-code-url: http://exciting-code.org/
-parser-dir-name: dependencies/parsers/exciting/
-parser-git-url: https://gitlab.mpcdf.mpg.de/nomad-lab/parser-exciting
-parser-specific: ''
-table-of-files: |
+codeLabel: exciting
+codeLabelStyle: All in LOWER case
+codeUrl: http://exciting-code.org/
+parserDirName: dependencies/parsers/exciting/
+parserGitUrl: https://gitlab.mpcdf.mpg.de/nomad-lab/parser-exciting
+parserSpecific: ''
+tableOfFiles: |
   |Input Filename| Description|
   |--- | --- |
   |`INFO.OUT`| mainfile|
