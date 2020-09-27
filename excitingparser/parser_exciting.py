@@ -240,6 +240,8 @@ class ExcitingParserContext(object):
     for gFile in [gw_File, gwFile]:
       if os.path.exists(gFile):
         gwParser = exciting_parser_gw.GWParser()
+        # print('Calling GW  subparser @ nClose_section_run()\n')
+
         gwParser.parseGW(gFile, backend,
                          dftMethodSectionGindex = self.secMethodIndex,
                          dftSingleConfigurationGindex = self.secSingleConfIndex,
@@ -897,6 +899,7 @@ class ExcitingParserContext(object):
 
     try:
       with open(dosFile) as f:
+        # print('Calling dos subparser @ onClose_section_single_configuration_calculation()\n')
         exciting_parser_dos.parseDos(f, backend, self.spinTreat, self.unit_cell_vol, energy_reference_fermi)
     except FileNotFoundError:
       logger.warning("File not found: {}" .format(dosFile))

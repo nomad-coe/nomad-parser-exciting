@@ -110,23 +110,25 @@ class DosHandler(xml.sax.handler.ContentHandler):
     def endElement(self, name):
         if name == 'totaldos':
             self.inDos = False
-            if not self.spinTreat:
-                self.numDosVal = len(self.energy)
-                self.totDosSpin[0] = self.totDos[0:self.numDosVal]
-                self.totDosSpin[1] = self.totDos[0:self.numDosVal]
-                self.energySpin = self.energy[0:self.numDosVal]
-                self.backend.addValue("dos_values", np.array(self.totDosSpin) * self.unitCellVol)
-                self.backend.addValue("dos_energies", self.energySpin + self.fermiEnergy)
-                self.backend.addValue("number_of_dos_values", self.numDosVal)
-                self.backend.addValue("dos_kind", "electronic")
-            else:
-                self.numDosVal = int(len(self.energy) / 2)
-                self.totDosSpin[0] = self.totDos[0:self.numDosVal]
-                self.totDosSpin[1] = self.totDos[self.numDosVal:int(2 * (self.numDosVal))]
-                self.energySpin = self.energy[0:self.numDosVal]
-                self.backend.addValue("dos_values", np.array(self.totDosSpin) * self.unitCellVol)
-                self.backend.addValue("dos_energies", self.energySpin + self.fermiEnergy)
-                self.backend.addValue("number_of_dos_values", self.numDosVal)
+            if self.fermiEnergy is not None:
+                if not self.spinTreat:
+                    self.numDosVal = len(self.energy)
+                    self.totDosSpin[0] = self.totDos[0:self.numDosVal]
+                    self.totDosSpin[1] = self.totDos[0:self.numDosVal]
+                    self.energySpin = self.energy[0:self.numDosVal]
+                    self.backend.addValue("dos_values", np.array(self.totDosSpin) * self.unitCellVol)
+                    self.backend.addValue("dos_energies", np.array(self.energySpin) + self.fermiEnergy)
+                    self.backend.addValue("number_of_dos_values", self.numDosVal)
+                    self.backend.addValue("dos_kind", "electronic")
+                else:
+                    self.numDosVal = int(len(self.energy) / 2)
+                    self.totDosSpin[0] = self.totDos[0:self.numDosVal]
+                    self.totDosSpin[1] = self.totDos[self.numDosVal:int(2 * (self.numDosVal))]
+                    self.energySpin = self.energy[0:self.numDosVal]
+                    self.backend.addValue("dos_values", np.array(self.totDosSpin) * self.unitCellVol)
+                    self.backend.addValue("dos_energies", np.array(self.energySpin) + self.fermiEnergy)
+                    self.backend.addValue("number_of_dos_values", self.numDosVal)
+                    self.backend.addValue("dos_kind", "electronic")
 
         elif name == 'partialdos':
             pass

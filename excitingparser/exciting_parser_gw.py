@@ -194,6 +194,7 @@ class GWParser(object):
 
         #  ############# DOS  ##############
         if os.path.exists(dosGWFile):
+            # print('\nPARSING GW DOS FILE\n') # TMK:
             dosGWGIndex = backend.openSection("section_dos")
             ha_per_joule = unit_conversion.convert_unit(1, "hartree", "J")
             fromH = unit_conversion.convert_unit_function("hartree", "J")
