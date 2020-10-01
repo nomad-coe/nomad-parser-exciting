@@ -319,7 +319,9 @@ class ExcitingParserContext(object):
                     self.bsetype = 'RPA'
                 elif dummyBse == 'IP':
                     self.bsetype = 'IP'
-                name = "EXCITON_BSE" + self.bsetype + '_SCR'
+                else:
+                    self.bsetype = 'UNKNOWN'
+                name = 'EXCITON_BSE%s_SCR' % self.bsetype
                 #  nameEps = "EPSILON_BSE" + self.bsetype + '_SCR'
                 if files[len(name):len(name)+4] == 'full':
                     self.screentype = 'full'
@@ -372,37 +374,40 @@ class ExcitingParserContext(object):
               loss.append([[],[]])
             #  lossDummy.append([])
 
-              outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-              outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-              outputSigmaFile = os.path.join(dirPath, "SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-              outputLossFile = os.path.join(dirPath, "LOSS_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
-              # - - - - -
               try:
-                with open(outputXSFile) as g:
-                    xsParser = exciting_parser_xs.XSParser()
-                    xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
-              except FileNotFoundError:
-                logger.warning("File not found: {}" .format(outputXSFile))
+                outputXSFile = os.path.join(dirPath, "EXCITON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+                outputEpsFile = os.path.join(dirPath, "EPSILON_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+                outputSigmaFile = os.path.join(dirPath, "SIGMA_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+                outputLossFile = os.path.join(dirPath, "LOSS_BSE" + self.bsetype + '_SCR' + self.screentype + "_OC" + self.tensorComp[i] + ".OUT")
+                # - - - - -
+                try:
+                  with open(outputXSFile) as g:
+                      xsParser = exciting_parser_xs.XSParser()
+                      xsParser.parseExciton(outputXSFile, backend, excNum, excEn, excBindEn, osclStr, transCoeff) #, dftMethodSectionGindex = self.secMethodIndex,
+                except FileNotFoundError:
+                  logger.warning("File not found: {}" .format(outputXSFile))
+                except Exception as err:
+                  logger.error("Exception on {}" .format(__file__), exc_info=err)
+                # - - - - -
+                try:
+                  with open(outputEpsFile) as g:
+                      epsParser = exciting_parser_eps.EPSParser()
+                      epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
+                except FileNotFoundError:
+                  logger.warning("File not found: {}" .format(outputEpsFile))
+                except Exception as err:
+                  logger.error("Exception on Exciting subparser", exc_info=err)
+                # - - - - -
+                try:
+                  with open(outputSigmaFile) as g:
+                      sigmaParser = exciting_parser_eps.EPSParser()
+                      sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
+                except FileNotFoundError:
+                  logger.warning("File not found: {}" .format(outputSigmaFile))
+                except Exception as err:
+                  logger.error("Exception on {}" .format(__file__), exc_info=err)
               except Exception as err:
-                logger.error("Exception on {}" .format(__file__), exc_info=err)
-              # - - - - -
-              try:
-                with open(outputEpsFile) as g:
-                    epsParser = exciting_parser_eps.EPSParser()
-                    epsParser.parseEpsilon(outputEpsFile, backend, epsEn, epsilon) #, dftMethodSectionGindex = self.secMethodIndex,
-              except FileNotFoundError:
-                logger.warning("File not found: {}" .format(outputEpsFile))
-              except Exception as err:
-                logger.error("Exception on Exciting subparser", exc_info=err)
-              # - - - - -
-              try:
-                with open(outputSigmaFile) as g:
-                    sigmaParser = exciting_parser_eps.EPSParser()
-                    sigmaParser.parseEpsilon(outputSigmaFile, backend, sigmaEn, sigma) #, dftMethodSectionGindex = self.secMethodIndex,
-              except FileNotFoundError:
-                logger.warning("File not found: {}" .format(outputSigmaFile))
-              except Exception as err:
-                logger.error("Exception on {}" .format(__file__), exc_info=err)
+                logger.error('Exception while processing further outfiles.')
 
 
               # with open(outputLossFile) as g:
