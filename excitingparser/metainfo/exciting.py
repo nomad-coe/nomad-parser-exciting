@@ -1062,6 +1062,18 @@ class section_single_configuration_calculation(public.section_single_configurati
         repeats=True,
         a_legacy=LegacyDefinition(name='x_exciting_section_fermi_surface'))
 
+    x_exciting_section_MT_charge_atom = SubSection(
+        sub_section=SectionProxy('x_exciting_section_MT_charge_atom'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_exciting_section_MT_charge_atom')
+    )
+
+    x_exciting_section_MT_moment_atom = SubSection(
+        sub_section=SectionProxy('x_exciting_section_MT_moment_atom'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_exciting_section_MT_moment_atom')
+    )
+
 
 class section_system(public.section_system):
 
@@ -1096,6 +1108,7 @@ class section_system(public.section_system):
     x_exciting_electronic_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='coulomb',
         description='''
         Electronic charge
         ''',
@@ -1175,6 +1188,14 @@ class section_system(public.section_system):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_gvector_size_z'))
 
+    x_exciting_gvector_size = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        G-vector grid size
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_gvector_size'))
+
     x_exciting_gvector_total = Quantity(
         type=np.dtype(np.int32),
         shape=[],
@@ -1215,6 +1236,14 @@ class section_system(public.section_system):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_kpoint_offset_z'))
 
+    x_exciting_kpoint_offset = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3],
+        description='''
+        K-points offset
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_kpoint_offset'))
+
     x_exciting_lmaxapw = Quantity(
         type=np.dtype(np.int32),
         shape=[],
@@ -1234,6 +1263,7 @@ class section_system(public.section_system):
     x_exciting_nuclear_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='coulomb',
         description='''
         Nuclear charge
         ''',
@@ -1262,6 +1292,14 @@ class section_system(public.section_system):
         number k-points z
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_number_kpoint_z'))
+
+    x_exciting_kpoint_grid = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        kpoint grid
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_kpoint_grid'))
 
     x_exciting_number_kpoints = Quantity(
         type=np.dtype(np.int32),
@@ -1303,6 +1341,14 @@ class section_system(public.section_system):
         Radius MT * Gmax
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_rgkmax'))
+
+    x_exciting_species_rtmin = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Chemical species with radius RT * Gmax
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_species_rtmin'))
 
     x_exciting_simulation_reciprocal_cell = Quantity(
         type=np.dtype(np.float64),
@@ -1375,6 +1421,22 @@ class section_system(public.section_system):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_wigner_radius'))
 
+    x_exciting_number_of_bravais_lattice_symmetries = Quantity(
+        type=int,
+        shape=[],
+        description='''
+        Number of Bravais lattice symmetries
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_number_of_bravais_lattice_symmetries'))
+
+    x_exciting_number_of_crystal_symmetries = Quantity(
+        type=int,
+        shape=[],
+        description='''
+        Number of crystal symmetries
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_number_of_crystal_symmetries'))
+
     x_exciting_section_atoms_group = SubSection(
         sub_section=SectionProxy('x_exciting_section_atoms_group'),
         repeats=True,
@@ -1401,6 +1463,72 @@ class section_system(public.section_system):
         a_legacy=LegacyDefinition(name='x_exciting_section_xc'))
 
 
+class x_exciting_section_MT_charge_atom(MSection):
+    '''
+    atom-resolved charges in muffin tins
+    '''
+
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_exciting_section_MT_charge_atom'))
+
+    x_exciting_MT_charge_atom_index = Quantity(
+        type=int,
+        shape=[],
+        description='''
+        index of the atom with muffin-tin charge
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_MT_charge_atom_index'))
+
+    x_exciting_MT_charge_atom_symbol = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        chemical symbol of the atom with muffin-tin charge
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_MT_charge_atom_symbol'))
+
+    x_exciting_MT_charge_atom_value = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        unit='coulomb',
+        description='''
+        value of the muffin-tin charge on atom
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_MT_charge_atom_value'))
+
+
+class x_exciting_section_MT_moment_atom(MSection):
+    '''
+    atom-resolved moments in muffin tins
+    '''
+
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_exciting_section_MT_moment_atom'))
+
+    x_exciting_MT_moment_atom_index = Quantity(
+        type=int,
+        shape=[],
+        description='''
+        index of the atom with muffin-tin moment
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_MT_moment_atom_index'))
+
+    x_exciting_MT_moment_atom_symbol = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        chemical symbol of the atom with muffin-tin moment
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_MT_moment_atom_symbol'))
+
+    x_exciting_MT_moment_atom_value = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3],
+        unit='coulomb * meter',
+        description='''
+        value of the muffin-tin moment on atom
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_MT_moment_atom_value'))
+
+
 class section_scf_iteration(public.section_scf_iteration):
 
     m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_scf_iteration'))
@@ -1408,6 +1536,7 @@ class section_scf_iteration(public.section_scf_iteration):
     x_exciting_charge_convergence_scf_iteration = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='coulomb',
         description='''
         exciting charge convergence
         ''',
@@ -1501,6 +1630,7 @@ class section_scf_iteration(public.section_scf_iteration):
     x_exciting_force_convergence_scf_iteration = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='newton',
         description='''
         exciting force convergence
         ''',
@@ -1529,6 +1659,7 @@ class section_scf_iteration(public.section_scf_iteration):
     x_exciting_energy_convergence_scf_iteration = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='joule',
         description='''
         exciting energy convergence
         ''',
@@ -1575,6 +1706,7 @@ class section_scf_iteration(public.section_scf_iteration):
     x_exciting_IBS_force_convergence_scf_iteration = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='newton',
         description='''
         exciting IBS force convergence
         ''',
@@ -1612,6 +1744,7 @@ class section_scf_iteration(public.section_scf_iteration):
     x_exciting_time_scf_iteration = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='s',
         description='''
         scf iteration time
         ''',
@@ -1626,6 +1759,15 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_total_MT_charge_scf_iteration'))
 
+    x_exciting_total_charge_scf_iteration = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        unit='coulomb',
+        description='''
+        Total charge
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_total_charge_scf_iteration'))
+
     x_exciting_XC_potential_scf_iteration = Quantity(
         type=np.dtype(np.float64),
         shape=[],
@@ -1635,6 +1777,43 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_XC_potential_scf_iteration'))
+
+    x_exciting_interstitial_moment_scf_iteration = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3],
+        unit='coulomb * meter',
+        description='''
+        Interstitial moment
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_interstitial_moment_scf_iteration'))
+
+    x_exciting_total_MT_moment_scf_iteration = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3],
+        unit='coulomb * meter',
+        description='''
+        Total moment in muffin-tins
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_total_MT_moment_scf_iteration'))
+
+    x_exciting_total_moment_scf_iteration = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3],
+        unit='coulomb * meter',
+        description='''
+        Total moment
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_total_moment_scf_iteration'))
+
+    x_exciting_section_MT_charge_atom_scf_iteration = SubSection(
+        sub_section=SectionProxy('x_exciting_section_MT_charge_atom'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_exciting_section_MT_charge_atom_scf_iteration'))
+
+    x_exciting_section_MT_moment_atom_scf_iteration = SubSection(
+        sub_section=SectionProxy('x_exciting_section_MT_moment_atom'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_exciting_section_MT_moment_atom_scf_iteration'))
 
 
 class section_method(public.section_method):
@@ -1703,6 +1882,7 @@ class section_method(public.section_method):
     x_exciting_scf_threshold_charge_change = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='coulomb',
         description='''
         Specifies the threshold for the x_exciting_effective_potential_convergence between
         two subsequent self-consistent field (SCF) iterations.
@@ -1723,6 +1903,7 @@ class section_method(public.section_method):
     x_exciting_scf_threshold_force_change = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='newton',
         description='''
         Convergence tolerance for forces (not including IBS contribution) during the SCF
         run
@@ -1744,6 +1925,7 @@ class section_method(public.section_method):
     x_exciting_xs_broadening = Quantity(
         type=np.dtype(np.float64),
         shape=[],
+        unit='joule',
         description='''
         Lorentzian broadening applied to the spectra.
         ''',
