@@ -5,6 +5,9 @@ import re
 import logging
 from xml.etree import ElementTree
 
+from .metainfo import m_env
+from nomad.parsing.parser import FairdiParser
+
 from nomad.parsing.text_parser import UnstructuredTextFileParser, Quantity, FileParser
 from nomad.datamodel.metainfo.public import section_single_configuration_calculation,\
     section_run, section_scf_iteration, section_system, section_method, section_XC_functionals,\
@@ -17,8 +20,8 @@ from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_sec
 
 
 class InputXMLParser(FileParser):
-    def __init__(self, mainfile, logger):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self):
+        super().__init__(None)
         self._init_parameters()
 
     def _init_parameters(self):
@@ -108,8 +111,8 @@ class InputXMLParser(FileParser):
 
 
 class GWInfoParser(UnstructuredTextFileParser):
-    def __init__(self, mainfile, logger):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self):
+        super().__init__(None)
 
     def init_quantities(self):
         self._quantities = []
@@ -155,9 +158,9 @@ class GWInfoParser(UnstructuredTextFileParser):
 
 
 class DataTextFileParser(FileParser):
-    def __init__(self, mainfile, logger, **kwargs):
+    def __init__(self, **kwargs):
         self._dtype = kwargs.get('dtype', float)
-        super().__init__(mainfile, logger=logger)
+        super().__init__(None)
 
     def _init_parameters(self):
         pass
@@ -178,8 +181,8 @@ class DataTextFileParser(FileParser):
 
 
 class ExcitingEvalqpParser(UnstructuredTextFileParser):
-    def __init__(self, mainfile, logger):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self):
+        super().__init__(None)
 
     def init_quantities(self):
         self._quantities = []
@@ -199,8 +202,8 @@ class ExcitingEvalqpParser(UnstructuredTextFileParser):
 
 
 class BandstructureDatParser(DataTextFileParser):
-    def __init__(self, mainfile, logger, **kwargs):
-        super().__init__(mainfile, logger)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._init_parameters()
         self._nspin = kwargs.get('nspin', None)
         self._energy_unit = kwargs.get('energy_unit', None)
@@ -290,8 +293,8 @@ class BandstructureDatParser(DataTextFileParser):
 
 
 class BandOutParser(DataTextFileParser):
-    def __init__(self, mainfile, logger, **kwargs):
-        super().__init__(mainfile, logger)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._init_parameters()
         self._nspin = kwargs.get('nspin', None)
         self._energy_unit = kwargs.get('energy_unit', None)
@@ -363,9 +366,9 @@ class BandOutParser(DataTextFileParser):
 
 
 class BandstructureXMLParser(FileParser):
-    def __init__(self, mainfile, logger, **kwargs):
+    def __init__(self, **kwargs):
         # TODO make a parent class for dos and bandstructure
-        super().__init__(mainfile, logger=logger)
+        super().__init__(None)
         self._distance_key = 'distance'
         self._coord_key = 'coord'
         self._energy_key = 'eval'
@@ -510,8 +513,8 @@ class BandstructureXMLParser(FileParser):
 
 
 class DOSXMLParser(FileParser):
-    def __init__(self, mainfile, logger, **kwargs):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self, **kwargs):
+        super().__init__(None)
         self._init_parameters()
         self._nspin_key = 'nspin'
         self._totaldos_key = 'totaldos'
@@ -677,8 +680,8 @@ class DOSXMLParser(FileParser):
 
 
 class ExcitingFermiSurfaceBxsfParser(UnstructuredTextFileParser):
-    def __init__(self, mainfile, logger):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self):
+        super().__init__(None)
 
     def init_quantities(self):
         self._quantities = []
@@ -709,8 +712,8 @@ class ExcitingFermiSurfaceBxsfParser(UnstructuredTextFileParser):
 
 
 class ExcitingEigenvalueParser(UnstructuredTextFileParser):
-    def __init__(self, mainfile, logger):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self):
+        super().__init__(None)
 
     def init_quantities(self):
         self._quantities = []
@@ -748,8 +751,8 @@ class ExcitingGWOutParser(UnstructuredTextFileParser):
 
 
 class ExcitingInfoParser(UnstructuredTextFileParser):
-    def __init__(self, mainfile, logger):
-        super().__init__(mainfile, logger=logger)
+    def __init__(self):
+        super().__init__(None)
 
     @staticmethod
     def _re_pattern(head, key, value=r'[Ee\+\d\.\- ]+', tail='\n'):
@@ -1246,24 +1249,26 @@ class ExcitingInfoParser(UnstructuredTextFileParser):
         return self.get('x_exciting_unit_cell_volume')
 
 
-class ExcitingOutput:
-    def __init__(self, filepath, archive, logger):
-        self.filepath = filepath
-        self.archive = archive
-        self.logger = logger if logger is not None else logging
-        self.info_parser = ExcitingInfoParser(self.filepath, self.logger)
-        self.dos_parser = DOSXMLParser(None, self.logger, energy_unit='hartree')
-        self.bandstructure_parser = BandstructureXMLParser(None, self.logger, energy_unit='hartree')
-        self.eigval_parser = ExcitingEigenvalueParser(None, self.logger)
-        self.fermisurf_parser = ExcitingFermiSurfaceBxsfParser(None, self.logger)
-        self.evalqp_parser = ExcitingEvalqpParser(None, self.logger)
-        self.dos_out_parser = DataTextFileParser(None, self.logger)
-        self.bandstructure_dat_parser = BandstructureDatParser(None, self.logger, energy_unit='hartree')
-        self.band_out_parser = BandOutParser(None, self.logger, energy_unit='hartree')
-        self.info_gw_parser = GWInfoParser(None, self.logger)
-        self.input_xml_parser = InputXMLParser(None, self.logger)
-        self.data_xs_parser = DataTextFileParser(None, self.logger)
-        self.data_clathrate_parser = DataTextFileParser(None, self.logger, dtype=str)
+class ExcitingParser(FairdiParser):
+    def __init__(self):
+        super().__init__(
+            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
+            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
+        self._metainfo_env = m_env
+
+        self.info_parser = ExcitingInfoParser()
+        self.dos_parser = DOSXMLParser(energy_unit='hartree')
+        self.bandstructure_parser = BandstructureXMLParser(energy_unit='hartree')
+        self.eigval_parser = ExcitingEigenvalueParser()
+        self.fermisurf_parser = ExcitingFermiSurfaceBxsfParser()
+        self.evalqp_parser = ExcitingEvalqpParser()
+        self.dos_out_parser = DataTextFileParser()
+        self.bandstructure_dat_parser = BandstructureDatParser(energy_unit='hartree')
+        self.band_out_parser = BandOutParser(energy_unit='hartree')
+        self.info_gw_parser = GWInfoParser()
+        self.input_xml_parser = InputXMLParser()
+        self.data_xs_parser = DataTextFileParser()
+        self.data_clathrate_parser = DataTextFileParser(dtype=str)
         self._calculation_type = None
 
     def get_exciting_files(self, default):
@@ -2255,7 +2260,29 @@ class ExcitingOutput:
             sec_calc_to_calc_refs.calculation_to_calculation_kind = 'source_calculation'
             self._calculation_type = 'volume_optimization'
 
-    def parse(self):
+    def _init_parsers(self):
+        self.info_parser.mainfile = self.filepath
+        self.info_parser.logger = self.logger
+        self.dos_parser.logger = self.logger
+        self.bandstructure_parser.logger = self.logger
+        self.eigval_parser.logger = self.logger
+        self.fermisurf_parser.logger = self.logger
+        self.evalqp_parser.logger = self.logger
+        self.dos_out_parser.logger = self.logger
+        self.bandstructure_dat_parser.logger = self.logger
+        self.band_out_parser.logger = self.logger
+        self.info_gw_parser.logger = self.logger
+        self.input_xml_parser.logger = self.logger
+        self.data_xs_parser.logger = self.logger
+        self.data_clathrate_parser.logger = self.logger
+
+    def parse(self, filepath, archive, logger):
+        self.filepath = filepath
+        self.archive = archive
+        self.logger = logger if logger is not None else logging
+
+        self._init_parsers()
+
         sec_run = self.archive.m_create(section_run)
 
         sec_run.program_name = 'exciting'
