@@ -1269,7 +1269,6 @@ class ExcitingParser(FairdiParser):
         self.input_xml_parser = InputXMLParser()
         self.data_xs_parser = DataTextFileParser()
         self.data_clathrate_parser = DataTextFileParser(dtype=str)
-        self._calculation_type = None
 
     def get_exciting_files(self, default):
         filename = os.path.join(self.info_parser.maindir, default)
@@ -2280,6 +2279,8 @@ class ExcitingParser(FairdiParser):
         self.filepath = filepath
         self.archive = archive
         self.logger = logger if logger is not None else logging
+
+        self._calculation_type = None
 
         self._init_parsers()
 
