@@ -719,7 +719,7 @@ class ExcitingEigenvalueParser(UnstructuredTextFileParser):
         self._quantities = []
         self._quantities.append(
             Quantity(
-                'k_points', r'\n\ ([\d+\.Ee\-\+\s]+) *\: *k\-point'))
+                'k_points', r'\s*\d+\s*([\d\.Ee\- ]+):\s*k\-point'))
 
         def str_to_eigenvalues(val_in):
             val = val_in[:val_in.rfind('\n \n')].strip()
@@ -736,7 +736,7 @@ class ExcitingEigenvalueParser(UnstructuredTextFileParser):
 
         self._quantities.append(
             Quantity(
-                'eigenvalues_occupancies', r'\(state\, eigenvalue and occupancy below\)\s*([\d+\.Ee\-\+\s]+)',
+                'eigenvalues_occupancies', r'\(state\, eigenvalue and occupancy below\)\s*([\d\.Ee\-\s]+?(?:\n *\n))',
                 str_operation=str_to_eigenvalues
             )
         )
@@ -1493,7 +1493,7 @@ class ExcitingParser(FairdiParser):
         elif name.startswith('EIGVAL') and name.endswith('OUT'):
             parser = self.eigval_parser
             parser_function = self._parse_eigenvalues
-        elif name.startswith('FERMISURF') and name.endswith('bxsf'):
+        elif (name.startswith('FERMISURF') or name.startswith('FS')) and name.endswith('bxsf'):
             parser = self.fermisurf_parser
             parser_function = self._parse_fermisurface
         elif name.startswith('EVALQP') and (name.endswith('DAT') or name.endswith('TXT')):
@@ -1973,6 +1973,8 @@ class ExcitingParser(FairdiParser):
 
         smearing_kind = self.info_parser.get('smearing_kind', None)
         if smearing_kind is not None:
+            if not isinstance(smearing_kind, str):
+                smearing_kind = smearing_kind[0]
             smearing_kind = smearing_kind_map[smearing_kind]
             sec_method.smearing_kind = smearing_kind
         smearing_width = self.info_parser.get('smearing_width', None)
@@ -2173,7 +2175,7 @@ class ExcitingParser(FairdiParser):
         sec_system.simulation_cell = self.info_parser.get('lattice_vectors')
         # I did not add it to x_exciting_simulation_reciprocal_cell because the
         # metainfo has wrong units?
-        sec_system.lattice_vectors_reciprocal = self.info_parser.get('lattice_vectors_reciprocal')
+        # sec_system.lattice_vectors_reciprocal = self.info_parser.get('lattice_vectors_reciprocal')
 
         if loop_type != 'final_scf_iteration':
             return
@@ -2217,7 +2219,7 @@ class ExcitingParser(FairdiParser):
         # Add data to scc
         # TODO add support for more output files and properties
         exciting_files = [
-            'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf']
+            'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf']
         for f in exciting_files:
             self.parse_file(f, sec_run.section_single_configuration_calculation[-1])
 
