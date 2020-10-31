@@ -3,12 +3,12 @@ import numpy as np
 import os
 import re
 import logging
-from xml.etree import ElementTree
 
 from .metainfo import m_env
 from nomad.parsing.parser import FairdiParser
 
-from nomad.parsing.text_parser import UnstructuredTextFileParser, Quantity, FileParser
+from nomad.parsing.file_parser import UnstructuredTextFileParser, Quantity, XMLParser,\
+    DataTextFileParser
 from nomad.datamodel.metainfo.public import section_single_configuration_calculation,\
     section_run, section_scf_iteration, section_system, section_method, section_XC_functionals,\
     section_sampling_method, section_dos, section_atom_projected_dos, section_k_band,\
@@ -17,97 +17,6 @@ from nomad.datamodel.metainfo.public import section_single_configuration_calcula
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
     x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface
-
-
-class InputXMLParser(FileParser):
-    def __init__(self):
-        super().__init__(None)
-        self._init_parameters()
-
-    def _init_parameters(self):
-        self._elements = None
-
-    @property
-    def root(self):
-        if self._file_handler is None:
-            if self.mainfile is None:
-                return
-            self._file_handler = ElementTree.parse(self.mainfile).getroot()
-            self._init_parameters()
-
-        return self._file_handler
-
-    @property
-    def elements(self):
-        if self._elements is None:
-            self._elements = self.root.findall('.//')
-
-        return self._elements
-
-    def parse(self, key):
-        if self._results is None:
-            self._results = dict()
-
-        if not self.root:
-            return
-
-        key_in = key
-        key = key.lstrip('/')
-        if key.find('/') > 0:
-            parent = os.path.dirname(key)
-            child = os.path.basename(key)
-            elements = self.root.findall(os.path.join('./', parent))
-        else:
-            elements = self.elements
-            child = key
-
-        val = []
-        for element in elements:
-            if child:
-                v = element.attrib.get(child, None)
-                if v is None:
-                    v = element.findall(child)
-                    v = [e.text for e in v]
-                if v:
-                    val.append(v)
-
-            else:
-                val.append(element.attrib)
-
-        if not val:
-            return
-
-        def convert(val_in):
-            # TODO do conversion also for dictionary elements
-            for i in range(len(val_in)):
-                if isinstance(val_in[i], dict):
-                    for key, val in val_in[i].items():
-                        val_in[i][key] = convert([val])[0]
-                elif isinstance(val_in[i], str):
-                    # exponential formatting
-                    re_float = r'(\d+\.\d+)d(\-\d+)'
-                    v = re.sub(re_float, r'\1e\2', val_in[i]).split()
-                    val_in[i] = v[0] if len(v) == 1 else v
-                elif isinstance(val_in[i], list):
-                    val_in[i] = convert(val_in[i])
-
-            try:
-                if val_in and isinstance(val_in[0], str) and val_in[0] in ['true', 'false']:
-                    val = np.array(val_in) == 'true'
-                    val = list([bool(v) for v in val])
-                else:
-                    val = np.array(val_in, dtype=float)
-                    if np.all(np.mod(val, 1) == 0):
-                        val = np.array(val, dtype=int)
-            except Exception:
-                val = val_in
-
-            return val
-
-        val = convert(val)
-        val = val[0] if len(val) == 1 else val
-
-        self._results[key_in] = val
 
 
 class GWInfoParser(UnstructuredTextFileParser):
@@ -157,29 +66,6 @@ class GWInfoParser(UnstructuredTextFileParser):
         )
 
 
-class DataTextFileParser(FileParser):
-    def __init__(self, **kwargs):
-        self._dtype = kwargs.get('dtype', float)
-        super().__init__(None)
-
-    def _init_parameters(self):
-        pass
-
-    @property
-    def data(self):
-        if self._file_handler is None:
-            if self.mainfile is None:
-                return
-
-            try:
-                self._file_handler = np.loadtxt(self.mainfile, dtype=self._dtype)
-            except Exception:
-                return
-
-            self._init_parameters()
-        return self._file_handler
-
-
 class ExcitingEvalqpParser(UnstructuredTextFileParser):
     def __init__(self):
         super().__init__(None)
@@ -204,11 +90,10 @@ class ExcitingEvalqpParser(UnstructuredTextFileParser):
 class BandstructureDatParser(DataTextFileParser):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._init_parameters()
         self._nspin = kwargs.get('nspin', None)
         self._energy_unit = kwargs.get('energy_unit', None)
 
-    def _init_parameters(self):
+    def init_parameters(self):
         # TODO make a parent clas for bandstructure dat and xml
         self._nspin = None
         self._nkpts_segment = None
@@ -295,11 +180,10 @@ class BandstructureDatParser(DataTextFileParser):
 class BandOutParser(DataTextFileParser):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._init_parameters()
         self._nspin = kwargs.get('nspin', None)
         self._energy_unit = kwargs.get('energy_unit', None)
 
-    def _init_parameters(self):
+    def init_parameters(self):
         self._nspin = None
         self._distances = None
         self._band_energies = None
@@ -365,7 +249,7 @@ class BandOutParser(DataTextFileParser):
         return self._neigs_segment
 
 
-class BandstructureXMLParser(FileParser):
+class BandstructureXMLParser(XMLParser):
     def __init__(self, **kwargs):
         # TODO make a parent class for dos and bandstructure
         super().__init__(None)
@@ -374,11 +258,10 @@ class BandstructureXMLParser(FileParser):
         self._energy_key = 'eval'
         self._vertex_key = 'vertex'
         self._band_key = 'band'
-        self._init_parameters()
         self._nspin = kwargs.get('nspin', None)
         self._energy_unit = kwargs.get('energy_unit', None)
 
-    def _init_parameters(self):
+    def init_parameters(self):
         self._nspin = None
         self._nkpts_segment = None
         self._neigs_segment = None
@@ -442,14 +325,6 @@ class BandstructureXMLParser(FileParser):
             self._neigs_segment = len(self.bands) // self.number_of_spin_channels
         return self._neigs_segment
 
-    @property
-    def root(self):
-        if self._file_handler is None:
-            self._file_handler = ElementTree.parse(self.mainfile).getroot()
-            self._init_parameters()
-
-        return self._file_handler
-
     def parse(self, key):
         if self._results is None:
             self._results = dict()
@@ -512,10 +387,9 @@ class BandstructureXMLParser(FileParser):
         self._results[key] = res
 
 
-class DOSXMLParser(FileParser):
+class DOSXMLParser(XMLParser):
     def __init__(self, **kwargs):
         super().__init__(None)
-        self._init_parameters()
         self._nspin_key = 'nspin'
         self._totaldos_key = 'totaldos'
         self._partialdos_key = 'partialdos'
@@ -527,7 +401,7 @@ class DOSXMLParser(FileParser):
         self._unit_key = 'unit'
         self._energy_unit = kwargs.get('energy_unit', None)
 
-    def _init_parameters(self):
+    def init_parameters(self):
         self._ndos = None
         self._natoms = None
         self._nspin = None
@@ -610,14 +484,6 @@ class DOSXMLParser(FileParser):
                 self._energies = pint.Quantity(self._energies, self.energy_unit)
 
         return self._energies
-
-    @property
-    def root(self):
-        if self._file_handler is None:
-            self._file_handler = ElementTree.parse(self.mainfile).getroot()
-            self._init_parameters()
-
-        return self._file_handler
 
     def _get_dos(self, diagram):
         dos = np.array(
@@ -1266,7 +1132,7 @@ class ExcitingParser(FairdiParser):
         self.bandstructure_dat_parser = BandstructureDatParser(energy_unit='hartree')
         self.band_out_parser = BandOutParser(energy_unit='hartree')
         self.info_gw_parser = GWInfoParser()
-        self.input_xml_parser = InputXMLParser()
+        self.input_xml_parser = XMLParser()
         self.data_xs_parser = DataTextFileParser()
         self.data_clathrate_parser = DataTextFileParser(dtype=str)
 
