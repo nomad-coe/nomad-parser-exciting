@@ -69,6 +69,14 @@ class x_exciting_section_atoms_group(MSection):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_MT_external_magnetic_field_atom_number'))
 
+    x_exciting_geometry_atom_positions = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        atomic positions
+        ''',
+        a_legacy=LegacyDefinition(name='x_exciting_geometry_atom_positions'))
+
     x_exciting_geometry_atom_positions_x = Quantity(
         type=np.dtype(np.float64),
         shape=[],

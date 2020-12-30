@@ -7,19 +7,18 @@ import logging
 from .metainfo import m_env
 from nomad.parsing.parser import FairdiParser
 
-from nomad.parsing.file_parser import UnstructuredTextFileParser, Quantity, XMLParser,\
-    DataTextFileParser
-from nomad.datamodel.metainfo.public import section_single_configuration_calculation,\
-    section_run, section_scf_iteration, section_system, section_method, section_XC_functionals,\
-    section_sampling_method, section_dos, section_atom_projected_dos, section_k_band,\
-    section_eigenvalues, section_k_band_segment, section_method_to_method_refs,\
-    section_calculation_to_calculation_refs, section_frame_sequence
+from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
+from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
+    ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, AtomProjectedDos,\
+    KBand, Eigenvalues, KBandSegment, MethodToMethodRefs, CalculationToCalculationRefs,\
+    FrameSequence
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
-    x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface
+    x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface,\
+    x_exciting_section_atoms_group
 
 
-class GWInfoParser(UnstructuredTextFileParser):
+class GWInfoParser(TextParser):
     def __init__(self):
         super().__init__(None)
 
@@ -43,30 +42,30 @@ class GWInfoParser(UnstructuredTextFileParser):
 
         self._quantities.append(
             Quantity(
-                'fermi_energy', r'G0W0\s*\-\s*\-+\s*[\s\S]*?Fermi energy\s*\:(\s*[\d\.]+)\s',
+                'fermi_energy', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Fermi energy\s*\:(\s*[\d\.]+)\s',
                 unit='hartree', repeats=False)
         )
 
         self._quantities.append(
             Quantity(
-                'direct_band_gap', r'G0W0\s*\-\s*\-+\s*[\s\S]*?Direct BandGap\s*\((?P<__unit>\w+)\)\s*\:(\s*[\d\.]+)\s',
+                'direct_band_gap', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Direct BandGap\s*\((?P<__unit>\w+)\)\s*\:(\s*[\d\.]+)\s',
                 repeats=False)
         )
 
         self._quantities.append(
             Quantity(
-                'fundamental_band_gap', r'G0W0\s*\-\s*\-+\s*[\s\S]*?Fundamental BandGap\s*\((?P<__unit>\w+)\)\s*\:(\s*[\d\.]+)\s',
+                'fundamental_band_gap', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Fundamental BandGap\s*\((?P<__unit>\w+)\)\s*\:(\s*[\d\.]+)\s',
                 repeats=False)
         )
 
         self._quantities.append(
             Quantity(
-                'optical_band_gap', r'G0W0\s*\-\s*\-+\s*[\s\S]*?Optical BandGap\s*\((?P<__unit>\w+)\)\s*\:(\s*[\d\.]+)\s',
+                'optical_band_gap', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Optical BandGap\s*\((?P<__unit>\w+)\)\s*\:(\s*[\d\.]+)\s',
                 repeats=False)
         )
 
 
-class ExcitingEvalqpParser(UnstructuredTextFileParser):
+class ExcitingEvalqpParser(TextParser):
     def __init__(self):
         super().__init__(None)
 
@@ -84,10 +83,10 @@ class ExcitingEvalqpParser(UnstructuredTextFileParser):
         self._quantities.append(
             Quantity(
                 'kpoints_eigenvalues', r'\s*k\-point \#\s*\d+:\s*([\d\s\.\-]+)([ \w\(\)]+\n)([\s\d\.\-Ee]+)',
-                str_operation=str_to_eigenvalue))
+                str_operation=str_to_eigenvalue, repeats=True))
 
 
-class BandstructureDatParser(DataTextFileParser):
+class BandstructureDatParser(DataTextParser):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._nspin = kwargs.get('nspin', None)
@@ -177,7 +176,7 @@ class BandstructureDatParser(DataTextFileParser):
         return self._neigs_segment
 
 
-class BandOutParser(DataTextFileParser):
+class BandOutParser(DataTextParser):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._nspin = kwargs.get('nspin', None)
@@ -258,6 +257,7 @@ class BandstructureXMLParser(XMLParser):
         self._energy_key = 'eval'
         self._vertex_key = 'vertex'
         self._band_key = 'band'
+        self._atom_key = 'atom'
         self._nspin = kwargs.get('nspin', None)
         self._energy_unit = kwargs.get('energy_unit', None)
 
@@ -268,6 +268,7 @@ class BandstructureXMLParser(XMLParser):
         self._bands = None
         self._vertices = None
         self._distances = None
+        self._species = None
 
     @property
     def distances(self):
@@ -276,7 +277,7 @@ class BandstructureXMLParser(XMLParser):
                 return
 
             self._distances = [
-                point.attrib.get(self._distance_key) for point in self.bands[0]]
+                point.attrib.get(self._distance_key) for point in self.bands[0][0]]
             self._distances = np.array(self._distances, dtype=float)
 
         return self._distances
@@ -284,12 +285,14 @@ class BandstructureXMLParser(XMLParser):
     @property
     def bands(self):
         if self._bands is None:
-            self._bands = self.root.findall('./%s' % self._band_key)
-            if not self._bands:
-                # check if atom-resolved
-                if self.root.findall('./species'):
-                    self.logger.error(
-                        'atom-resolved bandstructure currently not supported.')
+            bands = self.root.findall('./%s' % self._band_key)
+            self._bands = []
+            if bands:
+                self._bands.append(bands)
+            # add atom-resolved
+            bands_atom = self.root.findall('./*/%s' % self._atom_key)
+            for band in bands_atom:
+                self._bands.append(band.findall('./%s' % self._band_key))
         return self._bands
 
     @property
@@ -322,7 +325,7 @@ class BandstructureXMLParser(XMLParser):
     @property
     def number_of_band_segment_eigenvalues(self):
         if self._neigs_segment is None:
-            self._neigs_segment = len(self.bands) // self.number_of_spin_channels
+            self._neigs_segment = len(self.bands[0]) // self.number_of_spin_channels
         return self._neigs_segment
 
     def parse(self, key):
@@ -335,25 +338,28 @@ class BandstructureXMLParser(XMLParser):
         if key == 'band_energies':
             # TODO I am not certain about the format for the spin polarized case
             # I cannot find an example bandstructure file
-            # How about atom-resolved bandstructures?
+            # atom-resolved bandstructure are added as separate section_k_band
             res = []
-            start = 0
-            band_energies = np.zeros((
-                self.number_of_spin_channels, self.number_of_band_segment_eigenvalues,
-                len(self.distances)), dtype=float)
+            for n in range(len(self.bands)):
+                res_n = []
+                start = 0
+                band_energies = np.zeros((
+                    self.number_of_spin_channels, self.number_of_band_segment_eigenvalues,
+                    len(self.distances)), dtype=float)
 
-            for i in range(len(self.bands)):
-                band_energies[i % self.number_of_spin_channels][i] = np.array(
-                    [e.attrib.get(self._energy_key) for e in self.bands[i]])
+                for i in range(len(self.bands[n])):
+                    band_energies[i % self.number_of_spin_channels][i] = np.array(
+                        [e.attrib.get(self._energy_key) for e in self.bands[n][i]])
 
-            for nkpts_segment in self.number_of_k_points_per_segment:
-                end = start + nkpts_segment
-                band_energy = np.array([
-                    np.transpose(energy)[start:end] for energy in band_energies])
-                if self._energy_unit is not None:
-                    band_energy = pint.Quantity(band_energy, self._energy_unit)
-                res.append(band_energy)
-                start = end
+                for nkpts_segment in self.number_of_k_points_per_segment:
+                    end = start + nkpts_segment
+                    band_energy = np.array([
+                        np.transpose(energy)[start:end] for energy in band_energies])
+                    if self._energy_unit is not None:
+                        band_energy = pint.Quantity(band_energy, self._energy_unit)
+                    res_n.append(band_energy)
+                    start = end
+                res.append(res_n)
 
         elif key == 'band_k_points':
             res = []
@@ -545,7 +551,7 @@ class DOSXMLParser(XMLParser):
         self._results[key] = res
 
 
-class ExcitingFermiSurfaceBxsfParser(UnstructuredTextFileParser):
+class ExcitingFermiSurfaceBxsfParser(TextParser):
     def __init__(self):
         super().__init__(None)
 
@@ -573,11 +579,11 @@ class ExcitingFermiSurfaceBxsfParser(UnstructuredTextFileParser):
 
         self._quantities.append(
             Quantity(
-                'fermi_surface', r'BAND:\s*\d+\s*([\d\-\+\.Ee\s]+)\n *E*', unit='hartree')
-        )
+                'fermi_surface', r'BAND:\s*\d+\s*([\d\-\+\.Ee\s]+)\n *E*', unit='hartree',
+                repeats=True))
 
 
-class ExcitingEigenvalueParser(UnstructuredTextFileParser):
+class ExcitingEigenvalueParser(TextParser):
     def __init__(self):
         super().__init__(None)
 
@@ -585,7 +591,7 @@ class ExcitingEigenvalueParser(UnstructuredTextFileParser):
         self._quantities = []
         self._quantities.append(
             Quantity(
-                'k_points', r'\s*\d+\s*([\d\.Ee\- ]+):\s*k\-point'))
+                'k_points', r'\s*\d+\s*([\d\.Ee\- ]+):\s*k\-point', repeats=True))
 
         def str_to_eigenvalues(val_in):
             val = val_in[:val_in.rfind('\n \n')].strip()
@@ -603,12 +609,10 @@ class ExcitingEigenvalueParser(UnstructuredTextFileParser):
         self._quantities.append(
             Quantity(
                 'eigenvalues_occupancies', r'\(state\, eigenvalue and occupancy below\)\s*([\d\.Ee\-\s]+?(?:\n *\n))',
-                str_operation=str_to_eigenvalues
-            )
-        )
+                str_operation=str_to_eigenvalues, repeats=True))
 
 
-class ExcitingGWOutParser(UnstructuredTextFileParser):
+class ExcitingGWOutParser(TextParser):
     def __init__(self, mainfile, logger):
         super().__init__(mainfile, logger=logger)
 
@@ -616,61 +620,18 @@ class ExcitingGWOutParser(UnstructuredTextFileParser):
         self._quantities = []
 
 
-class ExcitingInfoParser(UnstructuredTextFileParser):
+class ExcitingInfoParser(TextParser):
     def __init__(self):
         super().__init__(None)
 
-    @staticmethod
-    def _re_pattern(head, key, value=r'[Ee\+\d\.\- ]+', tail='\n'):
-        return r'%s[\s\S]*?%s\s*\:*\=*\s*(%s)%s' % (head, key, value, tail)
+    def init_quantities(self):
+        def str_to_array(val_in):
+            val = [v.split(':')[-1].split() for v in val_in.strip().split('\n')]
+            val = val[0] if len(val) == 1 else val
+            return val
 
-    @staticmethod
-    def _str_to_quantity_tolerances(val_in):
-        return val_in.strip().replace('(', '').replace(')', '').split()
-
-    def _init_loop_quantities(self, loop_type):
-        # we use the same initialization in reading properties either for loop_type
-        # scf_iteraction, final_scf_iteration or final_optimization
-
-        # TODO check for header for other exciting versions
-        if loop_type == 'scf_iteration':
-            header = r'(?:I|SCF i)teration number'
-        elif loop_type == 'final_scf_iteration':
-            header = 'Convergence targets achieved. Performing final SCF iteration'
-        elif loop_type == 'final_optimization':
-            header = 'Force convergence target achieved'
-
-        self._quantities.append(
-            Quantity(
-                'energy_total_%s' % loop_type, self._re_pattern(header, r'[Tt]*otal energy'),
-                unit='hartree')
-        )
-
-        def str_to_energy_dict(val_in):
-            val = val_in.strip().split('\n')
-            energies = dict()
-            for v in val:
-                v = v.split(':')
-                if len(v) < 2:
-                    continue
-                energies[v[0].strip()] = pint.Quantity(float(v[1]), 'hartree')
-            return energies
-
-        self._quantities.append(
-            Quantity(
-                'energy_contributions_%s' % loop_type, self._re_pattern(
-                    header, r'(?:Energies|_)', value=r'[\-\s\w\.\:]+?', tail=r'\n *(?:DOS|Density)'),
-                str_operation=str_to_energy_dict
-            )
-        )
-
-        self._quantities.append(
-            Quantity(
-                'x_exciting_dos_fermi_%s' % loop_type,
-                self._re_pattern(
-                    header, r'DOS at Fermi energy \(states\/Ha\/cell\)'),
-                unit='1/hartree')
-        )
+        def str_to_symbols(val_in):
+            return [v.split()[2] for v in val_in.strip().split('\n')]
 
         def str_to_atom_properties_dict(val_in):
             unit = None
@@ -708,64 +669,31 @@ class ExcitingInfoParser(UnstructuredTextFileParser):
             properties['atom_resolved'] = atom_resolved
             return properties
 
-        self._quantities.append(
+        def str_to_quantity_tolerances(val_in):
+            return val_in.strip().replace('(', '').replace(')', '').split()
+
+        def str_to_energy_dict(val_in):
+            val = val_in.strip().split('\n')
+            energies = dict()
+            for v in val:
+                v = v.split(':')
+                if len(v) < 2:
+                    continue
+                energies[v[0].strip()] = pint.Quantity(float(v[1]), 'hartree')
+            return energies
+
+        self._quantities = [Quantity(
+            'program_version', r'\s*EXCITING\s*([\w\-\(\)\. ]+)\s*started', repeats=False,
+            dtype=str, flatten=False)]
+
+        initialization_quantities = [
             Quantity(
-                'charge_contributions_%s' % loop_type, self._re_pattern(
-                    header, r'(?:Charges|Electron charges)', value=r'[\-\s\w\.\:\(\)]+?',
-                    tail=r'\n *[A-Z\+]'),
-                str_operation=str_to_atom_properties_dict)
-        )
-
-        self._quantities.append(
-            Quantity(
-                'moment_contributions_%s' % loop_type, self._re_pattern(
-                    header, r'Moments', value=r'[\-\s\w\.\:\(\)]+?',
-                    tail=r'\n *[A-Z\+]'),
-                str_operation=str_to_atom_properties_dict)
-        )
-
-        self._miscellaneous_keys_mapping = {
-            'x_exciting_gap': (r'Estimated fundamental gap', 'hartree'),
-            'time': (r'Wall time \(seconds\)', 's')}
-
-        for name, key_unit in self._miscellaneous_keys_mapping.items():
-            self._quantities.append(
-                Quantity(
-                    '%s_%s' % (name, loop_type), self._re_pattern(
-                        header, key_unit[0]), unit=key_unit[1])
-            )
-
-        self._convergence_keys_mapping = {
-            'x_exciting_effective_potential_convergence': (
-                r'RMS change in effective potential \(target\)', 'hartree'),
-            'x_exciting_energy_convergence': (
-                r'Absolute change in total energy\s*\(target\)', 'hartree'),
-            'x_exciting_charge_convergence': (
-                r'Charge distance\s*\(target\)', 'elementary_charge'),
-            'x_exciting_IBS_force_convergence': (
-                r'Abs\. change in max\-nonIBS\-force\s*\(target\)', 'hartree/bohr')}
-
-        for name, key_unit in self._convergence_keys_mapping.items():
-            self._quantities.append(
-                Quantity(
-                    '%s_%s' % (name, loop_type), self._re_pattern(
-                        header, key_unit[0], value=r'[\(\)\d\.\-\+Ee ]+'),
-                    str_operation=self._str_to_quantity_tolerances, unit=key_unit[1])
-            )
-
-    def init_quantities(self):
-        def str_to_array(val_in):
-            val = [v.split(':')[-1].split() for v in val_in.strip().split('\n')]
-            val = val[0] if len(val) == 1 else val
-            return val
-
-        self._quantities = [
-            Quantity('program_version', r'\s*EXCITING\s*([\w\-\(\)\. ]+)\s*started', repeats=False),
-            Quantity(
-                'lattice_vectors', r'Lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
+                'lattice_vectors',
+                r'Lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
                 str_operation=str_to_array, unit='bohr', repeats=False),
             Quantity(
-                'lattice_vectors_reciprocal', r'Reciprocal lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
+                'lattice_vectors_reciprocal',
+                r'Reciprocal lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
                 str_operation=str_to_array, unit='1/bohr', repeats=False),
         ]
 
@@ -790,7 +718,7 @@ class ExcitingInfoParser(UnstructuredTextFileParser):
             'x_exciting_electronic_charge': ('Total electronic charge', 'elementary_charge'),
             'x_exciting_core_charge_initial': ('Total core charge', 'elementary_charge'),
             'x_exciting_valence_charge_initial': ('Total valence charge', 'elementary_charge'),
-            'x_exciting_wigner_radius': (r'Effective Wigner radius, \_s', 'bohr'),
+            'x_exciting_wigner_radius': (r'Effective Wigner radius, r\_s', 'bohr'),
             'x_exciting_empty_states': ('Number of empty states', None),
             'x_exciting_valence_states': ('Total number of valence states', None),
             'x_exciting_hamiltonian_size': ('Maximum Hamiltonian size', None),
@@ -803,13 +731,13 @@ class ExcitingInfoParser(UnstructuredTextFileParser):
             'smearing_width': ('Smearing width', None)}
 
         for name, key_unit in self._system_keys_mapping.items():
-            self._quantities.append(
+            initialization_quantities.append(
                 Quantity(
                     name, r'%s\s*:\s*([\s\S]*?)\n' % key_unit[0], unit=key_unit[1], repeats=False)
             )
 
         for name, key_unit in self._method_keys_mapping.items():
-            self._quantities.append(
+            initialization_quantities.append(
                 Quantity(
                     name, r'%s\s*:\s*([\s\S]*?)\n' % key_unit[0], unit=key_unit[1], repeats=False)
             )
@@ -845,13 +773,277 @@ class ExcitingInfoParser(UnstructuredTextFileParser):
             [r'%s\s*:(\s*[\s\S]*?)\n *' % p for p in species_prop]
         ) + r'\s*atomic positions( \(\w+\))\s*[\, \w\(\)]*:(\s*[0-9\-\:\.\s]+)'
 
-        self._quantities.append(
-            Quantity('species', species_pattern, str_operation=get_species_prop)
+        initialization_quantities.append(Quantity(
+            'species', species_pattern, str_operation=get_species_prop, repeats=True,
+            convert=False)
         )
 
-        self.quantities.append(
-            Quantity('potential_mixing', r'Using ([\w ]+) potential mixing')
+        initialization_quantities.append(Quantity(
+            'potential_mixing', r'Using ([\w ]+) potential mixing', repeats=False, flatten=False)
         )
+
+        self._quantities.append(Quantity(
+            'initialization',
+            r'Starting initialization([\s\S]+?)Ending initialization', repeats=False,
+            sub_parser=TextParser(quantities=initialization_quantities))
+        )
+
+        scf_quantities = [
+            Quantity(
+                'energy_total', r'[Tt]*otal energy\s*:\s*([\-\d\.Ee]+)', repeats=False,
+                dtype=float, unit='hartree'),
+            Quantity(
+                'energy_contributions', r'(?:Energies|_)([\-\s\w\.\:]+?)\n *(?:DOS|Density)',
+                str_operation=str_to_energy_dict, repeats=False, convert=False),
+            Quantity(
+                'x_exciting_dos_fermi',
+                r'DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*([\-\d\.Ee]+)',
+                repeats=False, dtype=float, unit='1/hartree'),
+            Quantity(
+                'charge_contributions',
+                r'(?:Charges|Electron charges\s*\:*\s*)([\-\s\w\.\:\(\)]+?)\n *[A-Z\+]',
+                str_operation=str_to_atom_properties_dict, repeats=False, convert=False),
+            Quantity(
+                'moment_contributions',
+                r'(?:Moments\s*\:*\s*)([\-\s\w\.\:\(\)]+?)\n *[A-Z\+]',
+                str_operation=str_to_atom_properties_dict, repeats=False, convert=False)]
+
+        self._miscellaneous_keys_mapping = {
+            'x_exciting_gap': (r'Estimated fundamental gap', 'hartree'),
+            'time': (r'Wall time \(seconds\)', 's')}
+
+        for name, key_unit in self._miscellaneous_keys_mapping.items():
+            scf_quantities.append(Quantity(
+                name, r'%s\s*\:*\s*([\-\d\.Ee]+)' % key_unit[0], repeats=False,
+                unit=key_unit[1]))
+
+        self._convergence_keys_mapping = {
+            'x_exciting_effective_potential_convergence': (
+                r'RMS change in effective potential \(target\)', 'hartree'),
+            'x_exciting_energy_convergence': (
+                r'Absolute change in total energy\s*\(target\)', 'hartree'),
+            'x_exciting_charge_convergence': (
+                r'Charge distance\s*\(target\)', 'elementary_charge'),
+            'x_exciting_IBS_force_convergence': (
+                r'Abs\. change in max\-nonIBS\-force\s*\(target\)', 'hartree/bohr')}
+
+        for name, key_unit in self._convergence_keys_mapping.items():
+            scf_quantities.append(Quantity(
+                name, r'%s\s*\:*\s*([\(\)\d\.\-\+Ee ]+)' % key_unit[0],
+                str_operation=str_to_quantity_tolerances, unit=key_unit[1], repeats=False))
+
+        self._quantities.append(Quantity(
+            'groundstate',
+            r'Groundstate module started([\s\S]+?)Groundstate module stopped',
+            sub_parser=TextParser(quantities=[
+                Quantity(
+                    'scf_iteration', r'(?:I|SCF i)teration number :([\s\S]+?)(?:\n *\n\+{10})',
+                    sub_parser=TextParser(quantities=scf_quantities), repeats=True),
+                Quantity(
+                    'final',
+                    r'(?:Convergence targets achieved\. Performing final SCF iteration|Reached self-consistent loops maximum)([\s\S]+?)(\n *\n\+{10})',
+                    sub_parser=TextParser(quantities=scf_quantities), repeats=False),
+                Quantity(
+                    'positions_format', r'Atomic positions\s*\(([a-z]+)\)', repeats=False),
+                Quantity(
+                    'symbols', r'Atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
+                    repeats=False, str_operation=str_to_symbols, dtype=str),
+                Quantity(
+                    'positions', r'Atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
+                    repeats=False, str_operation=str_to_array, dtype=float),
+                Quantity(
+                    'forces', r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
+                    repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr')
+            ]), repeats=False))
+
+        optimization_quantities = [
+            Quantity(
+                'positions_format', r'Atomic positions at this step\s*\(([a-z]+)\)', repeats=False),
+            Quantity(
+                'symbols',
+                r'Atomic positions at this step \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
+                repeats=False, str_operation=str_to_symbols, dtype=str),
+            Quantity(
+                'positions',
+                r'Atomic positions at this step \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
+                repeats=False, str_operation=str_to_array, dtype=float),
+            Quantity(
+                'forces',
+                r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Time',
+                repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr'),
+            Quantity(
+                'step', r'Optimization step\s*(\d+)', repeats=False, dtype=int),
+            Quantity(
+                'method', r'method\s*=\s*(\w+)', repeats=False, dtype=str),
+            Quantity(
+                'n_scf_iterations',
+                r'Number of total scf iterations\s*\:\s*(\d+)', repeats=False, dtype=int),
+            Quantity(
+                'force_convergence',
+                r'Maximum force magnitude\s*\(target\)\s*\:(\s*[\(\)\d\.\-\+Ee ]+)',
+                str_operation=str_to_quantity_tolerances, unit='hartree/bohr', repeats=False,
+                dtype=float),
+            Quantity(
+                'energy_total', r'Total energy at this optimization step\s*\:\s*([\-\d\.Ee]+)',
+                unit='hartree', repeats=False, dtype=float),
+            Quantity(
+                'time', r'Time spent in this optimization step\s*\:\s*([\-\d\.Ee]+)\s*seconds',
+                unit='s', repeats=False, dtype=float)
+        ]
+
+        self._quantities.append(Quantity(
+            'structure_optimization',
+            r'Structure-optimization module started([\s\S]+?)Structure-optimization module stopped',
+            sub_parser=TextParser(quantities=[
+                Quantity(
+                    'optimization_step',
+                    r'(Optimization step\s*\d+[\s\S]+?)(?:\n \n[-+]{10})',
+                    sub_parser=TextParser(quantities=optimization_quantities),
+                    repeats=True),
+                Quantity(
+                    'final',
+                    r'Force convergence target achieved([\s\S]+?)Optimized',
+                    sub_parser=TextParser(quantities=scf_quantities),
+                    repeats=False),
+                Quantity(
+                    'positions_format',
+                    r'Optimized atomic positions\s*\(([a-z]+)\)', repeats=False),
+                Quantity(
+                    'symbols',
+                    r'Optimized atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
+                    repeats=False, str_operation=str_to_symbols, dtype=str),
+                Quantity(
+                    'positions',
+                    r'Optimized atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
+                    str_operation=str_to_array, repeats=False, dtpye=float),
+                Quantity(
+                    'forces',
+                    r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
+                    repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr'),
+            ]), repeats=False))
+
+    def get_atom_labels(self, section):
+        labels = section.get('symbols')
+
+        if labels is None:
+            # we get it by concatenating species symbols
+            species = self.get('initialization').get('species', [])
+            labels = []
+            for specie in species:
+                labels += [specie.get('symbol')] * len(specie.get('positions'))
+        return labels
+
+    def get_positions_format(self, section):
+        positions_format = section.get('positions_format')
+
+        if positions_format is None:
+            species = self.get_initialization_parameter('species', [])
+            for specie in species:
+                positions_format = specie.get('positions_format', None)
+                if positions_format is not None:
+                    break
+
+        return positions_format
+
+    def get_atom_positions(self, section={}, positions=None, positions_format=None):
+        positions = positions if positions is not None else section.get('positions')
+
+        if positions is None:
+            species = self.get_initialization_parameter('species', [])
+            if species:
+                positions = np.vstack([s.get('positions') for s in species])
+
+        if positions is None:
+            return
+
+        positions = np.array(positions)
+        positions_format = positions_format if positions_format is not None else self.get_positions_format(section)
+
+        if positions_format == 'lattice':
+            cell = self.get_initialization_parameter('lattice_vectors')
+            if cell is None:
+                return
+            positions = np.dot(positions, cell.magnitude)
+
+        return pint.Quantity(positions, 'bohr')
+
+    def get_scf_threshold(self, name):
+        return self.get('groundstate', {}).get('scf_iteration', [{}])[-1].get(
+            name, [None, None])[-1]
+
+    def get_scf_quantity(self, name):
+        n_scf = len(self.get('energy_total_scf_iteration', []))
+        quantity = self.get('%s_scf_iteration' % name)
+        if quantity is None:
+            return
+
+        # this is really problematic if some scf steps dont have the quantity
+        # the only thing that we can do is to assume that the first steps are the
+        # ones with the missing quantity
+        if len(quantity) < n_scf:
+            quantity = [None] * (n_scf - len(quantity)) + quantity
+
+        return quantity
+
+    def get_xc_functional_name(self):
+        xc_functional_map = {
+            2: ['LDA_C_PZ', 'LDA_X_PZ'],
+            3: ['LDA_C_PW', 'LDA_X_PZ'],
+            4: ['LDA_C_XALPHA'],
+            5: ['LDA_C_VBH'],
+            20: ['GGA_C_PBE', 'GGA_X_PBE'],
+            21: ['GGA_C_PBE', 'GGA_X_PBE_R'],
+            22: ['GGA_C_PBE_SOL', 'GGA_X_PBE_SOL'],
+            26: ['GGA_C_PBE', 'GGA_X_WC'],
+            30: ['GGA_C_AM05', 'GGA_C_AM05'],
+            300: ['GGA_C_BGCP', 'GGA_X_PBE'],
+            406: ['HYB_GGA_XC_PBEH']}
+
+        xc_functional = self.get('initialization').get('x_exciting_xc_functional', None)
+        if xc_functional is None:
+            return []
+
+        name = xc_functional_map.get(xc_functional, [])
+
+        return name
+
+    @property
+    def n_optimization_steps(self):
+        return len(self.get('structure_optimization', {}).get('optimization_step', []))
+
+    def get_number_of_spin_channels(self):
+        spin_treatment = self.get('initialization').get('x_exciting_spin_treatment', [
+            'spin-unpolarised'])[0]
+        n_spin = 1 if spin_treatment.lower() == 'spin-unpolarised' else 2
+        return n_spin
+
+    def get_unit_cell_volume(self):
+        return self.get('initialization').get('x_exciting_unit_cell_volume')
+
+    def get_initialization_parameter(self, key, default=None):
+        return self.get('initialization', {}).get(key, default)
+
+
+class ExcitingParser(FairdiParser):
+    def __init__(self):
+        super().__init__(
+            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
+            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
+        self._metainfo_env = m_env
+
+        self.info_parser = ExcitingInfoParser()
+        self.dos_parser = DOSXMLParser(energy_unit='hartree')
+        self.bandstructure_parser = BandstructureXMLParser(energy_unit='hartree')
+        self.eigval_parser = ExcitingEigenvalueParser()
+        self.fermisurf_parser = ExcitingFermiSurfaceBxsfParser()
+        self.evalqp_parser = ExcitingEvalqpParser()
+        self.dos_out_parser = DataTextParser()
+        self.bandstructure_dat_parser = BandstructureDatParser(energy_unit='hartree')
+        self.band_out_parser = BandOutParser(energy_unit='hartree')
+        self.info_gw_parser = GWInfoParser()
+        self.input_xml_parser = XMLParser()
+        self.data_xs_parser = DataTextParser()
+        self.data_clathrate_parser = DataTextParser(dtype=str)
 
         # different names for different versions of exciting
         self._energy_keys_mapping = {
@@ -890,252 +1082,6 @@ class ExcitingInfoParser(UnstructuredTextFileParser):
             'x_exciting_section_MT_moment_atom': ['atom_resolved']
         }
 
-        self._init_loop_quantities('scf_iteration')
-        self._init_loop_quantities('final_scf_iteration')
-
-        def str_to_symbols(val_in):
-            return [v.split()[2] for v in val_in.strip().split('\n')]
-
-        self._quantities.append(
-            Quantity(
-                'positions_format_final_scf_iteration', re_pattern=self._re_pattern(
-                    r'Self-consistent loop stopped', r'Atomic positions\s*\(',
-                    value=r'[a-z]+', tail=r'\)'))
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_symbols_final_scf_iteration', re_pattern=self._re_pattern(
-                    r'Self-consistent loop stopped', r'Atomic positions \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Total'),
-                str_operation=str_to_symbols)
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_positions_final_scf_iteration', re_pattern=self._re_pattern(
-                    r'Self-consistent loop stopped', r'Atomic positions \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Total'),
-                str_operation=str_to_array)
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_forces_final_scf_iteration', re_pattern=self._re_pattern(
-                    r'Self-consistent loop stopped', r'Total atomic forces including IBS \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Atomic'),
-                str_operation=str_to_array, unit='hartree/bohr')
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_positions_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Atomic positions at this step \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Total'),
-                str_operation=str_to_array)
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_forces_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Total atomic forces including IBS \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Time'),
-                str_operation=str_to_array, unit='hartree/bohr')
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_symbols_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Atomic positions at this step \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Total'),
-                str_operation=str_to_symbols)
-        )
-
-        self._quantities.append(
-            Quantity(
-                'nstep_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'', value=r'\d+', tail=r'\s*\(method'))
-        )
-
-        self._quantities.append(
-            Quantity(
-                'method_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'method', value=r'\w+', tail=r'\)'))
-        )
-
-        self._quantities.append(
-            Quantity(
-                'n_scf_iterations_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Number of total scf iterations', value=r'\d+',))
-        )
-
-        self._quantities.append(
-            Quantity(
-                'force_convergence_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Maximum force magnitude\s*\(target\)',
-                    value=r'[\(\)\d\.\-\+Ee ]+'), str_operation=self._str_to_quantity_tolerances,
-                unit='hartree/bohr')
-        )
-
-        self._quantities.append(
-            Quantity(
-                'total_energy_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Total energy at this optimization step'),
-                unit='hartree')
-        )
-
-        self._quantities.append(
-            Quantity(
-                'time_optimization', re_pattern=self._re_pattern(
-                    r'Optimization step', r'Time spent in this optimization step', tail='seconds'),
-                unit='s')
-        )
-
-        self._init_loop_quantities('final_optimization')
-
-        self._quantities.append(
-            Quantity(
-                'atom_positions_final_optimization', re_pattern=self._re_pattern(
-                    r'Force convergence target achieved', r'Optimized atomic positions \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Total'),
-                str_operation=str_to_array)
-        )
-
-        self._quantities.append(
-            Quantity(
-                'atom_forces_final_optimization', re_pattern=self._re_pattern(
-                    r'Force convergence target achieved', r'Total atomic forces including IBS \(\w+\)',
-                    value=r'\s*atom[\-\s\w\.\:]*?', tail=r'\n *Atomic'),
-                str_operation=str_to_array, unit='hartree/bohr')
-        )
-
-    def get_atom_labels(self):
-        # atom labels do not change for all configurations?
-        # first, we get it from the initial ground state configuration
-        labels = self.get('atom_symbols_final_scf_iteration', [None])[0]
-
-        if labels is None:
-            # we get it by concatenating species symbols
-            species = self.get('species', [])
-            labels = []
-            for specie in species:
-                labels += [specie.get('symbol')] * len(specie.get('positions'))
-        return labels
-
-    def get_positions_format(self):
-        positions_format = self.get('positions_format_final_scf_iteration', [None])[0]
-
-        if positions_format is None:
-            species = self.get('species', [])
-            for specie in species:
-                positions_format = specie.get('positions_format', None)
-                if positions_format is not None:
-                    break
-
-        return positions_format
-
-    def get_atom_positions(self, loop_type, index):
-        positions = self.get('atom_positions_%s' % loop_type, [None] * (index + 1))[index]
-
-        if positions is None and loop_type == 'final_scf_iteration':
-            # we get it from initial positions in species
-            species = self.get('species', [])
-            if species:
-                positions = np.vstack([s.get('positions') for s in species])
-
-        if positions is None:
-            return
-
-        positions = np.array(positions)
-        positions_format = self.get_positions_format()
-
-        if positions_format == 'lattice':
-            cell = self.get('lattice_vectors', None)
-            if cell is None:
-                return
-            positions = np.dot(positions, cell.magnitude)
-
-        return pint.Quantity(positions, 'bohr')
-
-    def get_scf_threshold(self, name):
-        thresholds = self.get('%s_scf_iteration' % name, None)
-        if thresholds is None:
-            return
-
-        for i in range(len(thresholds)):
-            if thresholds[i] is not None:
-                return thresholds[i][1]
-
-    def get_scf_quantity(self, name):
-        n_scf = len(self.get('energy_total_scf_iteration', []))
-        quantity = self.get('%s_scf_iteration' % name)
-        if quantity is None:
-            return
-
-        # this is really problematic if some scf steps dont have the quantity
-        # the only thing that we can do is to assume that the first steps are the
-        # ones with the missing quantity
-        if len(quantity) < n_scf:
-            quantity = [None] * (n_scf - len(quantity)) + quantity
-
-        return quantity
-
-    def get_xc_functional_name(self):
-        xc_functional_map = {
-            2: ['LDA_C_PZ', 'LDA_X_PZ'],
-            3: ['LDA_C_PW', 'LDA_X_PZ'],
-            4: ['LDA_C_XALPHA'],
-            5: ['LDA_C_VBH'],
-            20: ['GGA_C_PBE', 'GGA_X_PBE'],
-            21: ['GGA_C_PBE', 'GGA_X_PBE_R'],
-            22: ['GGA_C_PBE_SOL', 'GGA_X_PBE_SOL'],
-            26: ['GGA_C_PBE', 'GGA_X_WC'],
-            30: ['GGA_C_AM05', 'GGA_C_AM05'],
-            300: ['GGA_C_BGCP', 'GGA_X_PBE'],
-            406: ['HYB_GGA_XC_PBEH']}
-
-        xc_functional = self.get('x_exciting_xc_functional', None)
-        if xc_functional is None:
-            return []
-
-        name = xc_functional_map.get(xc_functional, [])
-
-        return name
-
-    @property
-    def n_optimization_steps(self):
-        return len(self.get('nstep_optimization', []))
-
-    def get_number_of_spin_channels(self):
-        spin_treatment = self.get('x_exciting_spin_treatment', ['spin-unpolarised'])[0]
-        n_spin = 1 if spin_treatment.lower() == 'spin-unpolarised' else 2
-        return n_spin
-
-    def get_unit_cell_volume(self):
-        return self.get('x_exciting_unit_cell_volume')
-
-
-class ExcitingParser(FairdiParser):
-    def __init__(self):
-        super().__init__(
-            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
-            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
-        self._metainfo_env = m_env
-
-        self.info_parser = ExcitingInfoParser()
-        self.dos_parser = DOSXMLParser(energy_unit='hartree')
-        self.bandstructure_parser = BandstructureXMLParser(energy_unit='hartree')
-        self.eigval_parser = ExcitingEigenvalueParser()
-        self.fermisurf_parser = ExcitingFermiSurfaceBxsfParser()
-        self.evalqp_parser = ExcitingEvalqpParser()
-        self.dos_out_parser = DataTextFileParser()
-        self.bandstructure_dat_parser = BandstructureDatParser(energy_unit='hartree')
-        self.band_out_parser = BandOutParser(energy_unit='hartree')
-        self.info_gw_parser = GWInfoParser()
-        self.input_xml_parser = XMLParser()
-        self.data_xs_parser = DataTextFileParser()
-        self.data_clathrate_parser = DataTextFileParser(dtype=str)
-
     def get_exciting_files(self, default):
         filename = os.path.join(self.info_parser.maindir, default)
         if not os.path.isfile(filename):
@@ -1143,7 +1089,6 @@ class ExcitingParser(FairdiParser):
             mainfile_base = os.path.basename(
                 self.info_parser.mainfile).split('.')[0].replace('INFO', '')
             file_base = default.split('.')[0]
-
             options = [
                 f for f in os.listdir(
                     self.info_parser.maindir) if file_base in f and mainfile_base in f]
@@ -1161,7 +1106,7 @@ class ExcitingParser(FairdiParser):
         if self.dos_parser.get('totaldos', None) is None:
             return
 
-        sec_dos = sec_scc.m_create(section_dos)
+        sec_dos = sec_scc.m_create(Dos)
         sec_dos.dos_kind = 'electronic'
         sec_dos.number_of_dos_values = self.dos_parser.number_of_dos
         sec_dos.dos_energies = self.dos_parser.energies
@@ -1175,7 +1120,7 @@ class ExcitingParser(FairdiParser):
 
         partialdos = partialdos * self.info_parser.get_unit_cell_volume()
         partialdos = partialdos.to('m**3/J').magnitude
-        sec_atom_projected_dos = sec_scc.m_create(section_atom_projected_dos)
+        sec_atom_projected_dos = sec_scc.m_create(AtomProjectedDos)
         sec_atom_projected_dos.atom_projected_dos_m_kind = 'spherical'
         sec_atom_projected_dos.number_of_lm_atom_projected_dos = self.dos_parser.number_of_lm
         sec_atom_projected_dos.atom_projected_dos_energies = self.dos_parser.energies
@@ -1185,40 +1130,39 @@ class ExcitingParser(FairdiParser):
         # we need to set nspin again as this is overwritten when setting mainfile
         self.bandstructure_parser._nspin = self.info_parser.get_number_of_spin_channels()
 
-        band_energies = self.bandstructure_parser.get('band_energies', None)
-        if band_energies is None:
-            return
+        band_energies = self.bandstructure_parser.get('band_energies', [])
 
-        sec_k_band = sec_scc.m_create(section_k_band)
-        sec_k_band.band_structure_kind = 'electronic'
+        for n in range(len(band_energies)):
+            sec_k_band = sec_scc.m_create(KBand)
+            sec_k_band.band_structure_kind = 'electronic'
 
-        # imho the number of eigenvalues should also be property of the section_k_band
-        # since because the band structure data is not necessarily run with the
-        # same settings as that of the eigevalues
-        if not sec_scc.section_eigenvalues:
-            sec_eigenvalues = sec_scc.m_create(section_eigenvalues)
-        else:
-            sec_eigenvalues = sec_scc.section_eigenvalues[-1]
-        sec_eigenvalues.number_of_band_segment_eigenvalues =\
-            self.bandstructure_parser.number_of_band_segment_eigenvalues
+            # imho the number of eigenvalues should also be property of the section_k_band
+            # since because the band structure data is not necessarily run with the
+            # same settings as that of the eigevalues
+            if not sec_scc.section_eigenvalues:
+                sec_eigenvalues = sec_scc.m_create(Eigenvalues)
+            else:
+                sec_eigenvalues = sec_scc.section_eigenvalues[-1]
+            sec_eigenvalues.number_of_band_segment_eigenvalues =\
+                self.bandstructure_parser.number_of_band_segment_eigenvalues
 
-        band_k_points = self.bandstructure_parser.get('band_k_points')
-        nkpts_segment = self.bandstructure_parser.number_of_k_points_per_segment
-        band_seg_labels = self.bandstructure_parser.get('band_segm_labels')
-        band_seg_start_end = self.bandstructure_parser.get('band_segm_start_end')
-        for nb in range(len(band_energies)):
-            sec_k_band_segment = sec_k_band.m_create(section_k_band_segment)
-            sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
-            sec_k_band_segment.band_k_points = band_k_points[nb]
-            sec_k_band_segment.band_energies = band_energies[nb]
-            sec_k_band_segment.band_segm_labels = band_seg_labels[nb]
-            sec_k_band_segment.band_segm_start_end = band_seg_start_end[nb]
+            band_k_points = self.bandstructure_parser.get('band_k_points')
+            nkpts_segment = self.bandstructure_parser.number_of_k_points_per_segment
+            band_seg_labels = self.bandstructure_parser.get('band_segm_labels')
+            band_seg_start_end = self.bandstructure_parser.get('band_segm_start_end')
+            for nb in range(len(band_energies[n])):
+                sec_k_band_segment = sec_k_band.m_create(KBandSegment)
+                sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
+                sec_k_band_segment.band_k_points = band_k_points[nb]
+                sec_k_band_segment.band_energies = band_energies[n][nb]
+                sec_k_band_segment.band_segm_labels = band_seg_labels[nb]
+                sec_k_band_segment.band_segm_start_end = band_seg_start_end[nb]
 
     def _parse_eigenvalues(self, sec_scc):
         if self.eigval_parser.get('eigenvalues_occupancies', None) is None:
             return
 
-        sec_eigenvalues = sec_scc.m_create(section_eigenvalues)
+        sec_eigenvalues = sec_scc.m_create(Eigenvalues)
 
         def get_data(key):
             data = self.eigval_parser.get('eigenvalues_occupancies')
@@ -1259,7 +1203,7 @@ class ExcitingParser(FairdiParser):
         if data is None:
             return
 
-        sec_eigenvalues = sec_scc.m_create(section_eigenvalues)
+        sec_eigenvalues = sec_scc.m_create(Eigenvalues)
 
         def get_data(key):
             if key == 'k_points':
@@ -1301,7 +1245,7 @@ class ExcitingParser(FairdiParser):
             self.logger.error('Found inconsistent number of spin channels in gw dos!')
             return
 
-        sec_dos = sec_scc.m_create(section_dos)
+        sec_dos = sec_scc.m_create(Dos)
         sec_dos.number_of_dos_values = len(data)
 
         data = np.transpose(data)
@@ -1318,13 +1262,13 @@ class ExcitingParser(FairdiParser):
         if band_energies is None:
             return
 
-        sec_k_band = sec_scc.m_create(section_k_band)
+        sec_k_band = sec_scc.m_create(KBand)
         sec_k_band.band_structure_kind = 'electronic'
 
         band_k_points = self.bandstructure_dat_parser.band_k_points
         nkpts_segment = self.bandstructure_dat_parser.number_of_k_points_per_segment
         for nb in range(len(band_energies)):
-            sec_k_band_segment = sec_k_band.m_create(section_k_band_segment)
+            sec_k_band_segment = sec_k_band.m_create(KBandSegment)
             sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
             sec_k_band_segment.band_k_points = band_k_points[nb]
             sec_k_band_segment.band_energies = band_energies[nb]
@@ -1336,20 +1280,17 @@ class ExcitingParser(FairdiParser):
         if band_energies is None:
             return
 
-        sec_k_band = sec_scc.m_create(section_k_band)
-        sec_k_band.band_structure_kind = 'electronic'
-
-        sec_k_band = sec_scc.m_create(section_k_band)
+        sec_k_band = sec_scc.m_create(KBand)
         sec_k_band.band_structure_kind = 'electronic'
 
         nkpts_segment = self.band_out_parser.number_of_k_points_per_segment
         for nb in range(len(band_energies)):
-            sec_k_band_segment = sec_k_band.m_create(section_k_band_segment)
+            sec_k_band_segment = sec_k_band.m_create(KBandSegment)
             sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
             sec_k_band_segment.band_energies = band_energies[nb]
 
     def parse_file(self, name, section):
-        # TODO add support for info.xml
+        # TODO add support for info.xml, wannier.out
         if name.startswith('dos') and name.endswith('xml'):
             parser = self.dos_parser
             parser_function = self._parse_dos
@@ -1415,7 +1356,7 @@ class ExcitingParser(FairdiParser):
         sec_method.x_exciting_xs_ngridk = self.input_xml_parser.get('xs/ngridk', [1, 1, 1])
         rgkmax = self.input_xml_parser.get('xs/rgkmax', None)
         if rgkmax is None:
-            rgkmax = self.info_parser.get('x_exciting_rgkmax', 0.)
+            rgkmax = self.info_parser.get_initialization_parameter('x_exciting_rgkmax', 0.)
         sec_method.x_exciting_xs_rgkmax = rgkmax
         sec_method.x_exciting_xs_scissor = self.input_xml_parser.get('xs/scissor', 0.0)
         sec_method.x_exciting_xs_vkloff = self.input_xml_parser.get('xs/vkloff', [0., 0., 0.])
@@ -1428,7 +1369,7 @@ class ExcitingParser(FairdiParser):
                 'xs/screening/ngridk', [0, 0, 0])
             rgkmax = self.input_xml_parser.get('xs/screening/rgkmax', None)
             if rgkmax is None:
-                rgkmax = self.info_parser.get('x_exciting_rgkmax', 0.)
+                rgkmax = self.info_parser.get_initialization_parameter('x_exciting_rgkmax', 0.)
             sec_method.x_exciting_xs_screening_rgkmax = rgkmax
             sec_method.x_exciting_xs_screening_type = self.input_xml_parser.get(
                 'xs/screening/screentype', 'full')
@@ -1440,7 +1381,7 @@ class ExcitingParser(FairdiParser):
                 'xs/BSE/lmaxdielt', 14)
             rgkmax = self.input_xml_parser.get('xs/BSE/rgkmax', None)
             if rgkmax is None:
-                rgkmax = self.info_parser.get('x_exciting_rgkmax', 0)
+                rgkmax = self.info_parser.get_initialization_parameter('x_exciting_rgkmax', 0)
 
             sec_method.x_exciting_xs_bse_rgkmax = rgkmax
             sec_method.x_exciting_xs_bse_sciavbd = self.input_xml_parser.get(
@@ -1587,14 +1528,14 @@ class ExcitingParser(FairdiParser):
                     sccs.append(None)
                     continue
                 if quantity == quantity[0]:
-                    sec_scc = sec_run.m_create(section_single_configuration_calculation)
+                    sec_scc = sec_run.m_create(SingleConfigurationCalculation)
                 else:
                     sec_scc = sccs[i]
                     if sec_scc is None:
                         # This is the case when there is a mismatch between files
                         self.logger.warn(
                             'Mismatch in EXCITON and %s files' % quantity)
-                        sec_scc = sec_run.m_create(section_single_configuration_calculation)
+                        sec_scc = sec_run.m_create(SingleConfigurationCalculation)
                 if quantity == 'EXCITON':
                     parse_exciton(sec_scc, data)
                 elif quantity == 'EPSILON':
@@ -1654,7 +1595,7 @@ class ExcitingParser(FairdiParser):
                     continue
 
                 if quantity == 'EPSILON' and ext == 'FXC':
-                    sec_scc = sec_run.m_create(section_single_configuration_calculation)
+                    sec_scc = sec_run.m_create(SingleConfigurationCalculation)
                     sec_scc.x_exciting_xs_tddft_number_of_epsilon_values = len(data[0][0][0])
                     sec_scc.x_exciting_xs_tddft_epsilon_energies = pint.Quantity(
                         data[0][0][0], 'hartree')
@@ -1685,9 +1626,9 @@ class ExcitingParser(FairdiParser):
 
         self._calculation_type = 'xs'
         # inconsistency in the naming convention for xs input xml file
-        sec_method = sec_run.m_create(section_method)
+        sec_method = sec_run.m_create(Method)
 
-        sec_method_to_method_refs = sec_method.m_create(section_method_to_method_refs)
+        sec_method_to_method_refs = sec_method.m_create(MethodToMethodRefs)
         sec_method_ref = self.archive.section_run[-1].section_method[0]
         sec_method_to_method_refs.method_to_method_ref = sec_method_ref
         sec_method_to_method_refs.method_to_method_kind = 'starting_point'
@@ -1706,7 +1647,7 @@ class ExcitingParser(FairdiParser):
             self._parse_xs_tddft()
 
     def _parse_input_gw(self, sec_method):
-        gmaxvr = self.info_parser.get('x_exciting_gmaxvr', 0)
+        gmaxvr = self.info_parser.get_initialization_parameter('x_exciting_gmaxvr', 0)
         sec_method.gw_core_treatment = self.input_xml_parser.get(
             'gw/coreflag', 'all')
         sec_method.gw_polarizability_number_of_empty_states = int(
@@ -1733,7 +1674,7 @@ class ExcitingParser(FairdiParser):
         sec_method.gw_mixed_basis_tolerance = self.input_xml_parser.get(
             'gw/mixbasis/epsmb', 0.0001)
         gmb = self.input_xml_parser.get('gw/mixbasis/gmb', 1.0)
-        sec_method.gw_mixed_basis_gmax = gmb * self.info_parser.get('x_exciting_gmaxvr')
+        sec_method.gw_mixed_basis_gmax = gmb * gmaxvr
         pwm = self.input_xml_parser.get('gw/barecoul/pwm', 2.0)
         sec_method.gw_bare_coulomb_gmax = pwm * gmb * gmaxvr
         sec_method.gw_bare_coulomb_cutofftype = self.input_xml_parser.get(
@@ -1757,21 +1698,21 @@ class ExcitingParser(FairdiParser):
         if not self._calculation_type == 'gw':
             return
 
-        sec_method = sec_run.m_create(section_method)
+        sec_method = sec_run.m_create(Method)
         sec_method.electronic_structure_method = 'G0W0'
         xc_functional_name = ' '.join(self.info_parser.get_xc_functional_name())
         sec_method.gw_starting_point = xc_functional_name
-        sec_method_to_method_refs = sec_method.m_create(section_method_to_method_refs)
+        sec_method_to_method_refs = sec_method.m_create(MethodToMethodRefs)
         sec_method_ref = self.archive.section_run[-1].section_method[0]
         sec_method_to_method_refs.method_to_method_ref = sec_method_ref
         sec_method_to_method_refs.method_to_method_kind = 'starting_point'
 
         # parse input xml file, there seems to be two versions, input_gw.xml and input-gw.xml
-        for f in ['input_gw.xml', 'input-gw.xml']:
+        for f in ['input_gw.xml', 'input-gw.xml', 'input.xml']:
             self.parse_file(f, sec_method)
 
-        sec_scc = sec_run.m_create(section_single_configuration_calculation)
-        sec_calc_to_calc_refs = sec_scc.m_create(section_calculation_to_calculation_refs)
+        sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+        sec_calc_to_calc_refs = sec_scc.m_create(CalculationToCalculationRefs)
         sec_scc_ref = sec_run.section_single_configuration_calculation[0]
         sec_calc_to_calc_refs.calculation_to_calculation_ref = sec_scc_ref
         sec_calc_to_calc_refs.calculation_to_calculation_kind = 'starting_point'
@@ -1813,23 +1754,26 @@ class ExcitingParser(FairdiParser):
 
     def parse_miscellaneous(self):
         sec_run = self.archive.section_run[-1]
-        sec_sampling_method = sec_run.m_create(section_sampling_method)
+        sec_sampling_method = sec_run.m_create(SamplingMethod)
 
         # TODO there should be a sampling method single_point_calculation
         sec_sampling_method.sampling_method = 'geometry_optimization'
 
-        threshold_force = self.info_parser.get('force_convergence_optimization', [None])[0]
-        if threshold_force is not None:
+        structure_optimization = self.info_parser.get('structure_optimization')
+        if structure_optimization is not None:
+            threshold_force = structure_optimization.get(
+                'optimization_step', [{}])[0].get('force_convergence', [0., 0.])[-1]
             sec_sampling_method.geometry_optimization_threshold_force = threshold_force
 
-        sec_frame_sequence = sec_run.m_create(section_frame_sequence)
-        sec_frame_sequence.number_of_frames_in_sequence = max(self.info_parser.n_optimization_steps, 1)
-        sec_frame_sequence.frame_sequence_local_frames_ref = sec_run.section_single_configuration_calculation
+        sec_scc = sec_run.section_single_configuration_calculation
+        sec_frame_sequence = sec_run.m_create(FrameSequence)
+        sec_frame_sequence.number_of_frames_in_sequence = len(sec_scc)
+        sec_frame_sequence.frame_sequence_local_frames_ref = sec_scc
         sec_frame_sequence.frame_sequence_to_sampling_ref = sec_sampling_method
 
     def parse_method(self):
         sec_run = self.archive.section_run[-1]
-        sec_method = sec_run.m_create(section_method)
+        sec_method = sec_run.m_create(Method)
 
         sec_method.electronic_structure_method = 'DFT'
 
@@ -1837,15 +1781,17 @@ class ExcitingParser(FairdiParser):
             'Gaussian': 'gaussian', 'Methfessel-Paxton': 'methfessel-paxton',
             'Fermi-Dirac': 'fermi', 'Extended': 'tetrahedra'}
 
-        smearing_kind = self.info_parser.get('smearing_kind', None)
+        smearing_kind = self.info_parser.get_initialization_parameter('smearing_kind')
         if smearing_kind is not None:
             if not isinstance(smearing_kind, str):
                 smearing_kind = smearing_kind[0]
             smearing_kind = smearing_kind_map[smearing_kind]
             sec_method.smearing_kind = smearing_kind
-        smearing_width = self.info_parser.get('smearing_width', None)
+        smearing_width = self.info_parser.get_initialization_parameter('smearing_width')
         if smearing_width is not None:
-            sec_method.smearing_width = smearing_width
+            smearing_width = pint.Quantity(smearing_width, 'hartree').to('joule')
+            # TODO smearing with should have units of energy
+            sec_method.smearing_width = smearing_width.magnitude
 
         for name in self.info_parser._convergence_keys_mapping.keys():
             threshold = self.info_parser.get_scf_threshold(name)
@@ -1872,7 +1818,7 @@ class ExcitingParser(FairdiParser):
         for name in xc_functional_names:
             if name is None:
                 continue
-            sec_xc_functional = sec_method.m_create(section_XC_functionals)
+            sec_xc_functional = sec_method.m_create(XCFunctionals)
             sec_xc_functional.XC_functional_name = name
 
         sec_method.number_of_spin_channels = self.info_parser.get_number_of_spin_channels()
@@ -1880,174 +1826,160 @@ class ExcitingParser(FairdiParser):
         if self._calculation_type == 'volume_optimization':
             sec_method.x_exciting_volume_optimization = True
 
-    def parse_scc_full(self, loop_type):
+    def parse_scc(self, section):
         sec_run = self.archive.section_run[-1]
 
-        # total energy
-        total_energy = self.info_parser.get('energy_total_%s' % loop_type)
-        if total_energy is None:
-            # for calculations which does not output the final scf iteration
-            # we take the last scf_iteration as the final scf iteration
-            # we do not however read all the energy contributions
-            if loop_type == 'final_scf_iteration':
-                total_energy = [self.info_parser.get('energy_total_scf_iteration')[-1]]
+        final = section if section.get('energy_total') is not None else section.get('final')
+        if final is None:
+            # get it from last scf_iteration or optimization_step
+            final = section.get('scf_iteration', [None])[-1]
+            final = section.get('optimization_step', [None])[-1] if final is None else final
 
-        if total_energy is None:
+        if final is None:
             return
 
-        if loop_type == 'scf_iteration':
-            metainfo_ext = '_scf_iteration'
-            sec_scc = sec_run.section_single_configuration_calculation[0]
-            section = sec_scc.m_create(section_scf_iteration)
-            index = len(sec_run.section_single_configuration_calculation[0].section_scf_iteration) - 1
-        else:
-            metainfo_ext = ''
-            section = sec_run.m_create(section_single_configuration_calculation)
-            index = 0
+        sec_scc = sec_run.m_create(SingleConfigurationCalculation)
 
-        section.energy_total = total_energy[index]
+        def parse_scf(iteration, msection):
+            metainfo_ext = '' if hasattr(msection, 'energy_total') else '_scf_iteration'
 
-        # energy contibutions
-        energy_contributions = self.info_parser.get(
-            'energy_contributions_%s' % loop_type, [{}] * (index + 1))[index]
+            energy_total = iteration.get('energy_total')
+            if energy_total is not None:
+                setattr(msection, 'energy_total' + metainfo_ext, energy_total)
 
-        for key, names in self.info_parser._energy_keys_mapping.items():
-            val = None
-            for name in names:
-                val = energy_contributions.get(name, None)
-                if val:
-                    break
-            if val is None:
-                continue
-            setattr(section, key + metainfo_ext, val)
-            if key == 'x_exciting_fermi_energy':
-                # set it also in the global fermi energy, this is killing me
-                # there should only be one in global
-                # the metainfo naming is not consistent for scf_iteration
-                # and for global it becomes energy_reference_fermi
-                key = 'energy_reference_fermi'
-                metainfo_ext_fermi = '_iteration' if loop_type == 'scf_iteration' else metainfo_ext
-                val = pint.Quantity(
-                    [val.magnitude] * self.info_parser.get_number_of_spin_channels(), 'hartree')
-                setattr(section, key + metainfo_ext_fermi, val)
+            x_exciting_dos_fermi = iteration.get('x_exciting_dos_fermi')
+            if x_exciting_dos_fermi is not None:
+                setattr(msection, 'x_exciting_dos_fermi' + metainfo_ext, x_exciting_dos_fermi)
 
-        # charge contributions
-        charge_contributions = self.info_parser.get(
-            'charge_contributions_%s' % loop_type, [{}] * (index + 1))[index]
-        for key, names in self.info_parser._electron_charge_keys_mapping.items():
-            val = None
-            for name in names:
-                val = charge_contributions.get(name, None)
-                if val is not None:
-                    break
-            if val is None:
-                continue
-            if key == 'x_exciting_section_MT_charge_atom':
-                for n in range(len(val)):
-                    sec_mt_charge_atom = section.m_create(x_exciting_section_MT_charge_atom)
-                    sec_mt_charge_atom.x_exciting_MT_charge_atom_index = n + 1
-                    sec_mt_charge_atom.x_exciting_MT_charge_atom_symbol = val[n][0]
-                    sec_mt_charge_atom.x_exciting_MT_charge_atom_value = val[n][1]
-            else:
-                setattr(section, key + metainfo_ext, val)
+            # energy contibutions
+            energy_contributions = iteration.get('energy_contributions', {})
+            for key, names in self._energy_keys_mapping.items():
+                val = None
+                for name in names:
+                    val = energy_contributions.get(name, None)
+                    if val is not None:
+                        break
+                if val is None:
+                    continue
+                setattr(msection, key + metainfo_ext, val)
+                if key == 'x_exciting_fermi_energy':
+                    # set it also in the global fermi energy, this is killing me
+                    # there should only be one in global
+                    # the metainfo naming is not consistent for scf_iteration
+                    # and for global it becomes energy_reference_fermi
+                    key = 'energy_reference_fermi'
+                    metainfo_ext_fermi = metainfo_ext.replace('_scf', '')
+                    val = pint.Quantity(
+                        [val.magnitude] * self.info_parser.get_number_of_spin_channels(), 'hartree')
+                    setattr(msection, key + metainfo_ext_fermi, val)
 
-        # moment contributions
-        moment_contributions = self.info_parser.get(
-            'moment_contributions_%s' % loop_type, [{}] * (index + 1))[index]
-        for key, names in self.info_parser._moment_keys_mapping.items():
-            val = None
-            for name in names:
-                val = moment_contributions.get(name, None)
-                if val is not None:
-                    break
-            if val is None:
-                continue
-            if key == 'x_exciting_section_MT_moment_atom':
-                for n in range(len(val)):
-                    sec_mt_moment_atom = section.m_create(x_exciting_section_MT_moment_atom)
-                    sec_mt_moment_atom.x_exciting_MT_moment_atom_index = n + 1
-                    sec_mt_moment_atom.x_exciting_MT_moment_atom_symbol = val[n][0]
-                    sec_mt_moment_atom.x_exciting_MT_moment_atom_value = val[n][1]
-            else:
-                setattr(section, key + metainfo_ext, val)
+            # charge contributions
+            charge_contributions = iteration.get('charge_contributions', {})
+            for key, names in self._electron_charge_keys_mapping.items():
+                val = None
+                for name in names:
+                    val = charge_contributions.get(name, None)
+                    if val is not None:
+                        break
+                if val is None:
+                    continue
+                if key == 'x_exciting_section_MT_charge_atom':
+                    for n in range(len(val)):
+                        sec_mt_charge_atom = msection.m_create(x_exciting_section_MT_charge_atom)
+                        sec_mt_charge_atom.x_exciting_MT_charge_atom_index = n + 1
+                        sec_mt_charge_atom.x_exciting_MT_charge_atom_symbol = val[n][0]
+                        sec_mt_charge_atom.x_exciting_MT_charge_atom_value = val[n][1]
+                else:
+                    setattr(msection, key + metainfo_ext, val)
+
+            # moment contributions
+            moment_contributions = iteration.get('moment_contributions', {})
+            for key, names in self._moment_keys_mapping.items():
+                val = None
+                for name in names:
+                    val = moment_contributions.get(name, None)
+                    if val is not None:
+                        break
+                if val is None:
+                    continue
+                if key == 'x_exciting_section_MT_moment_atom':
+                    for n in range(len(val)):
+                        sec_mt_moment_atom = msection.m_create(x_exciting_section_MT_moment_atom)
+                        sec_mt_moment_atom.x_exciting_MT_moment_atom_index = n + 1
+                        sec_mt_moment_atom.x_exciting_MT_moment_atom_symbol = val[n][0]
+                        sec_mt_moment_atom.x_exciting_MT_moment_atom_value = val[n][1]
+                else:
+                    setattr(msection, key + metainfo_ext, val)
+
+            # convergence values
+            for name in self.info_parser._convergence_keys_mapping.keys():
+                val = iteration.get(name)
+                if val is None:
+                    continue
+
+                setattr(msection, name + metainfo_ext, val)
+
+            # other metainfo
+            for name in self.info_parser._miscellaneous_keys_mapping.keys():
+                val = iteration.get(name)
+                if val is None:
+                    continue
+
+                if name == 'time':
+                    if metainfo_ext == '_scf_iteration':
+                        msection.time_scf_iteration = val
+                    else:
+                        msection.time_calculation = val
+                else:
+                    setattr(msection, name + metainfo_ext, val)
+
+        # energy, moment, charge contributions
+        parse_scf(final, sec_scc)
 
         # forces
-        forces = self.info_parser.get('atom_forces_%s' % loop_type, [None] * (index + 1))[index]
+        forces = section.get('forces')
         if forces is not None:
-            section.atom_forces = forces
+            sec_scc.atom_forces = forces
 
-        # convergence values
-        for name in self.info_parser._convergence_keys_mapping.keys():
-            if loop_type == 'scf_iteration':
-                val = self.info_parser.get_scf_quantity(name)
-            else:
-                val = self.info_parser.get('%s_%s' % (name, loop_type), None)
+        # scf iterations
+        scf_iterations = section.get('scf_iteration', [])
+        for scf_iteration in scf_iterations:
+            sec_scf_iteration = sec_scc.m_create(ScfIteration)
+            parse_scf(scf_iteration, sec_scf_iteration)
 
-            if val is None or val[index] is None:
-                continue
+        return sec_scc
 
-            setattr(section, '%s_%s' % (name, loop_type), val[index][0])
-
-        # other metainfo
-        for name in self.info_parser._miscellaneous_keys_mapping.keys():
-            if loop_type == 'scf_iteration':
-                val = self.info_parser.get_scf_quantity(name)
-            else:
-                val = self.info_parser.get('%s_%s' % (name, loop_type), None)
-
-            if val is None or val[index] is None:
-                continue
-
-            val = val[index]
-            if name == 'time':
-                if loop_type == 'scf_iteration':
-                    section.time_scf_iteration = val
-                else:
-                    section.time_calculation = val
-            else:
-                setattr(section, '%s_%s' % (name, loop_type), val)
-
-        # references to method and system
-        if loop_type != 'scf_iteration':
-            section.single_configuration_calculation_to_system_ref = sec_run.section_system[-1]
-            section.single_configuration_to_calculation_method_ref = sec_run.section_method[-1]
-
-        # only final_scf_iteration contains scf_iteration steps
-        if loop_type != 'final_scf_iteration':
-            return
-
-        energy_scf_iteration = self.info_parser.get('energy_total_scf_iteration')
-        for n in range(len(energy_scf_iteration)):
-            self.parse_scc_full('scf_iteration')
-
-    def parse_system_full(self, loop_type):
+    def parse_system(self, section):
         sec_run = self.archive.section_run[-1]
 
-        if loop_type == 'optimization':
-            index = len(sec_run.section_system) - 1
-        else:
-            index = 0
+        positions = self.info_parser.get_atom_positions(section)
 
-        positions = self.info_parser.get_atom_positions(loop_type, index)
         if positions is None:
             return
 
-        sec_system = sec_run.m_create(section_system)
-
-        sec_system.atom_labels = self.info_parser.get_atom_labels()
-        sec_system.atom_positions = positions
-        sec_system.configuration_periodic_dimensions = [True] * 3
-        sec_system.lattice_vectors = self.info_parser.get('lattice_vectors')
-        sec_system.simulation_cell = self.info_parser.get('lattice_vectors')
-        # I did not add it to x_exciting_simulation_reciprocal_cell because the
-        # metainfo has wrong units?
-        # sec_system.lattice_vectors_reciprocal = self.info_parser.get('lattice_vectors_reciprocal')
-
-        if loop_type != 'final_scf_iteration':
+        atom_labels = self.info_parser.get_atom_labels(section)
+        if atom_labels is None:
             return
 
+        sec_system = sec_run.m_create(System)
+
+        sec_system.atom_positions = positions
+        sec_system.atom_labels = atom_labels
+        sec_system.configuration_periodic_dimensions = [True] * 3
+        # TODO confirm no cell optimization in exciting
+        lattice_vectors = self.info_parser.get_initialization_parameter('lattice_vectors')
+        sec_system.lattice_vectors = lattice_vectors
+        sec_system.simulation_cell = lattice_vectors
+
+        lattice_vectors_reciprocal = self.info_parser.get_initialization_parameter(
+            'lattice_vectors_reciprocal')
+        sec_system.lattice_vectors_reciprocal = lattice_vectors_reciprocal
+
+        if len(sec_run.section_system) > 1:
+            return sec_system
+
         for name in self.info_parser._system_keys_mapping.keys():
-            val = self.info_parser.get(name, None)
+            val = self.info_parser.get_initialization_parameter(name)
             if val is None:
                 continue
 
@@ -2056,11 +1988,26 @@ class ExcitingParser(FairdiParser):
                 sub_sec.x_exciting_spin_treatment = val
             elif name == 'x_exciting_xc_functional':
                 sub_sec = sec_system.m_create(x_exciting_section_xc)
-                sub_sec.x_exciting_xc_functional
+                sub_sec.x_exciting_xc_functional = val
             elif name == 'x_exciting_species_rtmin':
                 setattr(sec_system, name, ' '.join([str(v) for v in val]))
             else:
                 setattr(sec_system, name, val)
+
+        # species
+        species = self.info_parser.get_initialization_parameter('species', [])
+        for specie in species:
+            sec_atoms_group = sec_system.m_create(x_exciting_section_atoms_group)
+            sec_atoms_group.x_exciting_geometry_atom_labels = specie.get('symbol')
+            sec_atoms_group.x_exciting_geometry_atom_number = str(specie.get('number'))
+            sec_atoms_group.x_exciting_muffin_tin_points = specie.get('radial_points')
+            sec_atoms_group.x_exciting_muffin_tin_radius = specie.get('muffin_tin_radius')
+            positions_format = specie.get('positions_format')
+            sec_atoms_group.x_exciting_atom_position_format = positions_format
+            positions = specie.get('positions')
+            positions = self.info_parser.get_atom_positions(
+                positions=positions, positions_format=positions_format).to('m')
+            sec_atoms_group.x_exciting_geometry_atom_positions = positions.magnitude
 
         # clathrate info
         clathrate_file = self.get_exciting_files('str.out')
@@ -2075,54 +2022,68 @@ class ExcitingParser(FairdiParser):
         else:
             sec_system.x_exciting_clathrates = False
 
+        potential_mixing = self.info_parser.get_initialization_parameter('potential_mixing')
+        if potential_mixing is not None:
+            sec_system.x_exciting_potential_mixing = potential_mixing
+
+        return sec_system
+
     def parse_configurations(self):
         sec_run = self.archive.section_run[-1]
 
-        # Initial ground state configuration
-        self.parse_system_full('final_scf_iteration')
-        self.parse_scc_full('final_scf_iteration')
+        def parse_configuration(section):
+            if section is None:
+                return
 
-        # Add data to scc
-        # TODO add support for more output files and properties
-        exciting_files = [
-            'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf']
-        for f in exciting_files:
-            self.parse_file(f, sec_run.section_single_configuration_calculation[-1])
+            sec_scc = self.parse_scc(section)
+            if sec_scc is None:
+                return
 
-        # Configurations at each optimization step
-        for n in range(self.info_parser.n_optimization_steps):
-            self.parse_system_full('optimization')
+            sec_system = self.parse_system(section)
+            if sec_system is not None:
+                sec_scc.single_configuration_calculation_to_system_ref = sec_system
 
-            sec_scc = sec_run.m_create(section_single_configuration_calculation)
-            sec_scc.energy_total = self.info_parser.get('total_energy_optimization')[n]
-            forces = self.info_parser.get('atom_forces_optimization', [None] * (n + 1))[n]
-            if forces is not None:
-                sec_scc.atom_forces = forces
+            sec_scc.single_configuration_to_calculation_method_ref = sec_run.section_method[-1]
 
-            method = self.info_parser.get('method_optimization', [None] * (n + 1))[n]
-            if method is not None:
-                sec_scc.x_exciting_geometry_optimization_method = method
+            return sec_scc
 
-            nstep = self.info_parser.get('nstep_optimization', [None] * (n + 1))[n]
-            if nstep is not None:
-                sec_scc.x_exciting_geometry_optimization_step = nstep
+        # groundstate calculation
+        sec_scc = parse_configuration(self.info_parser.get('groundstate'))
+        if sec_scc is not None:
+            # add data to scc
+            # TODO add support for more output files and properties
+            exciting_files = [
+                'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf']
+            for f in exciting_files:
+                self.parse_file(f, sec_scc)
 
-            force_convergence = self.info_parser.get('force_convergence_optimization', [None] * (n + 1))[n]
+        # structure optimization
+        structure_optimization = self.info_parser.get('structure_optimization', {})
+        for optimization_step in structure_optimization.get('optimization_step', []):
+            sec_scc = parse_configuration(optimization_step)
+
+            if optimization_step.get('method') is not None:
+                sec_scc.x_exciting_geometry_optimization_method = optimization_step.get('method')
+
+            if optimization_step.get('step') is not None:
+                sec_scc.x_exciting_geometry_optimization_step = optimization_step.get('step')
+
+            force_convergence = optimization_step.get('force_convergence')
             if force_convergence is not None:
                 sec_scc.x_exciting_maximum_force_magnitude = force_convergence[0]
                 sec_scc.x_exciting_geometry_optimization_threshold_force = force_convergence[1]
 
-        # Final configuration after optimization
-        self.parse_system_full('final_optimization')
-        self.parse_scc_full('final_optimization')
+        sec_scc = parse_configuration(structure_optimization)
+        if sec_scc is None:
+            return
 
-        # Volume optimizations
+        # volume optimizations
         volume_index = 1
         while True:
             info_volume = self.get_exciting_files('run_dir%s/INFO.OUT' % str(volume_index).rjust(2, '0'))
             if not info_volume:
                 break
-            sec_calc_to_calc_refs = sec_scc.m_create(section_calculation_to_calculation_refs)
+            sec_calc_to_calc_refs = sec_scc.m_create(CalculationToCalculationRefs)
             sec_calc_to_calc_refs.calculation_to_calculation_external_url = info_volume[0]
             sec_calc_to_calc_refs.calculation_to_calculation_kind = 'source_calculation'
             self._calculation_type = 'volume_optimization'
@@ -2152,12 +2113,10 @@ class ExcitingParser(FairdiParser):
 
         self._init_parsers()
 
-        sec_run = self.archive.m_create(section_run)
+        sec_run = self.archive.m_create(Run)
 
         sec_run.program_name = 'exciting'
-        program_version = self.info_parser.get('program_version')
-        if isinstance(program_version, list):
-            program_version = ' '.join(program_version)
+        program_version = self.info_parser.get('program_version', '').strip()
         sec_run.program_version = program_version
         sec_run.program_basis_set_type = '(L)APW+lo'
 
