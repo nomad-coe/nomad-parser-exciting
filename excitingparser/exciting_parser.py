@@ -1330,7 +1330,7 @@ class ExcitingParser(FairdiParser):
 
         files = self.get_exciting_files(name)
         if len(files) > 1:
-            self.logger.warn('Found multiple files of type %s. Will read all!' % name)
+            self.logger.warn('Found multiple files. Will read all!', data=dict(file=name))
 
         for n in range(len(files)):
             parser.mainfile = files[n]
@@ -1450,7 +1450,7 @@ class ExcitingParser(FairdiParser):
                     bse_files.append(files)
 
             if len([f for f in bse_files if f]) > 1:
-                self.logger.warn('Multiple %s BSE types identified.' % name)
+                self.logger.warn('Multiple BSE files identified.', data=dict(file=name))
 
             return bse_files
 
@@ -1534,7 +1534,7 @@ class ExcitingParser(FairdiParser):
                     if sec_scc is None:
                         # This is the case when there is a mismatch between files
                         self.logger.warn(
-                            'Mismatch in EXCITON and %s files' % quantity)
+                            'Mismatch in EXCITON and file type', data=dict(file=quantity))
                         sec_scc = sec_run.m_create(SingleConfigurationCalculation)
                 if quantity == 'EXCITON':
                     parse_exciton(sec_scc, data)
