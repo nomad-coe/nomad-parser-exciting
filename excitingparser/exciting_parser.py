@@ -628,7 +628,7 @@ class ExcitingInfoParser(TextParser):
         def str_to_array(val_in):
             val = [v.split(':')[-1].split() for v in val_in.strip().split('\n')]
             val = val[0] if len(val) == 1 else val
-            return val
+            return np.array(val, dtype=float)
 
         def str_to_symbols(val_in):
             return [v.split()[2] for v in val_in.strip().split('\n')]
@@ -690,11 +690,11 @@ class ExcitingInfoParser(TextParser):
             Quantity(
                 'lattice_vectors',
                 r'Lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
-                str_operation=str_to_array, unit='bohr', repeats=False),
+                str_operation=str_to_array, unit='bohr', repeats=False, convert=False),
             Quantity(
                 'lattice_vectors_reciprocal',
                 r'Reciprocal lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
-                str_operation=str_to_array, unit='1/bohr', repeats=False),
+                str_operation=str_to_array, unit='1/bohr', repeats=False, convert=False),
         ]
 
         self._system_keys_mapping = {
@@ -850,7 +850,7 @@ class ExcitingInfoParser(TextParser):
                     repeats=False, str_operation=str_to_symbols, dtype=str),
                 Quantity(
                     'positions', r'Atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                    repeats=False, str_operation=str_to_array, dtype=float),
+                    repeats=False, str_operation=str_to_array, convert=False),
                 Quantity(
                     'forces', r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
                     repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr')
@@ -866,11 +866,11 @@ class ExcitingInfoParser(TextParser):
             Quantity(
                 'positions',
                 r'Atomic positions at this step \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                repeats=False, str_operation=str_to_array, dtype=float),
+                repeats=False, str_operation=str_to_array, convert=False),
             Quantity(
                 'forces',
                 r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Time',
-                repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr'),
+                repeats=False, str_operation=str_to_array, convert=False, unit='hartree/bohr'),
             Quantity(
                 'step', r'Optimization step\s*(\d+)', repeats=False, dtype=int),
             Quantity(
