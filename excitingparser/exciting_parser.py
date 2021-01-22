@@ -1024,13 +1024,8 @@ class ExcitingInfoParser(TextParser):
         return self.get('initialization', {}).get(key, default)
 
 
-class ExcitingParser(FairdiParser):
+class ExcitingParserInterface:
     def __init__(self):
-        super().__init__(
-            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
-            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
-        self._metainfo_env = m_env
-
         self.info_parser = ExcitingInfoParser()
         self.dos_parser = DOSXMLParser(energy_unit='hartree')
         self.bandstructure_parser = BandstructureXMLParser(energy_unit='hartree')
@@ -2088,7 +2083,7 @@ class ExcitingParser(FairdiParser):
             sec_calc_to_calc_refs.calculation_to_calculation_kind = 'source_calculation'
             self._calculation_type = 'volume_optimization'
 
-    def _init_parsers(self):
+    def init_parser(self):
         self.info_parser.mainfile = self.filepath
         self.info_parser.logger = self.logger
         self.dos_parser.logger = self.logger
@@ -2104,6 +2099,13 @@ class ExcitingParser(FairdiParser):
         self.data_xs_parser.logger = self.logger
         self.data_clathrate_parser.logger = self.logger
 
+    def reuse_parser(self, parser):
+        self.info_parser.quantities = parser.info_parser.quantities
+        self.eigval_parser.quantities = parser.eigval_parser.quantities
+        self.fermisurf_parser.quantities = parser.fermisurf_parser.quantities
+        self.evalqp_parser.quantities = parser.evalqp_parser.quantities
+        self.info_gw_parser.quantities = parser.info_gw_parser.quantities
+
     def parse(self, filepath, archive, logger):
         self.filepath = filepath
         self.archive = archive
@@ -2111,7 +2113,7 @@ class ExcitingParser(FairdiParser):
 
         self._calculation_type = None
 
-        self._init_parsers()
+        self.init_parser()
 
         sec_run = self.archive.m_create(Run)
 
@@ -2130,3 +2132,22 @@ class ExcitingParser(FairdiParser):
         self.parse_xs()
 
         self.parse_miscellaneous()
+
+
+class ExcitingParser(FairdiParser):
+    def __init__(self):
+        super().__init__(
+            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
+            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
+        self._metainfo_env = m_env
+        self.parser = None
+
+    def parse(self, filepath, archive, logger):
+        parser = ExcitingParserInterface()
+
+        if self.parser is not None:
+            parser.reuse_parser(self.parser)
+        else:
+            self.parser = parser
+
+        parser.parse(filepath, archive, logger)
