@@ -1024,8 +1024,12 @@ class ExcitingInfoParser(TextParser):
         return self.get('initialization', {}).get(key, default)
 
 
-class ExcitingParserInterface:
+class ExcitingParser(FairdiParser):
     def __init__(self):
+        super().__init__(
+            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
+            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
+        self._metainfo_env = m_env
         self.info_parser = ExcitingInfoParser()
         self.dos_parser = DOSXMLParser(energy_unit='hartree')
         self.bandstructure_parser = BandstructureXMLParser(energy_unit='hartree')
@@ -2132,22 +2136,3 @@ class ExcitingParserInterface:
         self.parse_xs()
 
         self.parse_miscellaneous()
-
-
-class ExcitingParser(FairdiParser):
-    def __init__(self):
-        super().__init__(
-            name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
-            mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
-        self._metainfo_env = m_env
-        self.parser = None
-
-    def parse(self, filepath, archive, logger):
-        parser = ExcitingParserInterface()
-
-        if self.parser is not None:
-            parser.reuse_parser(self.parser)
-        else:
-            self.parser = parser
-
-        parser.parse(filepath, archive, logger)
