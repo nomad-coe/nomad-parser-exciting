@@ -600,7 +600,7 @@ class ExcitingEigenvalueParser(TextParser):
             occs = val[-1]
             eigs = val[-2]
 
-            nspin = 2 if np.count_nonzero(occs > 1.0) == 0 else 1
+            nspin = 2 if occs[0] == 1. else 1
             data = dict()
             data['occupancies'] = np.reshape(occs, (nspin, len(occs) // nspin))
             data['eigenvalues'] = np.reshape(eigs, (nspin, len(eigs) // nspin))
@@ -707,7 +707,7 @@ class ExcitingInfoParser(TextParser):
             'x_exciting_kpoint_grid': (r'k\-point grid', None),
             'x_exciting_kpoint_offset': (r'k\-point offset', None),
             'x_exciting_number_kpoints': (r'Total number of k\-points', None),
-            'x_exciting_rgkmax': (r'R\^MT\_min \* \|G\+k\|\_max \(rgkmax\)', 'bohr'),
+            'x_exciting_rgkmax': (r'R\^MT\_min \* \|G\+k\|\_max \(rgkmax\)', None),
             'x_exciting_species_rtmin': (r'Species with R\^MT\_min', None),
             'x_exciting_gkmax': (r'Maximum \|G\+k\| for APW functions', '1/bohr'),
             'x_exciting_gmaxvr': (r'Maximum \|G\| for potential and density', '1/bohr'),
@@ -784,7 +784,7 @@ class ExcitingInfoParser(TextParser):
 
         self._quantities.append(Quantity(
             'initialization',
-            r'Starting initialization([\s\S]+?)Ending initialization', repeats=False,
+            r'(?:All units are atomic|Starting initialization)([\s\S]+?)(?:Using|Ending initialization)', repeats=False,
             sub_parser=TextParser(quantities=initialization_quantities))
         )
 
@@ -834,10 +834,10 @@ class ExcitingInfoParser(TextParser):
 
         self._quantities.append(Quantity(
             'groundstate',
-            r'Groundstate module started([\s\S]+?)Groundstate module stopped',
+            r'(?:Self\-consistent loop started|Groundstate module started)([\s\S]+?)Groundstate module stopped',
             sub_parser=TextParser(quantities=[
                 Quantity(
-                    'scf_iteration', r'(?:I|SCF i)teration number :([\s\S]+?)(?:\n *\n\+{10})',
+                    'scf_iteration', r'(?:I|SCF i)teration number :([\s\S]+?)(?:\n *\n\+{10}|\+\-{10})',
                     sub_parser=TextParser(quantities=scf_quantities), repeats=True),
                 Quantity(
                     'final',
@@ -877,7 +877,7 @@ class ExcitingInfoParser(TextParser):
                 'method', r'method\s*=\s*(\w+)', repeats=False, dtype=str),
             Quantity(
                 'n_scf_iterations',
-                r'Number of total scf iterations\s*\:\s*(\d+)', repeats=False, dtype=int),
+                r'Number of (?:total)* scf iterations\s*\:\s*(\d+)', repeats=False, dtype=int),
             Quantity(
                 'force_convergence',
                 r'Maximum force magnitude\s*\(target\)\s*\:(\s*[\(\)\d\.\-\+Ee ]+)',
@@ -893,11 +893,11 @@ class ExcitingInfoParser(TextParser):
 
         self._quantities.append(Quantity(
             'structure_optimization',
-            r'Structure-optimization module started([\s\S]+?)Structure-optimization module stopped',
+            r'Structure\-optimization module started([\s\S]+?)Structure\-optimization module stopped',
             sub_parser=TextParser(quantities=[
                 Quantity(
                     'optimization_step',
-                    r'(Optimization step\s*\d+[\s\S]+?)(?:\n \n[-+]{10})',
+                    r'(Optimization step\s*\d+[\s\S]+?(?:\n *\n\-{10}|Time spent in this optimization step:\s*[\d\.]+ seconds))',
                     sub_parser=TextParser(quantities=optimization_quantities),
                     repeats=True),
                 Quantity(
@@ -927,7 +927,7 @@ class ExcitingInfoParser(TextParser):
 
         if labels is None:
             # we get it by concatenating species symbols
-            species = self.get('initialization').get('species', [])
+            species = self.get('initialization', {}).get('species', [])
             labels = []
             for specie in species:
                 labels += [specie.get('symbol')] * len(specie.get('positions'))
@@ -986,6 +986,7 @@ class ExcitingInfoParser(TextParser):
         return quantity
 
     def get_xc_functional_name(self):
+        # TODO expand list to include other xcf
         xc_functional_map = {
             2: ['LDA_C_PZ', 'LDA_X_PZ'],
             3: ['LDA_C_PW', 'LDA_X_PZ'],
@@ -999,7 +1000,7 @@ class ExcitingInfoParser(TextParser):
             300: ['GGA_C_BGCP', 'GGA_X_PBE'],
             406: ['HYB_GGA_XC_PBEH']}
 
-        xc_functional = self.get('initialization').get('x_exciting_xc_functional', None)
+        xc_functional = self.get('initialization', {}).get('x_exciting_xc_functional', None)
         if xc_functional is None:
             return []
 
@@ -1012,8 +1013,8 @@ class ExcitingInfoParser(TextParser):
         return len(self.get('structure_optimization', {}).get('optimization_step', []))
 
     def get_number_of_spin_channels(self):
-        spin_treatment = self.get('initialization').get('x_exciting_spin_treatment', [
-            'spin-unpolarised'])[0]
+        spin_treatment = self.get('initialization').get(
+            'x_exciting_spin_treatment', 'spin-unpolarised')
         n_spin = 1 if spin_treatment.lower() == 'spin-unpolarised' else 2
         return n_spin
 
@@ -1163,9 +1164,13 @@ class ExcitingParser(FairdiParser):
 
         sec_eigenvalues = sec_scc.m_create(Eigenvalues)
 
+        nspin = self.info_parser.get_number_of_spin_channels()
+
         def get_data(key):
             data = self.eigval_parser.get('eigenvalues_occupancies')
-            res = np.hstack([v[key] for v in data])
+            # reshaping is not necessary as this is done in parser, however nspin is
+            # determined from occupancies which is problematic sometimes
+            res = np.hstack([np.reshape(v[key], (nspin, np.size(v[key]) // nspin)) for v in data])
             res = res.reshape((len(res), len(data), len(res[0]) // len(data)))
 
             if key == 'eigenvalues':
