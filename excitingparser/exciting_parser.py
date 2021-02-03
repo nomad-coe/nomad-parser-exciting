@@ -1013,13 +1013,13 @@ class ExcitingInfoParser(TextParser):
         return len(self.get('structure_optimization', {}).get('optimization_step', []))
 
     def get_number_of_spin_channels(self):
-        spin_treatment = self.get('initialization').get(
+        spin_treatment = self.get('initialization', {}).get(
             'x_exciting_spin_treatment', 'spin-unpolarised')
         n_spin = 1 if spin_treatment.lower() == 'spin-unpolarised' else 2
         return n_spin
 
     def get_unit_cell_volume(self):
-        return self.get('initialization').get('x_exciting_unit_cell_volume')
+        return self.get('initialization', {}).get('x_exciting_unit_cell_volume', 1.0)
 
     def get_initialization_parameter(self, key, default=None):
         return self.get('initialization', {}).get(key, default)
@@ -1531,7 +1531,7 @@ class ExcitingParser(FairdiParser):
                 if not data:
                     sccs.append(None)
                     continue
-                if quantity == quantity[0]:
+                if quantity == 'EXCITON':
                     sec_scc = sec_run.m_create(SingleConfigurationCalculation)
                 else:
                     sec_scc = sccs[i]
@@ -1540,16 +1540,21 @@ class ExcitingParser(FairdiParser):
                         self.logger.warn(
                             'Mismatch in EXCITON and file type', data=dict(file=quantity))
                         sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+
                 if quantity == 'EXCITON':
-                    parse_exciton(sec_scc, data)
+                    parse_function = parse_exciton
                 elif quantity == 'EPSILON':
-                    parse_epsilon(sec_scc, data)
+                    parse_function = parse_epsilon
                 elif quantity == 'SIGMA':
-                    parse_sigma(sec_scc, data)
+                    parse_function = parse_sigma
                 elif quantity == 'LOSS':
-                    parse_loss(sec_scc, data)
+                    parse_function = parse_loss
                 else:
-                    pass
+                    continue
+                try:
+                    parse_function(data, sec_scc)
+                except Exception:
+                    self.logger.error('Error setting xs data', data=dict(file=quantity))
 
     def _parse_xs_tddft(self):
         sec_run = self.archive.section_run[-1]
@@ -1957,12 +1962,32 @@ class ExcitingParser(FairdiParser):
         sec_run = self.archive.section_run[-1]
 
         positions = self.info_parser.get_atom_positions(section)
+        lattice_vectors = self.info_parser.get_initialization_parameter('lattice_vectors')
+        atom_labels = self.info_parser.get_atom_labels(section)
+
+        input_file = self.get_exciting_files('input.xml')
 
         if positions is None:
-            return
+            # get it from input.xml
+            for f in input_file:
+                self.input_xml_parser.mainfile = f
+                positions = self.input_xml_parser.get('structure/species/atom/coord')
+                lattice_vectors = self.input_xml_parser.get(
+                    'structure/crystal/basevect', np.eye(3))
+                species = self.input_xml_parser.get('structure/species/speciesfile')
 
-        atom_labels = self.info_parser.get_atom_labels(section)
-        if atom_labels is None:
+                if positions is None or lattice_vectors is None or species is None:
+                    continue
+                lattice_vectors *= self.input_xml_parser.get('structure/crystal/scale', 1.0)
+                positions = pint.Quantity(np.dot(positions, lattice_vectors), 'bohr')
+                lattice_vectors = pint.Quantity(lattice_vectors, 'bohr')
+
+                atoms = self.input_xml_parser.get('structure/species/atom')
+                atom_labels = []
+                for n in range(len(atoms)):
+                    atom_labels.extend([species[n].split('.')[0]] * len(atoms[n]))
+
+        if positions is None or atom_labels is None:
             return
 
         sec_system = sec_run.m_create(System)
@@ -1971,7 +1996,6 @@ class ExcitingParser(FairdiParser):
         sec_system.atom_labels = atom_labels
         sec_system.configuration_periodic_dimensions = [True] * 3
         # TODO confirm no cell optimization in exciting
-        lattice_vectors = self.info_parser.get_initialization_parameter('lattice_vectors')
         sec_system.lattice_vectors = lattice_vectors
         sec_system.simulation_cell = lattice_vectors
 
@@ -2040,10 +2064,12 @@ class ExcitingParser(FairdiParser):
                 return
 
             sec_scc = self.parse_scc(section)
+
+            sec_system = self.parse_system(section)
+
             if sec_scc is None:
                 return
 
-            sec_system = self.parse_system(section)
             if sec_system is not None:
                 sec_scc.single_configuration_calculation_to_system_ref = sec_system
 
