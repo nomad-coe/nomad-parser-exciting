@@ -161,7 +161,8 @@ class BandstructureDatParser(DataTextParser):
     @property
     def distances(self):
         if self._distances is None:
-            self._distances = np.transpose(self.data)[5]
+            data = np.transpose(self.data)
+            self._distances = data[5][:int(max(data[1]))]
 
         return self._distances
 
@@ -643,13 +644,12 @@ class ExcitingInfoParser(TextParser):
         super().__init__(None)
 
     def init_quantities(self):
+        re_symbol = re.compile(r'([A-Z][a-z]?)')
+
         def str_to_array(val_in):
             val = [v.split(':')[-1].split() for v in val_in.strip().split('\n')]
             val = val[0] if len(val) == 1 else val
             return np.array(val, dtype=float)
-
-        def str_to_symbols(val_in):
-            return [v.split()[2] for v in val_in.strip().split('\n')]
 
         def str_to_atom_properties_dict(val_in):
             unit = None
@@ -669,7 +669,7 @@ class ExcitingInfoParser(TextParser):
                     continue
 
                 elif v[0].startswith('species'):
-                    species = re.search('([A-Z][a-z]*)', v[-1]).group(1)
+                    species = re.search(re_symbol, v[-1]).group(1)
 
                 elif v[0].startswith('atom'):
                     v[0] = v[0].split()
@@ -862,13 +862,16 @@ class ExcitingInfoParser(TextParser):
                     r'(?:Convergence targets achieved\. Performing final SCF iteration|Reached self-consistent loops maximum)([\s\S]+?)(\n *\n\+{10})',
                     sub_parser=TextParser(quantities=scf_quantities), repeats=False),
                 Quantity(
-                    'positions_format', r'Atomic positions\s*\(([a-z]+)\)', repeats=False),
-                Quantity(
-                    'symbols', r'Atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                    repeats=False, str_operation=str_to_symbols, dtype=str),
-                Quantity(
-                    'positions', r'Atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                    repeats=False, str_operation=str_to_array, convert=False),
+                    'atomic_positions',
+                    r'(Atomic positions\s*\([\s\S]+?)\n\n',
+                    sub_parser=TextParser(quantities=[
+                        Quantity(
+                            'positions_format', r'Atomic positions\s*\(([a-z]+)\)'),
+                        Quantity(
+                            'symbols', r'atom\s*\d+\s*(\w+)', repeats=True, dtype=str),
+                        Quantity(
+                            'positions', r'\s*:\s*([\d\.\-]+\s*[\d\.\-]+\s*[\d\.\-]+)',
+                            repeats=True, dtype=float)])),
                 Quantity(
                     'forces', r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
                     repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr')
@@ -876,15 +879,16 @@ class ExcitingInfoParser(TextParser):
 
         optimization_quantities = [
             Quantity(
-                'positions_format', r'Atomic positions at this step\s*\(([a-z]+)\)', repeats=False),
-            Quantity(
-                'symbols',
-                r'Atomic positions at this step \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                repeats=False, str_operation=str_to_symbols, dtype=str),
-            Quantity(
-                'positions',
-                r'Atomic positions at this step \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                repeats=False, str_operation=str_to_array, convert=False),
+                'atomic_positions',
+                r'(Atomic positions at this step\s*\([\s\S]+?)\n\n',
+                sub_parser=TextParser(quantities=[
+                    Quantity(
+                        'positions_format', r'Atomic positions at this step\s*\(([a-z]+)\)'),
+                    Quantity(
+                        'symbols', r'atom\s*\d+\s*(\w+)', repeats=True, dtype=str),
+                    Quantity(
+                        'positions', r'\s*:\s*([\d\.\-]+\s*[\d\.\-]+\s*[\d\.\-]+)',
+                        repeats=True, dtype=float)])),
             Quantity(
                 'forces',
                 r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Time',
@@ -915,25 +919,25 @@ class ExcitingInfoParser(TextParser):
             sub_parser=TextParser(quantities=[
                 Quantity(
                     'optimization_step',
-                    r'(Optimization step\s*\d+[\s\S]+?(?:\n *\n\-{10}|Time spent in this optimization step:\s*[\d\.]+ seconds))',
+                    r'(Optimization step\s*\d+[\s\S]+?(?:\n *\n\-{10}|Time spent in this optimization step\s*:\s*[\d\.]+ seconds))',
                     sub_parser=TextParser(quantities=optimization_quantities),
                     repeats=True),
                 Quantity(
                     'final',
-                    r'Force convergence target achieved([\s\S]+?)Optimized',
+                    r'Force convergence target achieved([\s\S]+?Opt)',
                     sub_parser=TextParser(quantities=scf_quantities),
                     repeats=False),
                 Quantity(
-                    'positions_format',
-                    r'Optimized atomic positions\s*\(([a-z]+)\)', repeats=False),
-                Quantity(
-                    'symbols',
-                    r'Optimized atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                    repeats=False, str_operation=str_to_symbols, dtype=str),
-                Quantity(
-                    'positions',
-                    r'Optimized atomic positions \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Total',
-                    str_operation=str_to_array, repeats=False, dtpye=float),
+                    'atomic_positions',
+                    r'(imized atomic positions\s*\([\s\S]+?)\n\n',
+                    sub_parser=TextParser(quantities=[
+                        Quantity(
+                            'positions_format', r'imized atomic positions\s*\(([a-z]+)\)'),
+                        Quantity(
+                            'symbols', r'atom\s*\d+\s*(\w+)', repeats=True, dtype=str),
+                        Quantity(
+                            'positions', r'\s*:\s*([\d\.\-]+\s*[\d\.\-]+\s*[\d\.\-]+)',
+                            repeats=True, dtype=float)])),
                 Quantity(
                     'forces',
                     r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
@@ -1101,15 +1105,24 @@ class ExcitingParser(FairdiParser):
         }
 
     def get_exciting_files(self, default):
+        mainfile = os.path.basename(self.info_parser.mainfile)
+        suffix = mainfile.strip('INFO.OUT')
+        target = default.rsplit('.', 1)
+        filename = '%s%s' % (target[0], suffix)
+        if target[1:]:
+            filename = '%s.%s' % (filename, target[1])
+        filename = os.path.join(self.info_parser.maindir, filename)
+
+        if os.path.isfile(filename):
+            return [filename]
+
         filename = os.path.join(self.info_parser.maindir, default)
         if not os.path.isfile(filename):
             file_ext = default.split('.')[-1]
-            mainfile_base = os.path.basename(
-                self.info_parser.mainfile).split('.')[0].replace('INFO', '')
-            file_base = default.split('.')[0]
+            mainfile_base = mainfile.rsplit('.', 1)[0].replace('INFO', '')
             options = [
                 f for f in os.listdir(
-                    self.info_parser.maindir) if file_base in f and mainfile_base in f]
+                    self.info_parser.maindir) if target[0] in f and mainfile_base in f]
             options = [f for f in options if f.endswith(file_ext)]
             options.sort()
 
@@ -1229,31 +1242,36 @@ class ExcitingParser(FairdiParser):
 
         def get_data(key):
             if key == 'k_points':
-                return np.array([d[0] for d in data])
+                return np.array([d[0][:3] for d in data])
             elif key == 'Znk':
                 return np.array([d[1].get(key, None) for d in data])
             else:
                 energy = np.array([d[1].get(key, None) for d in data])
                 if None in energy:
-                    return
+                    return energy
                 return pint.Quantity(np.array([d[1].get(key) for d in data]), 'hartree')
 
         eigs_gw = get_data('E_GW')
         if eigs_gw[0] is None:
             return
 
+        nspin = self.info_parser.get_number_of_spin_channels()
+
+        def reshape(data):
+            return np.reshape(data, (nspin, len(data) // nspin, len(data[0])))
+
         sec_eigenvalues.number_of_eigenvalues = len(eigs_gw[0])
         sec_eigenvalues.number_of_eigenvalues_kpoints = len(eigs_gw)
         sec_eigenvalues.eigenvalues_kpoints = get_data('k_points')
-        sec_eigenvalues.eigenvalues_values = eigs_gw
-        sec_eigenvalues.gw_qp_linearization_prefactor = get_data('Znk')
+        sec_eigenvalues.eigenvalues_values = reshape(eigs_gw)
+        sec_eigenvalues.gw_qp_linearization_prefactor = reshape(get_data('Znk'))
 
-        sec_scc.gw_self_energy_x = get_data('Sx')
-        self_energy = get_data('Sc')
+        sec_scc.gw_self_energy_x = reshape(get_data('Sx'))
+        self_energy = reshape(get_data('Sc'))
         if self_energy is None:
-            self_energy = get_data('Re(Sc)')
+            self_energy = reshape(get_data('Re(Sc)'))
         sec_scc.gw_self_energy_c = self_energy
-        sec_scc.gw_xc_potential = get_data('Vxc')
+        sec_scc.gw_xc_potential = reshape(get_data('Vxc'))
 
     def _parse_dos_out(self, sec_scc):
         data = self.dos_out_parser.data
@@ -1263,19 +1281,21 @@ class ExcitingParser(FairdiParser):
         # TODO I am not sure about format for spin-polarized case! I assume it is
         # energy dos_up dos_down
         nspin = self.info_parser.get_number_of_spin_channels()
-        if nspin != len(data) - 1:
-            self.logger.error('Found inconsistent number of spin channels in gw dos!')
-            return
 
         sec_dos = sec_scc.m_create(Dos)
-        sec_dos.number_of_dos_values = len(data)
+        sec_dos.dos_kind = 'electronic'
+        sec_dos.number_of_dos_values = len(data) // nspin
 
-        data = np.transpose(data)
-        sec_dos.dos_energies = pint.Quantity(data[0], 'hartree')
+        data = np.reshape(data, (nspin, len(data) // nspin, 2))
+        data = np.transpose(data, axes=(2, 0, 1))
+
+        sec_dos.dos_energies = pint.Quantity(data[0][0], 'hartree')
         # metainfo does not have unit for dos
-        dos = pint.Quantity(data[1:], '1/hartree') * self.info_parser.get_unit_cell_volume()
+        dos = pint.Quantity(data[1], '1/hartree') * self.info_parser.get_unit_cell_volume()
         dos = dos.to('m**3/joule').magnitude
         sec_dos.dos_values = dos
+
+        # TODO add PDOS
 
     def _parse_bandstructure_dat(self, sec_scc):
         self.bandstructure_dat_parser._nspin = self.info_parser.get_number_of_spin_channels()
@@ -1461,6 +1481,7 @@ class ExcitingParser(FairdiParser):
     def _parse_xs_bse(self):
         sec_run = self.archive.section_run[-1]
 
+        # TODO read from xml file
         def get_files(name):
             bse_types = ['IP', 'singlet', 'triplet', 'RPA']
             scr_types = ['full', 'diag', 'noinvdiag', 'longrange']
@@ -1470,9 +1491,6 @@ class ExcitingParser(FairdiParser):
                     files = self.get_exciting_files(
                         '%s_BSE%s_SCR%s.OUT' % (name, bse_type, scr_type))
                     bse_files.append(files)
-
-            if len([f for f in bse_files if f]) > 1:
-                self.logger.warn('Multiple BSE files identified.', data=dict(file=name))
 
             return bse_files
 
@@ -1551,6 +1569,7 @@ class ExcitingParser(FairdiParser):
                     continue
                 if quantity == 'EXCITON':
                     sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+                    sccs.append(sec_scc)
                 else:
                     sec_scc = sccs[i]
                     if sec_scc is None:
@@ -1591,7 +1610,7 @@ class ExcitingParser(FairdiParser):
         qpoints = self.input_xml_parser.get('xs/qpointset/qpoint')
 
         def get_data(quantity, ext):
-            # all files related to quantity at alll qpoints
+            # all files related to quantity at all qpoints
             files = self.get_exciting_files('%s_%s%s%s.OUT' % (quantity, file_ext, ext, fxctype))
             data = [[], [], []]
             for i in range(len(qpoints)):
@@ -1605,11 +1624,7 @@ class ExcitingParser(FairdiParser):
                 if not data_q:
                     continue
 
-                n_components = len(data_q)
-                n_epsilon = len(data_q[0]) // n_components
-                data_q = np.transpose(np.vstack(data_q))
-                data_q = np.reshape(
-                    data_q, (len(data_q), n_components, n_epsilon))
+                data_q = np.transpose(data_q, axes=(2, 0, 1))
                 for j in range(len(data)):
                     data[j].append(data_q[j])
 
@@ -1979,9 +1994,9 @@ class ExcitingParser(FairdiParser):
     def parse_system(self, section):
         sec_run = self.archive.section_run[-1]
 
-        positions = self.info_parser.get_atom_positions(section)
+        positions = self.info_parser.get_atom_positions(section.get('atomic_positions', {}))
         lattice_vectors = self.info_parser.get_initialization_parameter('lattice_vectors')
-        atom_labels = self.info_parser.get_atom_labels(section)
+        atom_labels = self.info_parser.get_atom_labels(section.get('atomic_positions', {}))
 
         input_file = self.get_exciting_files('input.xml')
 
@@ -2101,7 +2116,8 @@ class ExcitingParser(FairdiParser):
             # add data to scc
             # TODO add support for more output files and properties
             exciting_files = [
-                'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf']
+                'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf',
+                'TDOS.OUT']
             for f in exciting_files:
                 self.parse_file(f, sec_scc)
 
