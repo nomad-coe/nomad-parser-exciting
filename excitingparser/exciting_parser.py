@@ -60,7 +60,7 @@ class GWInfoParser(TextParser):
 
         self._quantities.append(
             Quantity(
-                'fermi_energy', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Fermi energy\s*\:(\s*[\d\.]+)\s',
+                'fermi_energy', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Fermi energy\s*\:(\s*-?[\d\.]+)\s',
                 unit='hartree', repeats=False)
         )
 
@@ -811,7 +811,7 @@ class ExcitingInfoParser(TextParser):
                 'energy_total', r'[Tt]*otal energy\s*:\s*([\-\d\.Ee]+)', repeats=False,
                 dtype=float, unit='hartree'),
             Quantity(
-                'energy_contributions', r'(?:Energies|_)([\-\s\w\.\:]+?)\n *(?:DOS|Density)',
+                'energy_contributions', r'(?:Energies|_)([\+\-\s\w\.\:]+?)\n *(?:DOS|Density)',
                 str_operation=str_to_energy_dict, repeats=False, convert=False),
             Quantity(
                 'x_exciting_dos_fermi',
@@ -1133,16 +1133,39 @@ class ExcitingParser(FairdiParser):
         filenames = [f for f in filenames if os.access(f, os.F_OK)]
         return filenames
 
+    def file_exists(self, filename):
+        """Checks if a the given filename exists and is accessible in the same
+        folder where the mainfile is stored.
+        """
+        mainfile = os.path.basename(self.info_parser.mainfile)
+        suffix = mainfile.strip('INFO.OUT')
+        target = filename.rsplit('.', 1)
+        filepath = '%s%s' % (target[0], suffix)
+        if target[1:]:
+            filepath = '%s.%s' % (filepath, target[1])
+        filepath = os.path.join(self.info_parser.maindir, filepath)
+
+        if os.path.isfile(filepath) and os.access(filepath, os.F_OK):
+            return True
+        return False
+
     def _parse_dos(self, sec_scc):
         if self.dos_parser.get('totaldos', None) is None:
             return
 
+        # Get fermi energy: it is used to un-shift the DOS to
+        # the original scale in which also other energies are reported.
+        energy_fermi = sec_scc.energy_reference_fermi
+        if energy_fermi is None:
+            return
+        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+
         sec_dos = sec_scc.m_create(Dos)
         sec_dos.dos_kind = 'electronic'
         sec_dos.number_of_dos_values = self.dos_parser.number_of_dos
-        sec_dos.dos_energies = self.dos_parser.energies
+        sec_dos.dos_energies = self.dos_parser.energies + energy_fermi[0]
         totaldos = self.dos_parser.get('totaldos') * self.info_parser.get_unit_cell_volume()
-        # metainfo does not unit a unit for dos
+        # metainfo does not give a unit for dos
         sec_dos.dos_values = totaldos.to('m**3/joule').magnitude
 
         partialdos = self.dos_parser.get('partialdos')
@@ -1164,6 +1187,14 @@ class ExcitingParser(FairdiParser):
         band_energies = self.bandstructure_parser.get('band_energies', [])
 
         for n in range(len(band_energies)):
+
+            # Get fermi energy: it is used to un-shift the band structure to
+            # the original scale in which also other energies are reported.
+            energy_fermi = sec_scc.energy_reference_fermi
+            if energy_fermi is None:
+                continue
+            energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+
             sec_k_band = sec_scc.m_create(KBand)
             sec_k_band.band_structure_kind = 'electronic'
 
@@ -1185,7 +1216,7 @@ class ExcitingParser(FairdiParser):
                 sec_k_band_segment = sec_k_band.m_create(KBandSegment)
                 sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
                 sec_k_band_segment.band_k_points = band_k_points[nb]
-                sec_k_band_segment.band_energies = band_energies[n][nb]
+                sec_k_band_segment.band_energies = band_energies[n][nb] + energy_fermi[:, None, None]
                 sec_k_band_segment.band_segm_labels = band_seg_labels[nb]
                 sec_k_band_segment.band_segm_start_end = band_seg_start_end[nb]
 
@@ -1278,6 +1309,13 @@ class ExcitingParser(FairdiParser):
         if data is None:
             return
 
+        # Get fermi energy: it is used to un-shift the DOS to
+        # the original scale in which also other energies are reported.
+        energy_fermi = sec_scc.energy_reference_fermi
+        if energy_fermi is None:
+            return
+        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+
         # TODO I am not sure about format for spin-polarized case! I assume it is
         # energy dos_up dos_down
         nspin = self.info_parser.get_number_of_spin_channels()
@@ -1289,7 +1327,7 @@ class ExcitingParser(FairdiParser):
         data = np.reshape(data, (nspin, len(data) // nspin, 2))
         data = np.transpose(data, axes=(2, 0, 1))
 
-        sec_dos.dos_energies = pint.Quantity(data[0][0], 'hartree')
+        sec_dos.dos_energies = pint.Quantity(data[0][0], 'hartree') + energy_fermi[0]
         # metainfo does not have unit for dos
         dos = pint.Quantity(data[1], '1/hartree') * self.info_parser.get_unit_cell_volume()
         dos = dos.to('m**3/joule').magnitude
@@ -1304,6 +1342,13 @@ class ExcitingParser(FairdiParser):
         if band_energies is None:
             return
 
+        # Get fermi energy: it is used to un-shift the band structure to
+        # the original scale in which also other energies are reported.
+        energy_fermi = sec_scc.energy_reference_fermi
+        if energy_fermi is None:
+            return
+        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+
         sec_k_band = sec_scc.m_create(KBand)
         sec_k_band.band_structure_kind = 'electronic'
 
@@ -1313,7 +1358,7 @@ class ExcitingParser(FairdiParser):
             sec_k_band_segment = sec_k_band.m_create(KBandSegment)
             sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
             sec_k_band_segment.band_k_points = band_k_points[nb]
-            sec_k_band_segment.band_energies = band_energies[nb]
+            sec_k_band_segment.band_energies = band_energies[nb] + energy_fermi[:, None, None]
 
     def _parse_band_out(self, sec_scc):
         self.band_out_parser._nspin = self.info_parser.get_number_of_spin_channels()
@@ -1322,6 +1367,14 @@ class ExcitingParser(FairdiParser):
         if band_energies is None:
             return
 
+        # Get fermi energy: it is used to un-shift the band structure to
+        # the original scale in which also other energies are reported.
+        energy_fermi = sec_scc.energy_reference_fermi
+        if energy_fermi is None:
+            raise Exception("No fermi energy reported.")
+            return
+        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+
         sec_k_band = sec_scc.m_create(KBand)
         sec_k_band.band_structure_kind = 'electronic'
 
@@ -1329,7 +1382,7 @@ class ExcitingParser(FairdiParser):
         for nb in range(len(band_energies)):
             sec_k_band_segment = sec_k_band.m_create(KBandSegment)
             sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
-            sec_k_band_segment.band_energies = band_energies[nb]
+            sec_k_band_segment.band_energies = band_energies[nb] + energy_fermi[:, None, None]
 
     def parse_file(self, name, section):
         # TODO add support for info.xml, wannier.out
@@ -1754,23 +1807,36 @@ class ExcitingParser(FairdiParser):
             self.parse_file(f, sec_method)
 
         sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+        sec_scc.single_configuration_to_calculation_method_ref = sec_method
+        sec_scc.single_configuration_calculation_to_system_ref = sec_run.section_system[-1]
         sec_calc_to_calc_refs = sec_scc.m_create(CalculationToCalculationRefs)
         sec_scc_ref = sec_run.section_single_configuration_calculation[0]
         sec_calc_to_calc_refs.calculation_to_calculation_ref = sec_scc_ref
         sec_calc_to_calc_refs.calculation_to_calculation_kind = 'starting_point'
 
         # parse properties
-        gw_files = [
-            'EVALQP.DAT', 'EVALQP.TXT', 'TDOS-QP.OUT', 'bandstructure-qp.dat',
-            'BAND-QP.OUT']
-        for f in gw_files:
-            self.parse_file(f, sec_scc)
-
         gw_info_files = self.get_exciting_files(gw_info_file)
         if len(gw_info_files) > 1:
             self.logger.warn('Found multiple GW info files, will read only first!')
 
         self.info_gw_parser.mainfile = gw_info_files[0]
+
+        fermi_energy = self.info_gw_parser.get('fermi_energy', None)
+        if fermi_energy is not None:
+            sec_scc.gw_fermi_energy = fermi_energy
+            sec_scc.energy_reference_fermi = [fermi_energy.to('joule').magnitude]
+
+        gw_files = ['EVALQP.DAT', 'EVALQP.TXT', 'TDOS-QP.OUT']
+
+        # Parse GW band structure from one of the files:
+        bs_files = ['bandstructure-qp.dat', 'BAND-QP.OUT']
+        for fname in bs_files:
+            if self.file_exists(fname):
+                gw_files.append(fname)
+                break
+
+        for f in gw_files:
+            self.parse_file(f, sec_scc)
 
         frequency_data = self.info_gw_parser.get('frequency_data', None)
         if frequency_data is not None:
@@ -1779,10 +1845,6 @@ class ExcitingParser(FairdiParser):
             sec_method.gw_frequency_number = number
             sec_method.gw_frequency_values = frequency_data.get('values')
             sec_method.gw_frequency_weights = frequency_data.get('weights')
-
-        fermi_energy = self.info_gw_parser.get('fermi_energy', None)
-        if fermi_energy is not None:
-            sec_scc.gw_fermi_energy = fermi_energy
 
         fundamental_band_gap = self.info_gw_parser.get('direct_band_gap', None)
         if fundamental_band_gap is None:
@@ -1893,7 +1955,7 @@ class ExcitingParser(FairdiParser):
             if x_exciting_dos_fermi is not None:
                 setattr(msection, 'x_exciting_dos_fermi' + metainfo_ext, x_exciting_dos_fermi)
 
-            # energy contibutions
+            # energy contributions
             energy_contributions = iteration.get('energy_contributions', {})
             for key, names in self._energy_keys_mapping.items():
                 val = None
@@ -2093,16 +2155,14 @@ class ExcitingParser(FairdiParser):
         sec_run = self.archive.section_run[-1]
 
         def parse_configuration(section):
-            if section is None:
+            if not section:
                 return
 
             sec_scc = self.parse_scc(section)
-
-            sec_system = self.parse_system(section)
-
             if sec_scc is None:
                 return
 
+            sec_system = self.parse_system(section)
             if sec_system is not None:
                 sec_scc.single_configuration_calculation_to_system_ref = sec_system
 
@@ -2115,9 +2175,22 @@ class ExcitingParser(FairdiParser):
         if sec_scc is not None:
             # add data to scc
             # TODO add support for more output files and properties
-            exciting_files = [
-                'dos.xml', 'bandstructure.xml', 'EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf',
-                'TDOS.OUT']
+            exciting_files = ['EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf']
+
+            # Parse DFT DOS from one of the files
+            bs_files = ['dos.xml', 'TDOS.OUT']
+            for fname in bs_files:
+                if self.file_exists(fname):
+                    exciting_files.append(fname)
+                    break
+
+            # Parse DFT band structure from one of the files
+            bs_files = ['bandstructure.xml', 'BAND.OUT', 'bandstructure.dat']
+            for fname in bs_files:
+                if self.file_exists(fname):
+                    exciting_files.append(fname)
+                    break
+
             for f in exciting_files:
                 self.parse_file(f, sec_scc)
 
