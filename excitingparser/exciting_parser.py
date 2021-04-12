@@ -1371,7 +1371,6 @@ class ExcitingParser(FairdiParser):
         # the original scale in which also other energies are reported.
         energy_fermi = sec_scc.energy_reference_fermi
         if energy_fermi is None:
-            raise Exception("No fermi energy reported.")
             return
         energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
 
