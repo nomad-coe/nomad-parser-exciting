@@ -24,6 +24,10 @@ from nomad.datamodel import EntryArchive
 from excitingparser.exciting_parser import ExcitingParser
 
 
+def approx(value, abs=0, rel=1e-6):
+    return pytest.approx(value, abs=abs, rel=rel)
+
+
 @pytest.fixture(scope='module')
 def parser():
     return ExcitingParser()
@@ -47,29 +51,29 @@ def test_gs(parser):
 
     sec_method = sec_run.section_method[0]
     assert sec_method.number_of_spin_channels == 1
-    assert sec_method.smearing_width == pytest.approx(4.35974472e-22)
+    assert sec_method.smearing_width == approx(4.35974472e-22)
     assert sec_method.section_XC_functionals[1].XC_functional_name == 'GGA_X_PBE_SOL'
-    assert sec_method.x_exciting_scf_threshold_force_change.magnitude == pytest.approx(4.11936175e-12)
+    assert sec_method.x_exciting_scf_threshold_force_change.magnitude == approx(4.11936175e-12)
 
     sec_system = sec_run.section_system[0]
-    assert sec_system.lattice_vectors[0][0].magnitude == pytest.approx(1.72297146e-10)
-    assert sec_system.atom_positions[1][0].magnitude == pytest.approx(8.61485729e-11)
+    assert sec_system.lattice_vectors[0][0].magnitude == approx(1.72297146e-10)
+    assert sec_system.atom_positions[1][0].magnitude == approx(8.61485729e-11)
     assert len(sec_system.atom_labels) == 2
     assert sec_system.x_exciting_section_spin[0].x_exciting_spin_treatment == 'spin-unpolarised'
-    assert sec_system.x_exciting_section_atoms_group[0].x_exciting_muffin_tin_radius.magnitude == pytest.approx(6.87930374e-11)
+    assert sec_system.x_exciting_section_atoms_group[0].x_exciting_muffin_tin_radius.magnitude == approx(6.87930374e-11)
 
     sec_scc = sec_run.section_single_configuration_calculation[0]
-    assert sec_scc.energy_total.magnitude == pytest.approx(-3.30863556e-16)
+    assert sec_scc.energy_total.magnitude == approx(-3.30863556e-16)
     assert np.mean(sec_scc.atom_forces) == 0.0
-    assert sec_scc.charge_total.magnitude == pytest.approx(1.92261196e-18)
-    assert sec_scc.energy_reference_fermi.magnitude == pytest.approx(2.4422694e-18)
+    assert sec_scc.charge_total.magnitude == approx(1.92261196e-18)
+    assert sec_scc.energy_reference_fermi.magnitude == approx(2.4422694e-18)
     assert len(sec_scc.section_scf_iteration) == 12
-    assert sec_scc.section_scf_iteration[5].x_exciting_valence_charge_scf_iteration.magnitude == pytest.approx(1.28174131e-18)
-    assert sec_scc.section_scf_iteration[8].x_exciting_exchange_energy_scf_iteration.magnitude == pytest.approx(-4.39756926e-17)
-    assert sec_scc.section_scf_iteration[11].electronic_kinetic_energy_scf_iteration.magnitude == pytest.approx(3.30404896e-16)
+    assert sec_scc.section_scf_iteration[5].x_exciting_valence_charge_scf_iteration.magnitude == approx(1.28174131e-18)
+    assert sec_scc.section_scf_iteration[8].x_exciting_exchange_energy_scf_iteration.magnitude == approx(-4.39756926e-17)
+    assert sec_scc.section_scf_iteration[11].electronic_kinetic_energy_scf_iteration.magnitude == approx(3.30404896e-16)
     sec_eig = sec_scc.section_eigenvalues[0]
     assert np.shape(sec_eig.eigenvalues_kpoints) == (30, 3)
-    assert sec_eig.eigenvalues_values[0][9][4].magnitude == pytest.approx(2.74680139e-18)
+    assert sec_eig.eigenvalues_values[0][9][4].magnitude == approx(2.74680139e-18)
 
 
 def test_strucopt(parser):
@@ -79,21 +83,21 @@ def test_strucopt(parser):
     sec_systems = archive.section_run[0].section_system
     assert len(sec_systems) == 15
     assert sec_systems[0].atom_labels == ['Ga', 'Ga', 'Ga', 'Ga', 'O', 'O', 'O', 'O', 'O', 'O']
-    assert sec_systems[0].x_exciting_gkmax.magnitude == pytest.approx(1.13383567e+11)
-    assert sec_systems[3].atom_positions[1][1].magnitude == pytest.approx(3.07695918e-10)
-    assert sec_systems[10].atom_positions[-1][0].magnitude == pytest.approx(3.67156876e-11)
-    assert sec_systems[1].lattice_vectors[2][1].magnitude == pytest.approx(sec_systems[13].lattice_vectors[2][1].magnitude)
+    assert sec_systems[0].x_exciting_gkmax.magnitude == approx(1.13383567e+11)
+    assert sec_systems[3].atom_positions[1][1].magnitude == approx(3.07695918e-10)
+    assert sec_systems[10].atom_positions[-1][0].magnitude == approx(3.67156876e-11)
+    assert sec_systems[1].lattice_vectors[2][1].magnitude == approx(sec_systems[13].lattice_vectors[2][1].magnitude)
 
     sec_sccs = archive.section_run[0].section_single_configuration_calculation
     assert len(sec_sccs) == 15
     assert len(sec_sccs[0].section_scf_iteration) == 19
-    assert sec_sccs[0].section_scf_iteration[10].time_scf_iteration.magnitude == pytest.approx(431.84)
-    assert sec_sccs[0].section_scf_iteration[18].x_exciting_effective_potential_convergence_scf_iteration[0].magnitude == pytest.approx(4.62350928e-26)
-    assert sec_sccs[3].x_exciting_maximum_force_magnitude.magnitude == pytest.approx(1.64771998e-10)
-    assert sec_sccs[6].energy_total.magnitude == pytest.approx(-3.58415586e-14)
-    assert sec_sccs[9].time_calculation.magnitude == pytest.approx(724.33)
+    assert sec_sccs[0].section_scf_iteration[10].time_scf_iteration.magnitude == approx(431.84)
+    assert sec_sccs[0].section_scf_iteration[18].x_exciting_effective_potential_convergence_scf_iteration[0].magnitude == approx(4.62350928e-26)
+    assert sec_sccs[3].x_exciting_maximum_force_magnitude.magnitude == approx(1.64771998e-10)
+    assert sec_sccs[6].energy_total.magnitude == approx(-3.58415586e-14)
+    assert sec_sccs[9].time_calculation.magnitude == approx(724.33)
     assert len(sec_sccs[-1].x_exciting_section_MT_charge_atom) == 10
-    assert sec_sccs[-1].x_exciting_fermi_energy.magnitude == pytest.approx(1.03200886e-18)
+    assert sec_sccs[-1].x_exciting_fermi_energy.magnitude == approx(1.03200886e-18)
 
 
 def test_dos_spinpol(parser):
@@ -105,19 +109,19 @@ def test_dos_spinpol(parser):
     sec_doss = sec_scc.section_dos
 
     assert np.shape(sec_doss[0].dos_values) == (2, 500)
-    assert sec_doss[0].dos_energies[79].magnitude == pytest.approx(-2.98206539e-18)
-    assert sec_doss[0].dos_values[0][126] == pytest.approx(1.8925126966797494e-10)
-    assert sec_doss[0].dos_values[1][136] == pytest.approx(1.9160612889870427e-11)
-    assert sec_doss[0].dos_energies[240].magnitude == pytest.approx(-1.74389789e-19)
-    assert sec_doss[0].dos_values[0][220] == pytest.approx(5.638758214688811e-10)
-    assert sec_doss[0].dos_values[1][78] == pytest.approx(4.33359120779702e-10)
+    assert sec_doss[0].dos_energies[79].magnitude == approx(-1.70772016e-18)
+    assert sec_doss[0].dos_values[0][126] == approx(1.8925127e-10)
+    assert sec_doss[0].dos_values[1][136] == approx(1.91606129e-11)
+    assert sec_doss[0].dos_energies[240].magnitude == approx(1.09995544e-18)
+    assert sec_doss[0].dos_values[0][220] == approx(5.63875821e-10)
+    assert sec_doss[0].dos_values[1][78] == approx(4.33359121e-10)
 
     sec_pdoss = sec_scc.section_atom_projected_dos
     assert len(sec_pdoss) == 1
     assert np.shape(sec_pdoss[0].atom_projected_dos_values_lm) == (25, 2, 3, 500)
-    assert sec_doss[0].dos_energies[100].magnitude == pytest.approx(sec_pdoss[0].atom_projected_dos_energies[100].magnitude)
-    assert sec_pdoss[0].atom_projected_dos_values_lm[1][0][1][116] == pytest.approx(4.264786582546528e-13)
-    assert sec_pdoss[0].atom_projected_dos_values_lm[20][1][0][85] == pytest.approx(3.094123855740692e-17)
+    assert sec_doss[0].dos_energies[100].magnitude == approx(sec_pdoss[0].atom_projected_dos_energies[100].magnitude)
+    assert sec_pdoss[0].atom_projected_dos_values_lm[1][0][1][116] == approx(1.07677456e+16)
+    assert sec_pdoss[0].atom_projected_dos_values_lm[20][1][0][85] == approx(7.81205293e+11)
 
 
 def test_xs_tddft(parser):
@@ -175,25 +179,25 @@ def test_gw(silicon_gw):
     sec_methods = silicon_gw.section_run[0].section_method
     assert len(sec_methods) == 2
     assert sec_methods[1].electronic_structure_method == 'G0W0'
-    assert sec_methods[1].gw_mixed_basis_gmax.magnitude == pytest.approx(226767134954.67346)
+    assert sec_methods[1].gw_mixed_basis_gmax.magnitude == approx(226767134954.67346)
     assert sec_methods[1].gw_self_energy_singularity_treatment == 'mpb'
     assert sec_methods[1].gw_number_of_frequencies == 32
-    assert sec_methods[1].gw_frequency_values[-1].magnitude == pytest.approx(8.22665908e-16)
+    assert sec_methods[1].gw_frequency_values[-1].magnitude == approx(8.22665908e-16)
 
     sec_sccs = silicon_gw.section_run[0].section_single_configuration_calculation
     assert len(sec_sccs) == 2
 
     # Check GW properties
-    assert pytest.approx(sec_sccs[1].gw_fermi_energy.magnitude, 1.09865567e-19)
-    assert pytest.approx(sec_sccs[1].gw_fundamental_gap.magnitude, 3.42913865e-19)
-    assert pytest.approx(sec_sccs[1].gw_optical_gap.magnitude, 6.45981597e-19)
+    assert approx(sec_sccs[1].gw_fermi_energy.magnitude, 1.09865567e-19)
+    assert approx(sec_sccs[1].gw_fundamental_gap.magnitude, 3.42913865e-19)
+    assert approx(sec_sccs[1].gw_optical_gap.magnitude, 6.45981597e-19)
     assert np.shape(sec_sccs[1].section_eigenvalues[0].eigenvalues_values) == (1, 3, 20)
     assert sec_sccs[1].section_eigenvalues[0].eigenvalues_kpoints[-3][1] == 0.0
-    assert sec_sccs[1].section_eigenvalues[0].eigenvalues_values[0][2][9].magnitude == pytest.approx(1.769533187849446e-18, abs=1e-20)
-    assert sec_sccs[1].section_eigenvalues[0].gw_qp_linearization_prefactor[0][2][9] == pytest.approx(0.79935)
-    assert sec_sccs[1].gw_self_energy_x[0][2][0].magnitude == pytest.approx(-2.855981572623473e-18, abs=1e-20)
-    assert sec_sccs[1].gw_self_energy_c[0][2][14].magnitude == pytest.approx(-1.0879742954267992e-18, abs=1e-20)
-    assert sec_sccs[1].gw_xc_potential[0][2][6].magnitude == pytest.approx(-2.1691473890869554e-18, abs=1e-20)
+    assert sec_sccs[1].section_eigenvalues[0].eigenvalues_values[0][2][9].magnitude == approx(1.769533187849446e-18, abs=1e-20)
+    assert sec_sccs[1].section_eigenvalues[0].gw_qp_linearization_prefactor[0][2][9] == approx(0.79935)
+    assert sec_sccs[1].gw_self_energy_x[0][2][0].magnitude == approx(-2.855981572623473e-18, abs=1e-20)
+    assert sec_sccs[1].gw_self_energy_c[0][2][14].magnitude == approx(-1.0879742954267992e-18, abs=1e-20)
+    assert sec_sccs[1].gw_xc_potential[0][2][6].magnitude == approx(-2.1691473890869554e-18, abs=1e-20)
 
 
 def test_band_gw_silicon(silicon_gw):
@@ -224,7 +228,7 @@ def test_band_gw_silicon(silicon_gw):
         lowest_unoccupied_index = np.searchsorted(energies, energy_reference, "right")[0]
         highest_occupied_index = lowest_unoccupied_index - 1
         gap = energies[lowest_unoccupied_index] - energies[highest_occupied_index]
-        assert gap == pytest.approx(gap_assumed)
+        assert gap == approx(gap_assumed)
 
 
 def test_dos_gw_silicon(silicon_gw):
@@ -254,4 +258,4 @@ def test_dos_gw_silicon(silicon_gw):
         lowest_unoccupied_index = np.searchsorted(energies, energy_reference, "right")[0]
         highest_occupied_index = lowest_unoccupied_index - 1
         gap = energies[lowest_unoccupied_index] - energies[highest_occupied_index]
-        assert gap == pytest.approx(gap_assumed)
+        assert gap == approx(gap_assumed)

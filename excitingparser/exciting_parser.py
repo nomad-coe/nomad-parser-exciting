@@ -1172,12 +1172,11 @@ class ExcitingParser(FairdiParser):
         if partialdos is None:
             return
 
-        partialdos = partialdos * self.info_parser.get_unit_cell_volume()
-        partialdos = partialdos.to('m**3/J').magnitude
+        partialdos = partialdos.to('1/joule').magnitude
         sec_atom_projected_dos = sec_scc.m_create(AtomProjectedDos)
         sec_atom_projected_dos.atom_projected_dos_m_kind = 'spherical'
         sec_atom_projected_dos.number_of_lm_atom_projected_dos = self.dos_parser.number_of_lm
-        sec_atom_projected_dos.atom_projected_dos_energies = self.dos_parser.energies
+        sec_atom_projected_dos.atom_projected_dos_energies = self.dos_parser.energies + energy_fermi[0]
         sec_atom_projected_dos.atom_projected_dos_values_lm = partialdos
 
     def _parse_bandstructure(self, sec_scc):
