@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import pint
 import numpy as np
 import os
 import re
@@ -25,6 +24,7 @@ import logging
 from .metainfo import m_env
 from nomad.parsing.parser import FairdiParser
 
+from nomad.units import ureg
 from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
 from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
     ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, AtomProjectedDos,\
@@ -47,7 +47,7 @@ class GWInfoParser(TextParser):
             val = [v.split() for v in val_in.split('\n')]
             val = np.transpose(np.array([v for v in val if len(v) == 3], float))
             return dict(
-                number=np.array(val[0], dtype=int), values=pint.Quantity(val[1], 'hartree'),
+                number=np.array(val[0], dtype=int), values=val[1] * ureg.hartree,
                 weights=val[2])
 
         # TODO Read also input parameters here if input_GW.xml does not exist
@@ -61,7 +61,7 @@ class GWInfoParser(TextParser):
         self._quantities.append(
             Quantity(
                 'fermi_energy', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Fermi energy\s*\:(\s*-?[\d\.]+)\s',
-                unit='hartree', repeats=False)
+                unit=ureg.hartree, repeats=False)
         )
 
         self._quantities.append(
@@ -138,7 +138,7 @@ class BandstructureDatParser(DataTextParser):
                 end = start + nkpts_segment
                 band_energy = np.array([np.transpose(band)[start:end] for band in bands])
                 if self._energy_unit:
-                    band_energy = pint.Quantity(band_energy, self._energy_unit)
+                    band_energy = band_energy * self._energy_unit
                 self._band_energies.append(band_energy)
                 start = end
 
@@ -223,7 +223,7 @@ class BandOutParser(DataTextParser):
                 end = start + nkpts_segment
                 band_energy = np.array([np.transpose(band)[start:end] for band in bands])
                 if self._energy_unit:
-                    band_energy = pint.Quantity(band_energy, self._energy_unit)
+                    band_energy = band_energy * self._energy_unit
                 self._band_energies.append(band_energy)
                 start = end
 
@@ -375,7 +375,7 @@ class BandstructureXMLParser(XMLParser):
                     band_energy = np.array([
                         np.transpose(energy)[start:end] for energy in band_energies])
                     if self._energy_unit is not None:
-                        band_energy = pint.Quantity(band_energy, self._energy_unit)
+                        band_energy = band_energy * self._energy_unit
                     res_n.append(band_energy)
                     start = end
                 res.append(res_n)
@@ -425,6 +425,7 @@ class DOSXMLParser(XMLParser):
         self._dos_key = 'dos'
         self._unit_key = 'unit'
         self._energy_unit = kwargs.get('energy_unit', None)
+        self._units_mapping = dict(hartree=ureg.hartree)
 
     def init_parameters(self):
         self._ndos = None
@@ -442,7 +443,7 @@ class DOSXMLParser(XMLParser):
             if axis is None:
                 return
 
-            self._energy_unit = axis.attrib.get(self._unit_key).lower()
+            self._energy_unit = self._units_mapping.get(axis.attrib.get(self._unit_key).lower(), 1)
 
         return self._energy_unit
 
@@ -506,7 +507,7 @@ class DOSXMLParser(XMLParser):
                 [float(point.attrib.get(self._energy_key)) for point in self.total_dos[0]])
 
             if self.energy_unit is not None:
-                self._energies = pint.Quantity(self._energies, self.energy_unit)
+                self._energies = self._energies * self.energy_unit
 
         return self._energies
 
@@ -531,7 +532,7 @@ class DOSXMLParser(XMLParser):
                 res[i] = self._get_dos(self._total_dos[i])
 
             if self.energy_unit is not None:
-                res = pint.Quantity(res, '1/%s' % self.energy_unit)
+                res = res * (1 / self.energy_unit)
 
         elif 'partial' in key:
             if not self.partial_dos:
@@ -559,7 +560,7 @@ class DOSXMLParser(XMLParser):
                 res[lm][spin][atom] = self._get_dos(self.partial_dos[i])
 
             if self.energy_unit is not None:
-                res = pint.Quantity(res, '1/%s' % self.energy_unit)
+                res = res * (1 / self.energy_unit)
 
         elif key == 'energies':
             return self.energies
@@ -579,7 +580,7 @@ class ExcitingFermiSurfaceBxsfParser(TextParser):
 
         self._quantities.append(
             Quantity(
-                'fermi_energy', r'Fermi Energy:\s*([\d\.]+)\s*', unit='hartree', repeats=False))
+                'fermi_energy', r'Fermi Energy:\s*([\d\.]+)\s*', unit=ureg.hartree, repeats=False))
 
         def str_to_band_parameters(val_in):
             val = val_in.strip().split('\n')
@@ -598,7 +599,7 @@ class ExcitingFermiSurfaceBxsfParser(TextParser):
 
         self._quantities.append(
             Quantity(
-                'fermi_surface', r'BAND:\s*\d+\s*([\d\-\+\.Ee\s]+)\n *E*', unit='hartree',
+                'fermi_surface', r'BAND:\s*\d+\s*([\d\-\+\.Ee\s]+)\n *E*', unit=ureg.hartree,
                 repeats=True))
 
 
@@ -654,9 +655,9 @@ class ExcitingInfoParser(TextParser):
         def str_to_atom_properties_dict(val_in):
             unit = None
             if 'charge' in val_in:
-                unit = 'elementary_charge'
+                unit = ureg.elementary_charge
             elif 'moment' in val_in:
-                unit = 'elementary_charge * bohr'
+                unit = ureg.elementary_charge * ureg.bohr
 
             val = val_in.strip().split('\n')
 
@@ -677,12 +678,12 @@ class ExcitingInfoParser(TextParser):
                     v[1] = v[1][0] if len(v[1]) == 1 else v[1]
                     if species is None:
                         species = v[0][2]
-                    atom_resolved.append(((species, pint.Quantity(v[1], unit))))
+                    atom_resolved.append(((species, v[1] * unit)))
 
                 else:
                     vi = [float(vii) for vii in v[1].split()]
                     vi = vi[0] if len(vi) == 1 else vi
-                    properties[v[0].strip()] = pint.Quantity(vi, unit)
+                    properties[v[0].strip()] = vi * unit
 
             properties['atom_resolved'] = atom_resolved
             return properties
@@ -697,7 +698,7 @@ class ExcitingInfoParser(TextParser):
                 v = v.split(':')
                 if len(v) < 2:
                     continue
-                energies[v[0].strip()] = pint.Quantity(float(v[1]), 'hartree')
+                energies[v[0].strip()] = float(v[1]) * ureg.hartree
             return energies
 
         self._quantities = [Quantity(
@@ -708,16 +709,16 @@ class ExcitingInfoParser(TextParser):
             Quantity(
                 'lattice_vectors',
                 r'Lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
-                str_operation=str_to_array, unit='bohr', repeats=False, convert=False),
+                str_operation=str_to_array, unit=ureg.bohr, repeats=False, convert=False),
             Quantity(
                 'lattice_vectors_reciprocal',
                 r'Reciprocal lattice vectors\s*[\(cartesian\)]*\s*:\s*([\-0-9\.\s]+)\n',
-                str_operation=str_to_array, unit='1/bohr', repeats=False, convert=False),
+                str_operation=str_to_array, unit=1 / ureg.bohr, repeats=False, convert=False),
         ]
 
         self._system_keys_mapping = {
-            'x_exciting_unit_cell_volume': ('Unit cell volume', 'bohr ** 3'),
-            'x_exciting_brillouin_zone_volume': ('Brillouin zone volume', '1/bohr ** 3'),
+            'x_exciting_unit_cell_volume': ('Unit cell volume', ureg.bohr ** 3),
+            'x_exciting_brillouin_zone_volume': ('Brillouin zone volume', 1 / ureg.bohr ** 3),
             'x_exciting_number_of_atoms': ('Total number of atoms per unit cell', None),
             'x_exciting_spin_treatment': ('Spin treatment', None),
             'x_exciting_number_of_bravais_lattice_symmetries': ('Number of Bravais lattice symmetries', None),
@@ -727,16 +728,16 @@ class ExcitingInfoParser(TextParser):
             'x_exciting_number_kpoints': (r'Total number of k\-points', None),
             'x_exciting_rgkmax': (r'R\^MT\_min \* \|G\+k\|\_max \(rgkmax\)', None),
             'x_exciting_species_rtmin': (r'Species with R\^MT\_min', None),
-            'x_exciting_gkmax': (r'Maximum \|G\+k\| for APW functions', '1/bohr'),
-            'x_exciting_gmaxvr': (r'Maximum \|G\| for potential and density', '1/bohr'),
+            'x_exciting_gkmax': (r'Maximum \|G\+k\| for APW functions', 1 / ureg.bohr),
+            'x_exciting_gmaxvr': (r'Maximum \|G\| for potential and density', 1 / ureg.bohr),
             'x_exciting_gvector_size': (r'G\-vector grid sizes', None),
             'x_exciting_gvector_total': (r'Total number of G\-vectors', None),
             'x_exciting_lmaxapw': (r'   APW functions', None),
-            'x_exciting_nuclear_charge': ('Total nuclear charge', 'elementary_charge'),
-            'x_exciting_electronic_charge': ('Total electronic charge', 'elementary_charge'),
-            'x_exciting_core_charge_initial': ('Total core charge', 'elementary_charge'),
-            'x_exciting_valence_charge_initial': ('Total valence charge', 'elementary_charge'),
-            'x_exciting_wigner_radius': (r'Effective Wigner radius, r\_s', 'bohr'),
+            'x_exciting_nuclear_charge': ('Total nuclear charge', ureg.elementary_charge),
+            'x_exciting_electronic_charge': ('Total electronic charge', ureg.elementary_charge),
+            'x_exciting_core_charge_initial': ('Total core charge', ureg.elementary_charge),
+            'x_exciting_valence_charge_initial': ('Total valence charge', ureg.elementary_charge),
+            'x_exciting_wigner_radius': (r'Effective Wigner radius, r\_s', ureg.bohr),
             'x_exciting_empty_states': ('Number of empty states', None),
             'x_exciting_valence_states': ('Total number of valence states', None),
             'x_exciting_hamiltonian_size': ('Maximum Hamiltonian size', None),
@@ -768,10 +769,10 @@ class ExcitingInfoParser(TextParser):
             prop['symbol'] = val[0][1]
             prop['file'] = val[0][2]
             prop['name'] = val[0][3]
-            prop['nuclear_charge'] = pint.Quantity(float(val[0][4]), 'elementary_charge')
-            prop['electronic_charge'] = pint.Quantity(float(val[0][5]), 'elementary_charge')
-            prop['atomic_mass'] = pint.Quantity(float(val[0][6]), 'electron_mass')
-            prop['muffin_tin_radius'] = pint.Quantity(float(val[0][7]), 'bohr')
+            prop['nuclear_charge'] = float(val[0][4]) * ureg.elementary_charge
+            prop['electronic_charge'] = float(val[0][5]) * ureg.elementary_charge
+            prop['atomic_mass'] = float(val[0][6]) * ureg.electron_mass
+            prop['muffin_tin_radius'] = float(val[0][7]) * ureg.bohr
             prop['radial_points'] = int(val[0][8])
             prop['positions_format'] = val[0][9].lstrip('(').rstrip(')')
 
@@ -809,14 +810,14 @@ class ExcitingInfoParser(TextParser):
         scf_quantities = [
             Quantity(
                 'energy_total', r'[Tt]*otal energy\s*:\s*([\-\d\.Ee]+)', repeats=False,
-                dtype=float, unit='hartree'),
+                dtype=float, unit=ureg.hartree),
             Quantity(
                 'energy_contributions', r'(?:Energies|_)([\+\-\s\w\.\:]+?)\n *(?:DOS|Density)',
                 str_operation=str_to_energy_dict, repeats=False, convert=False),
             Quantity(
                 'x_exciting_dos_fermi',
                 r'DOS at Fermi energy \(states\/Ha\/cell\)\s*:\s*([\-\d\.Ee]+)',
-                repeats=False, dtype=float, unit='1/hartree'),
+                repeats=False, dtype=float, unit=1 / ureg.hartree),
             Quantity(
                 'charge_contributions',
                 r'(?:Charges|Electron charges\s*\:*\s*)([\-\s\w\.\:\(\)]+?)\n *[A-Z\+]',
@@ -827,8 +828,8 @@ class ExcitingInfoParser(TextParser):
                 str_operation=str_to_atom_properties_dict, repeats=False, convert=False)]
 
         self._miscellaneous_keys_mapping = {
-            'x_exciting_gap': (r'Estimated fundamental gap', 'hartree'),
-            'time': (r'Wall time \(seconds\)', 's')}
+            'x_exciting_gap': (r'Estimated fundamental gap', ureg.hartree),
+            'time': (r'Wall time \(seconds\)', ureg.s)}
 
         for name, key_unit in self._miscellaneous_keys_mapping.items():
             scf_quantities.append(Quantity(
@@ -837,13 +838,13 @@ class ExcitingInfoParser(TextParser):
 
         self._convergence_keys_mapping = {
             'x_exciting_effective_potential_convergence': (
-                r'RMS change in effective potential \(target\)', 'hartree'),
+                r'RMS change in effective potential \(target\)', ureg.hartree),
             'x_exciting_energy_convergence': (
-                r'Absolute change in total energy\s*\(target\)', 'hartree'),
+                r'Absolute change in total energy\s*\(target\)', ureg.hartree),
             'x_exciting_charge_convergence': (
-                r'Charge distance\s*\(target\)', 'elementary_charge'),
+                r'Charge distance\s*\(target\)', ureg.elementary_charge),
             'x_exciting_IBS_force_convergence': (
-                r'Abs\. change in max\-nonIBS\-force\s*\(target\)', 'hartree/bohr')}
+                r'Abs\. change in max\-nonIBS\-force\s*\(target\)', ureg.hartree / ureg.bohr)}
 
         for name, key_unit in self._convergence_keys_mapping.items():
             scf_quantities.append(Quantity(
@@ -874,7 +875,7 @@ class ExcitingInfoParser(TextParser):
                             repeats=True, dtype=float)])),
                 Quantity(
                     'forces', r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
-                    repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr')
+                    repeats=False, str_operation=str_to_array, dtype=float, unit=ureg.hartree / ureg.bohr)
             ]), repeats=False))
 
         optimization_quantities = [
@@ -892,7 +893,7 @@ class ExcitingInfoParser(TextParser):
             Quantity(
                 'forces',
                 r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Time',
-                repeats=False, str_operation=str_to_array, convert=False, unit='hartree/bohr'),
+                repeats=False, str_operation=str_to_array, convert=False, unit=ureg.hartree / ureg.bohr),
             Quantity(
                 'step', r'Optimization step\s*(\d+)', repeats=False, dtype=int),
             Quantity(
@@ -903,14 +904,14 @@ class ExcitingInfoParser(TextParser):
             Quantity(
                 'force_convergence',
                 r'Maximum force magnitude\s*\(target\)\s*\:(\s*[\(\)\d\.\-\+Ee ]+)',
-                str_operation=str_to_quantity_tolerances, unit='hartree/bohr', repeats=False,
+                str_operation=str_to_quantity_tolerances, unit=ureg.hartree / ureg.bohr, repeats=False,
                 dtype=float),
             Quantity(
                 'energy_total', r'Total energy at this optimization step\s*\:\s*([\-\d\.Ee]+)',
-                unit='hartree', repeats=False, dtype=float),
+                unit=ureg.hartree, repeats=False, dtype=float),
             Quantity(
                 'time', r'Time spent in this optimization step\s*\:\s*([\-\d\.Ee]+)\s*seconds',
-                unit='s', repeats=False, dtype=float)
+                unit=ureg.s, repeats=False, dtype=float)
         ]
 
         self._quantities.append(Quantity(
@@ -941,7 +942,7 @@ class ExcitingInfoParser(TextParser):
                 Quantity(
                     'forces',
                     r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
-                    repeats=False, str_operation=str_to_array, dtype=float, unit='hartree/bohr'),
+                    repeats=False, str_operation=str_to_array, dtype=float, unit=ureg.hartree / ureg.bohr),
             ]), repeats=False))
 
     def get_atom_labels(self, section):
@@ -987,7 +988,7 @@ class ExcitingInfoParser(TextParser):
                 return
             positions = np.dot(positions, cell.magnitude)
 
-        return pint.Quantity(positions, 'bohr')
+        return positions * ureg.bohr
 
     def get_scf_threshold(self, name):
         return self.get('groundstate', {}).get('scf_iteration', [{}])[-1].get(
@@ -1054,14 +1055,14 @@ class ExcitingParser(FairdiParser):
             mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
         self._metainfo_env = m_env
         self.info_parser = ExcitingInfoParser()
-        self.dos_parser = DOSXMLParser(energy_unit='hartree')
-        self.bandstructure_parser = BandstructureXMLParser(energy_unit='hartree')
+        self.dos_parser = DOSXMLParser(energy_unit=ureg.hartree)
+        self.bandstructure_parser = BandstructureXMLParser(energy_unit=ureg.hartree)
         self.eigval_parser = ExcitingEigenvalueParser()
         self.fermisurf_parser = ExcitingFermiSurfaceBxsfParser()
         self.evalqp_parser = ExcitingEvalqpParser()
         self.dos_out_parser = DataTextParser()
-        self.bandstructure_dat_parser = BandstructureDatParser(energy_unit='hartree')
-        self.band_out_parser = BandOutParser(energy_unit='hartree')
+        self.bandstructure_dat_parser = BandstructureDatParser(energy_unit=ureg.hartree)
+        self.band_out_parser = BandOutParser(energy_unit=ureg.hartree)
         self.info_gw_parser = GWInfoParser()
         self.input_xml_parser = XMLParser()
         self.data_xs_parser = DataTextParser()
@@ -1158,7 +1159,7 @@ class ExcitingParser(FairdiParser):
         energy_fermi = sec_scc.energy_reference_fermi
         if energy_fermi is None:
             return
-        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+        energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         sec_dos = sec_scc.m_create(Dos)
         sec_dos.dos_kind = 'electronic'
@@ -1192,7 +1193,7 @@ class ExcitingParser(FairdiParser):
             energy_fermi = sec_scc.energy_reference_fermi
             if energy_fermi is None:
                 continue
-            energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+            energy_fermi = (energy_fermi.magnitude * ureg.joule).to("hartree")
 
             sec_k_band = sec_scc.m_create(KBand)
             sec_k_band.band_structure_kind = 'electronic'
@@ -1235,7 +1236,7 @@ class ExcitingParser(FairdiParser):
             res = res.reshape((len(res), len(data), len(res[0]) // len(data)))
 
             if key == 'eigenvalues':
-                res = pint.Quantity(res, 'hartree')
+                res = res * ureg.hartree
             return res
 
         sec_eigenvalues.eigenvalues_values = get_data('eigenvalues')
@@ -1279,7 +1280,7 @@ class ExcitingParser(FairdiParser):
                 energy = np.array([d[1].get(key, None) for d in data])
                 if None in energy:
                     return energy
-                return pint.Quantity(np.array([d[1].get(key) for d in data]), 'hartree')
+                return np.array([d[1].get(key) for d in data]) * ureg.hartree
 
         eigs_gw = get_data('E_GW')
         if eigs_gw[0] is None:
@@ -1313,7 +1314,7 @@ class ExcitingParser(FairdiParser):
         energy_fermi = sec_scc.energy_reference_fermi
         if energy_fermi is None:
             return
-        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+        energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         # TODO I am not sure about format for spin-polarized case! I assume it is
         # energy dos_up dos_down
@@ -1326,9 +1327,9 @@ class ExcitingParser(FairdiParser):
         data = np.reshape(data, (nspin, len(data) // nspin, 2))
         data = np.transpose(data, axes=(2, 0, 1))
 
-        sec_dos.dos_energies = pint.Quantity(data[0][0], 'hartree') + energy_fermi[0]
+        sec_dos.dos_energies = data[0][0] * ureg.hartree + energy_fermi[0]
         # metainfo does not have unit for dos
-        dos = pint.Quantity(data[1], '1/hartree') * self.info_parser.get_unit_cell_volume()
+        dos = data[1] * (1 / ureg.hartree) * self.info_parser.get_unit_cell_volume()
         dos = dos.to('m**3/joule').magnitude
         sec_dos.dos_values = dos
 
@@ -1346,7 +1347,7 @@ class ExcitingParser(FairdiParser):
         energy_fermi = sec_scc.energy_reference_fermi
         if energy_fermi is None:
             return
-        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+        energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         sec_k_band = sec_scc.m_create(KBand)
         sec_k_band.band_structure_kind = 'electronic'
@@ -1371,7 +1372,7 @@ class ExcitingParser(FairdiParser):
         energy_fermi = sec_scc.energy_reference_fermi
         if energy_fermi is None:
             return
-        energy_fermi = pint.Quantity(energy_fermi.magnitude, "joule").to("hartree")
+        energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         sec_k_band = sec_scc.m_create(KBand)
         sec_k_band.band_structure_kind = 'electronic'
@@ -1562,10 +1563,10 @@ class ExcitingParser(FairdiParser):
             sec_scc.x_exciting_xs_bse_number_of_components = n_components
             n_excitons = len(data[0]) // n_components
             sec_scc.x_exciting_xs_bse_number_of_excitons = n_excitons
-            sec_scc.x_exciting_xs_bse_exciton_energies = pint.Quantity(
-                np.reshape(data[1], (n_components, n_excitons)), 'hartree')
-            sec_scc.x_exciting_xs_bse_exciton_binding_energies = pint.Quantity(
-                np.reshape(data[2], (n_components, n_excitons)), 'hartree')
+            sec_scc.x_exciting_xs_bse_exciton_energies = np.reshape(
+                data[1], (n_components, n_excitons)) * ureg.hartree
+            sec_scc.x_exciting_xs_bse_exciton_binding_energies = np.reshape(
+                data[2], (n_components, n_excitons)) * ureg.hartree
             sec_scc.x_exciting_xs_bse_exciton_oscillator_strength = np.reshape(
                 data[3], (n_components, n_excitons))
             sec_scc.x_exciting_xs_bse_exciton_amplitude_re = np.reshape(
@@ -1579,8 +1580,8 @@ class ExcitingParser(FairdiParser):
             n_epsilon = len(data[0]) // n_components
 
             sec_scc.x_exciting_xs_bse_number_of_energy_points = n_epsilon
-            sec_scc.x_exciting_xs_bse_epsilon_energies = pint.Quantity(
-                np.reshape(data[0], (n_components, n_epsilon)), 'hartree')
+            sec_scc.x_exciting_xs_bse_epsilon_energies = np.reshape(
+                data[0], (n_components, n_epsilon)) * ureg.hartree
             sec_scc.x_exciting_xs_bse_epsilon_re = np.reshape(
                 data[1], (n_components, n_epsilon))
             sec_scc.x_exciting_xs_bse_epsilon_im = np.reshape(
@@ -1591,8 +1592,8 @@ class ExcitingParser(FairdiParser):
             data = np.transpose(np.vstack(data))
             n_sigma = len(data[0]) // n_components
 
-            sec_scc.x_exciting_xs_bse_sigma_energies = pint.Quantity(
-                np.reshape(data[0], (n_components, n_sigma)), 'hartree')
+            sec_scc.x_exciting_xs_bse_sigma_energies = np.reshape(
+                data[0], (n_components, n_sigma)) * ureg.hartree
             sec_scc.x_exciting_xs_bse_sigma_re = np.reshape(
                 data[1], (n_components, n_sigma))
             sec_scc.x_exciting_xs_bse_sigma_im = np.reshape(
@@ -1603,8 +1604,8 @@ class ExcitingParser(FairdiParser):
             data = np.transpose(np.vstack(data))
             n_loss = len(data[0]) // n_components
 
-            sec_scc.x_exciting_xs_bse_loss_energies = pint.Quantity(
-                np.reshape(data[0], (n_components, n_loss)), 'hartree')
+            sec_scc.x_exciting_xs_bse_loss_energies = np.reshape(
+                data[0], (n_components, n_loss)) * ureg.hartree
             sec_scc.x_exciting_xs_bse_loss = np.reshape(
                 data[1], (n_components, n_loss))
 
@@ -1690,8 +1691,7 @@ class ExcitingParser(FairdiParser):
                 if quantity == 'EPSILON' and ext == 'FXC':
                     sec_scc = sec_run.m_create(SingleConfigurationCalculation)
                     sec_scc.x_exciting_xs_tddft_number_of_epsilon_values = len(data[0][0][0])
-                    sec_scc.x_exciting_xs_tddft_epsilon_energies = pint.Quantity(
-                        data[0][0][0], 'hartree')
+                    sec_scc.x_exciting_xs_tddft_epsilon_energies = data[0][0][0] * ureg.hartree
                     sec_scc.x_exciting_xs_tddft_dielectric_function_local_field = data[1:]
 
                 elif quantity == 'EPSILON' and ext == 'NLF_FXC':
@@ -1891,7 +1891,7 @@ class ExcitingParser(FairdiParser):
             sec_method.smearing_kind = smearing_kind
         smearing_width = self.info_parser.get_initialization_parameter('smearing_width')
         if smearing_width is not None:
-            smearing_width = pint.Quantity(smearing_width, 'hartree').to('joule')
+            smearing_width = (smearing_width * ureg.hartree).to('joule')
             # TODO smearing with should have units of energy
             sec_method.smearing_width = smearing_width.magnitude
 
@@ -1971,8 +1971,7 @@ class ExcitingParser(FairdiParser):
                     # and for global it becomes energy_reference_fermi
                     key = 'energy_reference_fermi'
                     metainfo_ext_fermi = metainfo_ext.replace('_scf', '')
-                    val = pint.Quantity(
-                        [val.magnitude] * self.info_parser.get_number_of_spin_channels(), 'hartree')
+                    val = ([val.magnitude] * self.info_parser.get_number_of_spin_channels()) * ureg.hartree
                     setattr(msection, key + metainfo_ext_fermi, val)
 
             # charge contributions
@@ -2072,8 +2071,8 @@ class ExcitingParser(FairdiParser):
                 if positions is None or lattice_vectors is None or species is None:
                     continue
                 lattice_vectors *= self.input_xml_parser.get('structure/crystal/scale', 1.0)
-                positions = pint.Quantity(np.dot(positions, lattice_vectors), 'bohr')
-                lattice_vectors = pint.Quantity(lattice_vectors, 'bohr')
+                positions = np.dot(positions, lattice_vectors), * ureg.bohr
+                lattice_vectors = lattice_vectors * ureg.bohr
 
                 atoms = self.input_xml_parser.get('structure/species/atom')
                 atom_labels = []
