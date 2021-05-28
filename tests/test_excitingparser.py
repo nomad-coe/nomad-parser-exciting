@@ -104,24 +104,20 @@ def test_dos_spinpol(parser):
     archive = EntryArchive()
     parser.parse('tests/data/CeO_dos/INFO.OUT', archive, None)
 
-    sec_scc = archive.section_run[0].section_single_configuration_calculation[0]
-    assert len(sec_scc.section_dos) == 1
-    sec_doss = sec_scc.section_dos
+    sec_dos = archive.section_run[0].section_single_configuration_calculation[0].dos_electronic[0]
 
-    assert np.shape(sec_doss[0].dos_values) == (2, 500)
-    assert sec_doss[0].dos_energies[79].magnitude == approx(-1.70772016e-18)
-    assert sec_doss[0].dos_values[0][126] == approx(1.8925127e-10)
-    assert sec_doss[0].dos_values[1][136] == approx(1.91606129e-11)
-    assert sec_doss[0].dos_energies[240].magnitude == approx(1.09995544e-18)
-    assert sec_doss[0].dos_values[0][220] == approx(5.63875821e-10)
-    assert sec_doss[0].dos_values[1][78] == approx(4.33359121e-10)
+    assert np.shape(sec_dos.dos_total[0].dos_values) == (500,)
+    assert sec_dos.dos_energies[79].magnitude == approx(-1.70772016e-18)
+    assert sec_dos.dos_total[0].dos_values[126] == approx(1.8925127e-10)
+    assert sec_dos.dos_total[1].dos_values[136] == approx(1.91606129e-11)
+    assert sec_dos.dos_energies[240].magnitude == approx(1.09995544e-18)
+    assert sec_dos.dos_total[0].dos_values[220] == approx(5.63875821e-10)
+    assert sec_dos.dos_total[1].dos_values[78] == approx(4.33359121e-10)
 
-    sec_pdoss = sec_scc.section_atom_projected_dos
-    assert len(sec_pdoss) == 1
-    assert np.shape(sec_pdoss[0].atom_projected_dos_values_lm) == (25, 2, 3, 500)
-    assert sec_doss[0].dos_energies[100].magnitude == approx(sec_pdoss[0].atom_projected_dos_energies[100].magnitude)
-    assert sec_pdoss[0].atom_projected_dos_values_lm[1][0][1][116] == approx(1.07677456e+16)
-    assert sec_pdoss[0].atom_projected_dos_values_lm[20][1][0][85] == approx(7.81205293e+11)
+    assert len(sec_dos.dos_atom_projected) == 150
+    assert np.shape(sec_dos.dos_atom_projected[149].dos_values) == (500,)
+    assert sec_dos.dos_atom_projected[7].dos_values[116] == approx(1.07677456e+16)
+    assert sec_dos.dos_atom_projected[123].dos_values[85] == approx(7.81205293e+11)
 
 
 def test_xs_tddft(parser):
@@ -238,10 +234,10 @@ def test_dos_gw_silicon(silicon_gw):
     assert len(sccs) == 2
     gaps = [0.5442277, 1.360569]
     for gap_assumed, scc in zip(gaps, sccs):
-        assert len(scc.section_dos) == 1
-        dos = scc.section_dos[0]
+        assert len(scc.dos_electronic) == 1
+        dos = scc.dos_electronic[0]
         energies = dos.dos_energies.to(ureg.electron_volt).magnitude
-        values = dos.dos_values
+        values = np.array([d.dos_values for d in dos.dos_total])
 
         # Check that an energy reference is reported
         energy_reference = scc.energy_reference_fermi

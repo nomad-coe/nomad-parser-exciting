@@ -27,7 +27,7 @@ from nomad.parsing.parser import FairdiParser
 from nomad.units import ureg
 from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
 from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
-    ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, AtomProjectedDos,\
+    ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, DosValues,\
     KBand, Eigenvalues, KBandSegment, MethodToMethodRefs, CalculationToCalculationRefs,\
     FrameSequence
 
@@ -1161,24 +1161,30 @@ class ExcitingParser(FairdiParser):
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
-        sec_dos = sec_scc.m_create(Dos)
-        sec_dos.dos_kind = 'electronic'
-        sec_dos.number_of_dos_values = self.dos_parser.number_of_dos
+        sec_dos = sec_scc.m_create(Dos, SingleConfigurationCalculation.dos_electronic)
+        sec_dos.n_dos_values = self.dos_parser.number_of_dos
         sec_dos.dos_energies = self.dos_parser.energies + energy_fermi[0]
         totaldos = self.dos_parser.get('totaldos') * self.info_parser.get_unit_cell_volume()
-        # metainfo does not give a unit for dos
-        sec_dos.dos_values = totaldos.to('m**3/joule').magnitude
+        for spin in range(len(totaldos)):
+            sec_dos_values = sec_dos.m_create(DosValues, Dos.dos_total)
+            sec_dos_values.dos_spin = spin
+            sec_dos_values.dos_values = totaldos[spin].to('m**3/joule').magnitude
 
         partialdos = self.dos_parser.get('partialdos')
         if partialdos is None:
             return
 
         partialdos = partialdos.to('1/joule').magnitude
-        sec_atom_projected_dos = sec_scc.m_create(AtomProjectedDos)
-        sec_atom_projected_dos.atom_projected_dos_m_kind = 'spherical'
-        sec_atom_projected_dos.number_of_lm_atom_projected_dos = self.dos_parser.number_of_lm
-        sec_atom_projected_dos.atom_projected_dos_energies = self.dos_parser.energies + energy_fermi[0]
-        sec_atom_projected_dos.atom_projected_dos_values_lm = partialdos
+        lm_values = np.column_stack((np.arange(len(partialdos)), np.zeros(len(partialdos), dtype=np.int32)))
+        for lm in range(len(partialdos)):
+            for spin in range(len(partialdos[lm])):
+                for atom in range(len(partialdos[lm][spin])):
+                    sec_dos_values = sec_dos.m_create(DosValues, Dos.dos_atom_projected)
+                    sec_dos_values.dos_m_kind = 'spherical'
+                    sec_dos_values.dos_lm = lm_values[lm]
+                    sec_dos_values.dos_spin = spin
+                    sec_dos_values.dos_atom_index = atom
+                    sec_dos_values.dos_values = partialdos[lm][spin][atom]
 
     def _parse_bandstructure(self, sec_scc):
         # we need to set nspin again as this is overwritten when setting mainfile
@@ -1320,18 +1326,18 @@ class ExcitingParser(FairdiParser):
         # energy dos_up dos_down
         nspin = self.info_parser.get_number_of_spin_channels()
 
-        sec_dos = sec_scc.m_create(Dos)
-        sec_dos.dos_kind = 'electronic'
-        sec_dos.number_of_dos_values = len(data) // nspin
+        sec_dos = sec_scc.m_create(Dos, SingleConfigurationCalculation.dos_electronic)
+        sec_dos.n_dos_values = len(data) // nspin
 
         data = np.reshape(data, (nspin, len(data) // nspin, 2))
         data = np.transpose(data, axes=(2, 0, 1))
 
         sec_dos.dos_energies = data[0][0] * ureg.hartree + energy_fermi[0]
-        # metainfo does not have unit for dos
         dos = data[1] * (1 / ureg.hartree) * self.info_parser.get_unit_cell_volume()
-        dos = dos.to('m**3/joule').magnitude
-        sec_dos.dos_values = dos
+        for spin in range(len(dos)):
+            sec_dos_values = sec_dos.m_create(DosValues, Dos.dos_total)
+            sec_dos_values.dos_spin = spin
+            sec_dos_values.dos_values = dos[spin].to('m**3/joule').magnitude
 
         # TODO add PDOS
 
