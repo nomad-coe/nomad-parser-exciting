@@ -71,9 +71,9 @@ def test_gs(parser):
     assert sec_scc.section_scf_iteration[5].x_exciting_valence_charge_scf_iteration.magnitude == approx(1.28174131e-18)
     assert sec_scc.section_scf_iteration[8].x_exciting_exchange_energy_scf_iteration.magnitude == approx(-4.39756926e-17)
     assert sec_scc.section_scf_iteration[11].electronic_kinetic_energy_scf_iteration.magnitude == approx(3.30404896e-16)
-    sec_eig = sec_scc.section_eigenvalues[0]
-    assert np.shape(sec_eig.eigenvalues_kpoints) == (30, 3)
-    assert sec_eig.eigenvalues_values[0][9][4].magnitude == approx(2.74680139e-18)
+    sec_eig = sec_scc.eigenvalues[0]
+    assert np.shape(sec_eig.band_energies_kpoints) == (30, 3)
+    assert sec_eig.band_energies[9].band_energies_values[4].magnitude == approx(2.74680139e-18)
 
 
 def test_strucopt(parser):
@@ -187,10 +187,10 @@ def test_gw(silicon_gw):
     assert approx(sec_sccs[1].gw_fermi_energy.magnitude, 1.09865567e-19)
     assert approx(sec_sccs[1].gw_fundamental_gap.magnitude, 3.42913865e-19)
     assert approx(sec_sccs[1].gw_optical_gap.magnitude, 6.45981597e-19)
-    assert np.shape(sec_sccs[1].section_eigenvalues[0].eigenvalues_values) == (1, 3, 20)
-    assert sec_sccs[1].section_eigenvalues[0].eigenvalues_kpoints[-3][1] == 0.0
-    assert sec_sccs[1].section_eigenvalues[0].eigenvalues_values[0][2][9].magnitude == approx(1.769533187849446e-18, abs=1e-20)
-    assert sec_sccs[1].section_eigenvalues[0].gw_qp_linearization_prefactor[0][2][9] == approx(0.79935)
+    assert np.shape(sec_sccs[1].eigenvalues[0].band_energies[2].band_energies_values) == (20,)
+    assert sec_sccs[1].eigenvalues[0].band_energies_kpoints[-3][1] == 0.0
+    assert sec_sccs[1].eigenvalues[0].band_energies[2].band_energies_values[9].magnitude == approx(1.769533187849446e-18, abs=1e-20)
+    # assert sec_sccs[1].section_eigenvalues[0].gw_qp_linearization_prefactor[0][2][9] == approx(0.79935)
     assert sec_sccs[1].gw_self_energy_x[0][2][0].magnitude == approx(-2.855981572623473e-18, abs=1e-20)
     assert sec_sccs[1].gw_self_energy_c[0][2][14].magnitude == approx(-1.0879742954267992e-18, abs=1e-20)
     assert sec_sccs[1].gw_xc_potential[0][2][6].magnitude == approx(-2.1691473890869554e-18, abs=1e-20)
@@ -204,11 +204,13 @@ def test_band_gw_silicon(silicon_gw):
     assert len(sccs) == 2
     gaps = [0.446307, 1.2553776]
     for gap_assumed, scc in zip(gaps, sccs):
-        assert len(scc.section_k_band) == 1
-        band = scc.section_k_band[0]
-        segments = band.section_k_band_segment
-        energies = [s.band_energies.to(ureg.electron_volt).magnitude for s in segments]
-        energies = np.concatenate(energies, axis=1)
+        assert len(scc.band_structure_electronic) == 1
+        band = scc.band_structure_electronic[0]
+        segments = band.band_structure_segment
+        energies = []
+        for s in segments:
+            energies.append([b.band_energies_values.to(ureg.electron_volt).magnitude for b in s.band_energies])
+        energies = np.concatenate(energies, axis=0)
 
         # Check that an energy reference is reported
         energy_reference = scc.energy_reference_fermi

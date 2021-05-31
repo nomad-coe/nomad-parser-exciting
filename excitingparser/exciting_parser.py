@@ -28,7 +28,7 @@ from nomad.units import ureg
 from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
 from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
     ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, DosValues,\
-    KBand, Eigenvalues, KBandSegment, MethodToMethodRefs, CalculationToCalculationRefs,\
+    BandEnergies, BandEnergiesValues, BandStructure, MethodToMethodRefs, CalculationToCalculationRefs,\
     FrameSequence
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
@@ -1201,36 +1201,29 @@ class ExcitingParser(FairdiParser):
                 continue
             energy_fermi = (energy_fermi.magnitude * ureg.joule).to("hartree")
 
-            sec_k_band = sec_scc.m_create(KBand)
-            sec_k_band.band_structure_kind = 'electronic'
-
-            # imho the number of eigenvalues should also be property of the section_k_band
-            # since because the band structure data is not necessarily run with the
-            # same settings as that of the eigevalues
-            if not sec_scc.section_eigenvalues:
-                sec_eigenvalues = sec_scc.m_create(Eigenvalues)
-            else:
-                sec_eigenvalues = sec_scc.section_eigenvalues[-1]
-            sec_eigenvalues.number_of_band_segment_eigenvalues =\
-                self.bandstructure_parser.number_of_band_segment_eigenvalues
+            sec_k_band = sec_scc.m_create(BandStructure, SingleConfigurationCalculation.band_structure_electronic)
+            sec_k_band.band_structure_energies_shift = energy_fermi[0]
 
             band_k_points = self.bandstructure_parser.get('band_k_points')
             nkpts_segment = self.bandstructure_parser.number_of_k_points_per_segment
             band_seg_labels = self.bandstructure_parser.get('band_segm_labels')
-            band_seg_start_end = self.bandstructure_parser.get('band_segm_start_end')
             for nb in range(len(band_energies[n])):
-                sec_k_band_segment = sec_k_band.m_create(KBandSegment)
-                sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
-                sec_k_band_segment.band_k_points = band_k_points[nb]
-                sec_k_band_segment.band_energies = band_energies[n][nb] + energy_fermi[:, None, None]
-                sec_k_band_segment.band_segm_labels = band_seg_labels[nb]
-                sec_k_band_segment.band_segm_start_end = band_seg_start_end[nb]
+                sec_k_band_segment = sec_k_band.m_create(BandEnergies)
+                sec_k_band_segment.n_band_energies_kpoints = nkpts_segment[nb]
+                sec_k_band_segment.band_energies_kpoints = band_k_points[nb]
+                labels_segment = [None] * nkpts_segment[nb]
+                labels_segment[0], labels_segment[-1] = band_seg_labels[nb]
+                sec_k_band_segment.band_energies_kpoints_labels = labels_segment
+                for spin in range(len(band_energies[n][nb])):
+                    for kpt in range(len(band_energies[n][nb][spin])):
+                        sec_band_energies = sec_k_band_segment.m_create(BandEnergiesValues)
+                        sec_band_energies.band_energies_spin = spin
+                        sec_band_energies.band_energies_kpoints_index = kpt
+                        sec_band_energies.band_energies_values = band_energies[n][nb][spin][kpt] + energy_fermi[0]
 
     def _parse_eigenvalues(self, sec_scc):
         if self.eigval_parser.get('eigenvalues_occupancies', None) is None:
             return
-
-        sec_eigenvalues = sec_scc.m_create(Eigenvalues)
 
         nspin = self.info_parser.get_number_of_spin_channels()
 
@@ -1245,9 +1238,17 @@ class ExcitingParser(FairdiParser):
                 res = res * ureg.hartree
             return res
 
-        sec_eigenvalues.eigenvalues_values = get_data('eigenvalues')
-        sec_eigenvalues.eigenvalues_occupation = get_data('occupancies')
-        sec_eigenvalues.eigenvalues_kpoints = self.eigval_parser.get('k_points')
+        sec_eigenvalues = sec_scc.m_create(BandEnergies)
+        sec_eigenvalues.band_energies_kpoints = self.eigval_parser.get('k_points')
+        eigs = get_data('eigenvalues')
+        occs = get_data('occupancies')
+        for spin in range(len(eigs)):
+            for kpt in range(len(eigs[spin])):
+                sec_eigenvalues_values = sec_eigenvalues.m_create(BandEnergiesValues)
+                sec_eigenvalues_values.band_energies_spin = spin
+                sec_eigenvalues_values.band_energies_kpoints_index = kpt
+                sec_eigenvalues_values.band_energies_values = eigs[spin][kpt]
+                sec_eigenvalues_values.band_energies_occupations = occs[spin][kpt]
 
     def _parse_fermisurface(self, sec_scc):
         fermi_surface = self.fermisurf_parser.get('fermi_surface', [None])[0]
@@ -1275,8 +1276,6 @@ class ExcitingParser(FairdiParser):
         if data is None:
             return
 
-        sec_eigenvalues = sec_scc.m_create(Eigenvalues)
-
         def get_data(key):
             if key == 'k_points':
                 return np.array([d[0][:3] for d in data])
@@ -1297,11 +1296,19 @@ class ExcitingParser(FairdiParser):
         def reshape(data):
             return np.reshape(data, (nspin, len(data) // nspin, len(data[0])))
 
-        sec_eigenvalues.number_of_eigenvalues = len(eigs_gw[0])
-        sec_eigenvalues.number_of_eigenvalues_kpoints = len(eigs_gw)
-        sec_eigenvalues.eigenvalues_kpoints = get_data('k_points')
-        sec_eigenvalues.eigenvalues_values = reshape(eigs_gw)
-        sec_eigenvalues.gw_qp_linearization_prefactor = reshape(get_data('Znk'))
+        sec_eigenvalues = sec_scc.m_create(BandEnergies)
+        sec_eigenvalues.n_bands = len(eigs_gw[0])
+        sec_eigenvalues.n_band_energies_kpoints = len(eigs_gw)
+        sec_eigenvalues.band_energies_kpoints = get_data('k_points')
+        eigs_gw = reshape(eigs_gw)
+        for spin in range(len(eigs_gw)):
+            for kpt in range(len(eigs_gw[spin])):
+                sec_eigenvalues_values = sec_eigenvalues.m_create(BandEnergiesValues)
+                sec_eigenvalues_values.band_energies_spin = spin
+                sec_eigenvalues_values.band_energies_kpoints_index = kpt
+                sec_eigenvalues_values.band_energies_values = eigs_gw[spin][kpt]
+
+        # sec_eigenvalues.gw_qp_linearization_prefactor = reshape(get_data('Znk'))
 
         sec_scc.gw_self_energy_x = reshape(get_data('Sx'))
         self_energy = reshape(get_data('Sc'))
@@ -1355,16 +1362,21 @@ class ExcitingParser(FairdiParser):
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
-        sec_k_band = sec_scc.m_create(KBand)
-        sec_k_band.band_structure_kind = 'electronic'
+        sec_k_band = sec_scc.m_create(BandStructure, SingleConfigurationCalculation.band_structure_electronic)
+        sec_k_band.band_structure_energies_shift = energy_fermi[0]
 
         band_k_points = self.bandstructure_dat_parser.band_k_points
         nkpts_segment = self.bandstructure_dat_parser.number_of_k_points_per_segment
         for nb in range(len(band_energies)):
-            sec_k_band_segment = sec_k_band.m_create(KBandSegment)
-            sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
-            sec_k_band_segment.band_k_points = band_k_points[nb]
-            sec_k_band_segment.band_energies = band_energies[nb] + energy_fermi[:, None, None]
+            sec_k_band_segment = sec_k_band.m_create(BandEnergies)
+            sec_k_band_segment.n_band_energies_kpoints = nkpts_segment[nb]
+            sec_k_band_segment.band_energies_kpoints = band_k_points[nb]
+            for spin in range(len(band_energies[nb])):
+                for kpt in range(len(band_energies[nb][spin])):
+                    sec_band_energies = sec_k_band_segment.m_create(BandEnergiesValues)
+                    sec_band_energies.band_energies_spin = spin
+                    sec_band_energies.band_energies_kpoints_index = kpt
+                    sec_band_energies.band_energies_values = band_energies[nb][spin][kpt] + energy_fermi[0]
 
     def _parse_band_out(self, sec_scc):
         self.band_out_parser._nspin = self.info_parser.get_number_of_spin_channels()
@@ -1379,15 +1391,19 @@ class ExcitingParser(FairdiParser):
         if energy_fermi is None:
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
-
-        sec_k_band = sec_scc.m_create(KBand)
-        sec_k_band.band_structure_kind = 'electronic'
+        sec_k_band = sec_scc.m_create(BandStructure, SingleConfigurationCalculation.band_structure_electronic)
+        sec_k_band.band_structure_energies_shift = energy_fermi
 
         nkpts_segment = self.band_out_parser.number_of_k_points_per_segment
         for nb in range(len(band_energies)):
-            sec_k_band_segment = sec_k_band.m_create(KBandSegment)
-            sec_k_band_segment.number_of_k_points_per_segment = nkpts_segment[nb]
-            sec_k_band_segment.band_energies = band_energies[nb] + energy_fermi[:, None, None]
+            sec_k_band_segment = sec_k_band.m_create(BandEnergies)
+            sec_k_band_segment.n_band_energies_kpoints = nkpts_segment[nb]
+            for spin in range(len(band_energies[nb])):
+                for kpt in range(len(band_energies[nb][spin])):
+                    sec_band_energies = sec_k_band_segment.m_create(BandEnergiesValues)
+                    sec_band_energies.band_energies_spin = spin
+                    sec_band_energies.band_energies_kpoints_index = kpt
+                    sec_band_energies.band_energies_values = band_energies[nb][spin][kpt] + energy_fermi[0]
 
     def parse_file(self, name, section):
         # TODO add support for info.xml, wannier.out
