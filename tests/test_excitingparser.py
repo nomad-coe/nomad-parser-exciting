@@ -106,18 +106,18 @@ def test_dos_spinpol(parser):
 
     sec_dos = archive.section_run[0].section_single_configuration_calculation[0].dos_electronic[0]
 
-    assert np.shape(sec_dos.dos_total[0].dos_values) == (500,)
-    assert sec_dos.dos_energies[79].magnitude == approx(-1.70772016e-18)
-    assert sec_dos.dos_total[0].dos_values[126] == approx(1.8925127e-10)
-    assert sec_dos.dos_total[1].dos_values[136] == approx(1.91606129e-11)
-    assert sec_dos.dos_energies[240].magnitude == approx(1.09995544e-18)
-    assert sec_dos.dos_total[0].dos_values[220] == approx(5.63875821e-10)
-    assert sec_dos.dos_total[1].dos_values[78] == approx(4.33359121e-10)
+    assert np.shape(sec_dos.total[0].value) == (500,)
+    assert sec_dos.energies[79].magnitude == approx(-1.70772016e-18)
+    assert sec_dos.total[0].value[126].magnitude == approx(4.77822157e+18)
+    assert sec_dos.total[1].value[136].magnitude == approx(4.83767713e+17)
+    assert sec_dos.energies[240].magnitude == approx(1.09995544e-18)
+    assert sec_dos.total[0].value[220].magnitude == approx(1.42367532e+19)
+    assert sec_dos.total[1].value[78].magnitude == approx(1.09414637e+19)
 
-    assert len(sec_dos.dos_atom_projected) == 150
-    assert np.shape(sec_dos.dos_atom_projected[149].dos_values) == (500,)
-    assert sec_dos.dos_atom_projected[7].dos_values[116] == approx(1.07677456e+16)
-    assert sec_dos.dos_atom_projected[123].dos_values[85] == approx(7.81205293e+11)
+    assert len(sec_dos.atom_projected) == 150
+    assert np.shape(sec_dos.atom_projected[149].value) == (500,)
+    assert sec_dos.atom_projected[7].value[116].magnitude == approx(1.07677456e+16)
+    assert sec_dos.atom_projected[123].value[85].magnitude == approx(7.81205293e+11)
 
 
 def test_xs_tddft(parser):
@@ -238,8 +238,8 @@ def test_dos_gw_silicon(silicon_gw):
     for gap_assumed, scc in zip(gaps, sccs):
         assert len(scc.dos_electronic) == 1
         dos = scc.dos_electronic[0]
-        energies = dos.dos_energies.to(ureg.electron_volt).magnitude
-        values = np.array([d.dos_values for d in dos.dos_total])
+        energies = dos.energies.to(ureg.electron_volt).magnitude
+        values = np.array([d.value for d in dos.total])
 
         # Check that an energy reference is reported
         energy_reference = scc.energy_reference_fermi

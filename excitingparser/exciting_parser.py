@@ -1162,13 +1162,14 @@ class ExcitingParser(FairdiParser):
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         sec_dos = sec_scc.m_create(Dos, SingleConfigurationCalculation.dos_electronic)
-        sec_dos.n_dos_values = self.dos_parser.number_of_dos
-        sec_dos.dos_energies = self.dos_parser.energies + energy_fermi[0]
-        totaldos = self.dos_parser.get('totaldos') * self.info_parser.get_unit_cell_volume()
+        sec_dos.n_energies = self.dos_parser.number_of_dos
+        sec_dos.energies = self.dos_parser.energies + energy_fermi[0]
+        totaldos = self.dos_parser.get('totaldos')
         for spin in range(len(totaldos)):
-            sec_dos_values = sec_dos.m_create(DosValues, Dos.dos_total)
-            sec_dos_values.dos_spin = spin
-            sec_dos_values.dos_values = totaldos[spin].to('m**3/joule').magnitude
+            sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
+            sec_dos_values.normalization_factor = 1
+            sec_dos_values.spin = spin
+            sec_dos_values.value = totaldos[spin]
 
         partialdos = self.dos_parser.get('partialdos')
         if partialdos is None:
@@ -1179,12 +1180,12 @@ class ExcitingParser(FairdiParser):
         for lm in range(len(partialdos)):
             for spin in range(len(partialdos[lm])):
                 for atom in range(len(partialdos[lm][spin])):
-                    sec_dos_values = sec_dos.m_create(DosValues, Dos.dos_atom_projected)
-                    sec_dos_values.dos_m_kind = 'spherical'
-                    sec_dos_values.dos_lm = lm_values[lm]
-                    sec_dos_values.dos_spin = spin
-                    sec_dos_values.dos_atom_index = atom
-                    sec_dos_values.dos_values = partialdos[lm][spin][atom]
+                    sec_dos_values = sec_dos.m_create(DosValues, Dos.atom_projected)
+                    sec_dos_values.m_kind = 'spherical'
+                    sec_dos_values.lm = lm_values[lm]
+                    sec_dos_values.spin = spin
+                    sec_dos_values.atom_index = atom
+                    sec_dos_values.value = partialdos[lm][spin][atom]
 
     def _parse_bandstructure(self, sec_scc):
         # we need to set nspin again as this is overwritten when setting mainfile
@@ -1334,17 +1335,18 @@ class ExcitingParser(FairdiParser):
         nspin = self.info_parser.get_number_of_spin_channels()
 
         sec_dos = sec_scc.m_create(Dos, SingleConfigurationCalculation.dos_electronic)
-        sec_dos.n_dos_values = len(data) // nspin
+        sec_dos.n_energies = len(data) // nspin
 
         data = np.reshape(data, (nspin, len(data) // nspin, 2))
         data = np.transpose(data, axes=(2, 0, 1))
 
-        sec_dos.dos_energies = data[0][0] * ureg.hartree + energy_fermi[0]
-        dos = data[1] * (1 / ureg.hartree) * self.info_parser.get_unit_cell_volume()
+        sec_dos.energies = data[0][0] * ureg.hartree + energy_fermi[0]
+        dos = data[1] * (1 / ureg.hartree)
         for spin in range(len(dos)):
-            sec_dos_values = sec_dos.m_create(DosValues, Dos.dos_total)
-            sec_dos_values.dos_spin = spin
-            sec_dos_values.dos_values = dos[spin].to('m**3/joule').magnitude
+            sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
+            sec_dos_values.spin = spin
+            sec_dos_values.normalization_factor = 1
+            sec_dos_values.value = dos[spin]
 
         # TODO add PDOS
 
