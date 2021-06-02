@@ -1167,7 +1167,6 @@ class ExcitingParser(FairdiParser):
         totaldos = self.dos_parser.get('totaldos')
         for spin in range(len(totaldos)):
             sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
-            sec_dos_values.normalization_factor = 1
             sec_dos_values.spin = spin
             sec_dos_values.value = totaldos[spin]
 
@@ -1345,7 +1344,6 @@ class ExcitingParser(FairdiParser):
         for spin in range(len(dos)):
             sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
             sec_dos_values.spin = spin
-            sec_dos_values.normalization_factor = 1
             sec_dos_values.value = dos[spin]
 
         # TODO add PDOS
