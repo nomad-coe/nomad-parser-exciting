@@ -63,9 +63,9 @@ def test_gs(parser):
     assert sec_system.x_exciting_section_atoms_group[0].x_exciting_muffin_tin_radius.magnitude == approx(6.87930374e-11)
 
     sec_scc = sec_run.section_single_configuration_calculation[0]
-    assert sec_scc.energy_total.magnitude == approx(-3.30863556e-16)
-    assert np.mean(sec_scc.atom_forces) == 0.0
-    assert sec_scc.charge_total.magnitude == approx(1.92261196e-18)
+    assert sec_scc.energy_total.value.magnitude == approx(-3.30863556e-16)
+    assert np.mean(sec_scc.forces_total.value) == 0.0
+    assert sec_scc.charges[0].total.magnitude == approx(1.92261196e-18)
     assert sec_scc.energy_reference_fermi.magnitude == approx(2.4422694e-18)
     assert len(sec_scc.section_scf_iteration) == 12
     assert sec_scc.section_scf_iteration[5].x_exciting_valence_charge_scf_iteration.magnitude == approx(1.28174131e-18)
@@ -94,7 +94,7 @@ def test_strucopt(parser):
     assert sec_sccs[0].section_scf_iteration[10].time_scf_iteration.magnitude == approx(431.84)
     assert sec_sccs[0].section_scf_iteration[18].x_exciting_effective_potential_convergence_scf_iteration[0].magnitude == approx(4.62350928e-26)
     assert sec_sccs[3].x_exciting_maximum_force_magnitude.magnitude == approx(1.64771998e-10)
-    assert sec_sccs[6].energy_total.magnitude == approx(-3.58415586e-14)
+    assert sec_sccs[6].energy_total.value.magnitude == approx(-3.58415586e-14)
     assert sec_sccs[9].time_calculation.magnitude == approx(724.33)
     assert len(sec_sccs[-1].x_exciting_section_MT_charge_atom) == 10
     assert sec_sccs[-1].x_exciting_fermi_energy.magnitude == approx(1.03200886e-18)

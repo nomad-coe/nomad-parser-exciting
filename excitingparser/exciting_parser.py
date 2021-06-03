@@ -29,7 +29,7 @@ from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextP
 from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
     ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, DosValues,\
     BandEnergies, BandEnergiesValues, ChannelInfo, BandStructure, MethodToMethodRefs,\
-    CalculationToCalculationRefs, FrameSequence
+    CalculationToCalculationRefs, FrameSequence, Energy, Forces, Charges
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
     x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface,\
@@ -1073,13 +1073,18 @@ class ExcitingParser(FairdiParser):
             'energy_total': ['Total energy', 'total energy'],
             'x_exciting_fermi_energy': ['Fermi energy', 'Fermi'],
             'electronic_kinetic_energy': ['Kinetic energy', 'electronic kinetic'],
+            'energy_kinetic_electronic': ['Kinetic energy', 'electronic kinetic'],
+            'energy_coulomb': ['Coulomb energy', 'Coulomb'],
             'x_exciting_coulomb_energy': ['Coulomb energy', 'Coulomb'],
+            'energy_X': ['Exchange energy', 'exchange'],
             'x_exciting_exchange_energy': ['Exchange energy', 'exchange'],
+            'energy_C': ['Correlation energy', 'correlation'],
             'x_exciting_correlation_energy': ['Correlation energy', 'correlation'],
             'energy_sum_eigenvalues': ['Sum of eigenvalues', 'sum of eigenvalues'],
             'x_exciting_effective_potential_energy': ['Effective potential energy'],
             'x_exciting_coulomb_potential_energy': ['Coulomb potential energy', 'Coulomb potential'],
             'energy_XC_potential': ['xc potential energy', 'xc potential'],
+            'energy_electrostatic': ['Hartree energy', 'Hartree'],
             'x_exciting_hartree_energy': ['Hartree energy', 'Hartree'],
             'x_exciting_electron_nuclear_energy': ['Electron-nuclear energy', 'electron-nuclear '],
             'x_exciting_nuclear_nuclear_energy': ['Nuclear-nuclear energy', 'nuclear-nuclear'],
@@ -1972,7 +1977,11 @@ class ExcitingParser(FairdiParser):
 
             energy_total = iteration.get('energy_total')
             if energy_total is not None:
-                setattr(msection, 'energy_total' + metainfo_ext, energy_total)
+                if metainfo_ext:
+                    setattr(msection, 'energy_total' + metainfo_ext, energy_total)
+                else:
+                    msection.m_add_sub_section(
+                        SingleConfigurationCalculation.energy_total, Energy(value=energy_total))
 
             x_exciting_dos_fermi = iteration.get('x_exciting_dos_fermi')
             if x_exciting_dos_fermi is not None:
@@ -1988,7 +1997,12 @@ class ExcitingParser(FairdiParser):
                         break
                 if val is None:
                     continue
-                setattr(msection, key + metainfo_ext, val)
+                if not metainfo_ext and key.startswith('energy_'):
+                    msection.m_add_sub_section(getattr(
+                        SingleConfigurationCalculation, key), Energy(value=val))
+                else:
+                    setattr(msection, key + metainfo_ext, val)
+
                 if key == 'x_exciting_fermi_energy':
                     # set it also in the global fermi energy, this is killing me
                     # there should only be one in global
@@ -2015,6 +2029,13 @@ class ExcitingParser(FairdiParser):
                         sec_mt_charge_atom.x_exciting_MT_charge_atom_index = n + 1
                         sec_mt_charge_atom.x_exciting_MT_charge_atom_symbol = val[n][0]
                         sec_mt_charge_atom.x_exciting_MT_charge_atom_value = val[n][1]
+                    if not metainfo_ext:
+                        sec_charges = msection.m_create(Charges)
+                        sec_charges.value = [
+                            val[n][1].magnitude for n in range(len(val))] * val[0][1].units
+                        sec_charges.total = charge_contributions.get('total charge')
+                elif key == 'charge_total':
+                    pass
                 else:
                     setattr(msection, key + metainfo_ext, val)
 
@@ -2065,7 +2086,8 @@ class ExcitingParser(FairdiParser):
         # forces
         forces = section.get('forces')
         if forces is not None:
-            sec_scc.atom_forces = forces
+            sec_scc.m_add_sub_section(SingleConfigurationCalculation.forces_total, Forces(
+                value=forces))
 
         # scf iterations
         scf_iterations = section.get('scf_iteration', [])
