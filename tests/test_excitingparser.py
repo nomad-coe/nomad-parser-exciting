@@ -194,7 +194,7 @@ def test_gw(silicon_gw):
     assert sec_gw.qp_linearization_prefactor[2].value[9].magnitude == approx(0.79935)
     assert sec_gw.self_energy_X[2].value[0].magnitude == approx(-2.855981572623473e-18, abs=1e-20)
     assert sec_gw.self_energy_C[2].value[14].magnitude == approx(-1.0879742954267992e-18, abs=1e-20)
-    assert sec_gw.XC_potential[2].value[6].magnitude == approx(-2.1691473890869554e-18, abs=1e-20)
+    assert sec_gw.energy_XC_potential[2].value[6].magnitude == approx(-2.1691473890869554e-18, abs=1e-20)
 
 
 def test_band_gw_silicon(silicon_gw):
