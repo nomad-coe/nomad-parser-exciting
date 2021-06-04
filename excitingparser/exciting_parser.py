@@ -29,7 +29,7 @@ from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextP
 from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
     ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, DosValues,\
     BandEnergies, BandEnergiesValues, ChannelInfo, BandStructure, MethodToMethodRefs,\
-    CalculationToCalculationRefs, FrameSequence, Energy, Forces, Charges
+    CalculationToCalculationRefs, FrameSequence, Energy, Forces, Charges, GW
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
     x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface,\
@@ -1300,6 +1300,8 @@ class ExcitingParser(FairdiParser):
         nspin = self.info_parser.get_number_of_spin_channels()
 
         def reshape(data):
+            if data[0] is None:
+                return
             return np.reshape(data, (nspin, len(data) // nspin, len(data[0])))
 
         sec_eigenvalues = sec_scc.m_create(BandEnergies)
@@ -1314,14 +1316,20 @@ class ExcitingParser(FairdiParser):
                 sec_eigenvalues_values.kpoints_index = kpt
                 sec_eigenvalues_values.value = eigs_gw[spin][kpt]
 
-        # sec_eigenvalues.gw_qp_linearization_prefactor = reshape(get_data('Znk'))
-
-        sec_scc.gw_self_energy_x = reshape(get_data('Sx'))
-        self_energy = reshape(get_data('Sc'))
-        if self_energy is None:
-            self_energy = reshape(get_data('Re(Sc)'))
-        sec_scc.gw_self_energy_c = self_energy
-        sec_scc.gw_xc_potential = reshape(get_data('Vxc'))
+        sec_gw = sec_scc.gw[-1] if sec_scc.gw else sec_scc.m_create(GW)
+        gw_metainfo_map = {
+            'Znk': GW.qp_linearization_prefactor, 'Sx': GW.self_energy_X,
+            'Sc': GW.self_energy_C, 'Re(Sc)': GW.self_energy_C, 'Vxc': GW.XC_potential}
+        for gw_key, sec_definition in gw_metainfo_map.items():
+            gw_data = reshape(get_data(gw_key))
+            if gw_data is None:
+                continue
+            for spin in range(len(gw_data)):
+                for kpt in range(len(gw_data[spin])):
+                    sec_gw_energies = sec_gw.m_create(BandEnergiesValues, sec_definition)
+                    sec_gw_energies.spin = spin
+                    sec_gw_energies.kpoints_index = kpt
+                    sec_gw_energies.value = gw_data[spin][kpt]
 
     def _parse_dos_out(self, sec_scc):
         data = self.dos_out_parser.data
@@ -1849,9 +1857,11 @@ class ExcitingParser(FairdiParser):
 
         self.info_gw_parser.mainfile = gw_info_files[0]
 
+        sec_gw = sec_scc.gw[-1] if sec_scc.gw else sec_scc.m_create(GW)
+
         fermi_energy = self.info_gw_parser.get('fermi_energy', None)
         if fermi_energy is not None:
-            sec_scc.gw_fermi_energy = fermi_energy
+            sec_gw.fermi_energy = fermi_energy
             sec_scc.energy_reference_fermi = [fermi_energy.to('joule').magnitude]
 
         gw_files = ['EVALQP.DAT', 'EVALQP.TXT', 'TDOS-QP.OUT']
@@ -1878,11 +1888,11 @@ class ExcitingParser(FairdiParser):
         if fundamental_band_gap is None:
             fundamental_band_gap = self.info_gw_parser.get('fundamental_band_gap', None)
         if fundamental_band_gap is not None:
-            sec_scc.gw_fundamental_gap = fundamental_band_gap
+            sec_gw.fundamental_gap = fundamental_band_gap
 
         optical_band_gap = self.info_gw_parser.get('optical_band_gap', None)
         if optical_band_gap is not None:
-            sec_scc.gw_optical_gap = optical_band_gap
+            sec_gw.optical_gap = optical_band_gap
 
     def parse_miscellaneous(self):
         sec_run = self.archive.section_run[-1]
