@@ -1319,7 +1319,7 @@ class ExcitingParser(FairdiParser):
         sec_gw = sec_scc.gw[-1] if sec_scc.gw else sec_scc.m_create(GW)
         gw_metainfo_map = {
             'Znk': GW.qp_linearization_prefactor, 'Sx': GW.self_energy_X,
-            'Sc': GW.self_energy_C, 'Re(Sc)': GW.self_energy_C, 'Vxc': GW.XC_potential}
+            'Sc': GW.self_energy_C, 'Re(Sc)': GW.self_energy_C, 'Vxc': GW.energy_XC_potential}
         for gw_key, sec_definition in gw_metainfo_map.items():
             gw_data = reshape(get_data(gw_key))
             if gw_data is None:
