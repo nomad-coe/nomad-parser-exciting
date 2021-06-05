@@ -24,7 +24,7 @@ from nomad.metainfo import (  # pylint: disable=unused-import
 )
 from nomad.metainfo.legacy import LegacyDefinition
 
-from nomad.datamodel.metainfo import public
+from nomad.datamodel.metainfo import common_dft as public
 
 m_package = Package(
     name='exciting_nomadmetainfo_json',
@@ -1555,11 +1555,11 @@ class x_exciting_section_MT_moment_atom(MSection):
         a_legacy=LegacyDefinition(name='x_exciting_MT_moment_atom_value'))
 
 
-class section_scf_iteration(public.section_scf_iteration):
+class section_scf_iteration(public.ScfIteration):
 
     m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_scf_iteration'))
 
-    x_exciting_charge_convergence_scf_iteration = Quantity(
+    x_exciting_charge_convergence = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1568,7 +1568,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_charge_convergence_scf_iteration'))
 
-    x_exciting_core_electron_kinetic_energy_scf_iteration = Quantity(
+    x_exciting_core_electron_kinetic_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1578,7 +1578,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_core_electron_kinetic_energy_scf_iteration'))
 
-    x_exciting_core_charge_scf_iteration = Quantity(
+    x_exciting_core_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1587,7 +1587,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_core_charge_scf_iteration'))
 
-    x_exciting_valence_charge_scf_iteration = Quantity(
+    x_exciting_valence_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1596,7 +1596,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_valence_charge_scf_iteration'))
 
-    x_exciting_core_leakage_scf_iteration = Quantity(
+    x_exciting_core_leakage = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1605,7 +1605,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_core_leakage_scf_iteration'))
 
-    x_exciting_correlation_energy_scf_iteration = Quantity(
+    x_exciting_correlation_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1615,7 +1615,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_correlation_energy_scf_iteration'))
 
-    x_exciting_coulomb_energy_scf_iteration = Quantity(
+    x_exciting_coulomb_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1625,7 +1625,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_coulomb_energy_scf_iteration'))
 
-    x_exciting_coulomb_potential_energy_scf_iteration = Quantity(
+    x_exciting_coulomb_potential_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1635,7 +1635,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_coulomb_potential_energy_scf_iteration'))
 
-    x_exciting_dos_fermi_scf_iteration = Quantity(
+    x_exciting_dos_fermi = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='1 / joule',
@@ -1644,7 +1644,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_dos_fermi_scf_iteration'))
 
-    x_exciting_effective_potential_convergence_scf_iteration = Quantity(
+    x_exciting_effective_potential_convergence = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1653,7 +1653,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_effective_potential_convergence_scf_iteration'))
 
-    x_exciting_force_convergence_scf_iteration = Quantity(
+    x_exciting_force_convergence = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='newton',
@@ -1662,7 +1662,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_force_convergence_scf_iteration'))
 
-    x_exciting_effective_potential_energy_scf_iteration = Quantity(
+    x_exciting_effective_potential_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1672,7 +1672,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_effective_potential_energy_scf_iteration'))
 
-    x_exciting_electron_nuclear_energy_scf_iteration = Quantity(
+    x_exciting_electron_nuclear_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1682,7 +1682,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_electron_nuclear_energy_scf_iteration'))
 
-    x_exciting_energy_convergence_scf_iteration = Quantity(
+    x_exciting_energy_convergence = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1691,7 +1691,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_energy_convergence_scf_iteration'))
 
-    x_exciting_exchange_energy_scf_iteration = Quantity(
+    x_exciting_exchange_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1701,7 +1701,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_exchange_energy_scf_iteration'))
 
-    x_exciting_fermi_energy_scf_iteration = Quantity(
+    x_exciting_fermi_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1710,7 +1710,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_fermi_energy_scf_iteration'))
 
-    x_exciting_gap_scf_iteration = Quantity(
+    x_exciting_gap = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1719,7 +1719,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_gap_scf_iteration'))
 
-    x_exciting_hartree_energy_scf_iteration = Quantity(
+    x_exciting_hartree_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1729,7 +1729,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_hartree_energy_scf_iteration'))
 
-    x_exciting_IBS_force_convergence_scf_iteration = Quantity(
+    x_exciting_IBS_force_convergence = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='newton',
@@ -1738,7 +1738,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_IBS_force_convergence_scf_iteration'))
 
-    x_exciting_interstitial_charge_scf_iteration = Quantity(
+    x_exciting_interstitial_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1747,7 +1747,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_interstitial_charge_scf_iteration'))
 
-    x_exciting_madelung_energy_scf_iteration = Quantity(
+    x_exciting_madelung_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1757,7 +1757,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_madelung_energy_scf_iteration'))
 
-    x_exciting_nuclear_nuclear_energy_scf_iteration = Quantity(
+    x_exciting_nuclear_nuclear_energy = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1767,7 +1767,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_nuclear_nuclear_energy_scf_iteration'))
 
-    x_exciting_time_scf_iteration = Quantity(
+    x_exciting_time = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='s',
@@ -1776,7 +1776,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_time_scf_iteration'))
 
-    x_exciting_total_MT_charge_scf_iteration = Quantity(
+    x_exciting_total_MT_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1785,7 +1785,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_total_MT_charge_scf_iteration'))
 
-    x_exciting_total_charge_scf_iteration = Quantity(
+    x_exciting_total_charge = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='coulomb',
@@ -1794,7 +1794,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_total_charge_scf_iteration'))
 
-    x_exciting_XC_potential_scf_iteration = Quantity(
+    x_exciting_XC_potential = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         unit='joule',
@@ -1804,7 +1804,7 @@ class section_scf_iteration(public.section_scf_iteration):
         categories=[public.energy_component, public.energy_value],
         a_legacy=LegacyDefinition(name='x_exciting_XC_potential_scf_iteration'))
 
-    x_exciting_interstitial_moment_scf_iteration = Quantity(
+    x_exciting_interstitial_moment = Quantity(
         type=np.dtype(np.float64),
         shape=[3],
         unit='coulomb * meter',
@@ -1813,7 +1813,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_interstitial_moment_scf_iteration'))
 
-    x_exciting_total_MT_moment_scf_iteration = Quantity(
+    x_exciting_total_MT_moment = Quantity(
         type=np.dtype(np.float64),
         shape=[3],
         unit='coulomb * meter',
@@ -1822,7 +1822,7 @@ class section_scf_iteration(public.section_scf_iteration):
         ''',
         a_legacy=LegacyDefinition(name='x_exciting_total_MT_moment_scf_iteration'))
 
-    x_exciting_total_moment_scf_iteration = Quantity(
+    x_exciting_total_moment = Quantity(
         type=np.dtype(np.float64),
         shape=[3],
         unit='coulomb * meter',

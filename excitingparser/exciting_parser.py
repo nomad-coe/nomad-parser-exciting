@@ -1073,7 +1073,6 @@ class ExcitingParser(FairdiParser):
         self._energy_keys_mapping = {
             'energy_total': ['Total energy', 'total energy'],
             'x_exciting_fermi_energy': ['Fermi energy', 'Fermi'],
-            'electronic_kinetic_energy': ['Kinetic energy', 'electronic kinetic'],
             'energy_kinetic_electronic': ['Kinetic energy', 'electronic kinetic'],
             'energy_coulomb': ['Coulomb energy', 'Coulomb'],
             'x_exciting_coulomb_energy': ['Coulomb energy', 'Coulomb'],
@@ -1951,19 +1950,15 @@ class ExcitingParser(FairdiParser):
         sec_scc = sec_run.m_create(SingleConfigurationCalculation)
 
         def parse_scf(iteration, msection):
-            metainfo_ext = '' if hasattr(msection, 'energy_total') else '_scf_iteration'
 
             energy_total = iteration.get('energy_total')
             if energy_total is not None:
-                if metainfo_ext:
-                    setattr(msection, 'energy_total' + metainfo_ext, energy_total)
-                else:
-                    msection.m_add_sub_section(
-                        SingleConfigurationCalculation.energy_total, Energy(value=energy_total))
+                msection.m_add_sub_section(
+                    SingleConfigurationCalculation.energy_total, Energy(value=energy_total))
 
             x_exciting_dos_fermi = iteration.get('x_exciting_dos_fermi')
             if x_exciting_dos_fermi is not None:
-                setattr(msection, 'x_exciting_dos_fermi' + metainfo_ext, x_exciting_dos_fermi)
+                setattr(msection, 'x_exciting_dos_fermi', x_exciting_dos_fermi)
 
             # energy contributions
             energy_contributions = iteration.get('energy_contributions', {})
@@ -1975,21 +1970,16 @@ class ExcitingParser(FairdiParser):
                         break
                 if val is None:
                     continue
-                if not metainfo_ext and key.startswith('energy_'):
+                if key.startswith('energy_'):
                     msection.m_add_sub_section(getattr(
                         SingleConfigurationCalculation, key), Energy(value=val))
                 else:
-                    setattr(msection, key + metainfo_ext, val)
+                    setattr(msection, key, val)
 
                 if key == 'x_exciting_fermi_energy':
-                    # set it also in the global fermi energy, this is killing me
-                    # there should only be one in global
-                    # the metainfo naming is not consistent for scf_iteration
-                    # and for global it becomes energy_reference_fermi
                     key = 'energy_reference_fermi'
-                    metainfo_ext_fermi = metainfo_ext.replace('_scf', '')
                     val = ([val.magnitude] * self.info_parser.get_number_of_spin_channels()) * ureg.hartree
-                    setattr(msection, key + metainfo_ext_fermi, val)
+                    setattr(msection, key, val)
 
             # charge contributions
             charge_contributions = iteration.get('charge_contributions', {})
@@ -2007,7 +1997,6 @@ class ExcitingParser(FairdiParser):
                         sec_mt_charge_atom.x_exciting_MT_charge_atom_index = n + 1
                         sec_mt_charge_atom.x_exciting_MT_charge_atom_symbol = val[n][0]
                         sec_mt_charge_atom.x_exciting_MT_charge_atom_value = val[n][1]
-                    if not metainfo_ext:
                         sec_charges = msection.m_create(Charges)
                         sec_charges.value = [
                             val[n][1].magnitude for n in range(len(val))] * val[0][1].units
@@ -2015,7 +2004,7 @@ class ExcitingParser(FairdiParser):
                 elif key == 'charge_total':
                     pass
                 else:
-                    setattr(msection, key + metainfo_ext, val)
+                    setattr(msection, key, val)
 
             # moment contributions
             moment_contributions = iteration.get('moment_contributions', {})
@@ -2034,7 +2023,7 @@ class ExcitingParser(FairdiParser):
                         sec_mt_moment_atom.x_exciting_MT_moment_atom_symbol = val[n][0]
                         sec_mt_moment_atom.x_exciting_MT_moment_atom_value = val[n][1]
                 else:
-                    setattr(msection, key + metainfo_ext, val)
+                    setattr(msection, key, val)
 
             # convergence values
             for name in self.info_parser._convergence_keys_mapping.keys():
@@ -2042,7 +2031,7 @@ class ExcitingParser(FairdiParser):
                 if val is None:
                     continue
 
-                setattr(msection, name + metainfo_ext, val)
+                setattr(msection, name, val)
 
             # other metainfo
             for name in self.info_parser._miscellaneous_keys_mapping.keys():
@@ -2051,12 +2040,9 @@ class ExcitingParser(FairdiParser):
                     continue
 
                 if name == 'time':
-                    if metainfo_ext == '_scf_iteration':
-                        msection.time_scf_iteration = val
-                    else:
-                        msection.time_calculation = val
+                    msection.time_calculation = val
                 else:
-                    setattr(msection, name + metainfo_ext, val)
+                    setattr(msection, name, val)
 
         # energy, moment, charge contributions
         parse_scf(final, sec_scc)

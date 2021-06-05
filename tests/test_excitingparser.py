@@ -67,10 +67,10 @@ def test_gs(parser):
     assert np.mean(sec_scc.forces_total.value) == 0.0
     assert sec_scc.charges[0].total.magnitude == approx(1.92261196e-18)
     assert sec_scc.energy_reference_fermi.magnitude == approx(2.4422694e-18)
-    assert len(sec_scc.section_scf_iteration) == 12
-    assert sec_scc.section_scf_iteration[5].x_exciting_valence_charge_scf_iteration.magnitude == approx(1.28174131e-18)
-    assert sec_scc.section_scf_iteration[8].x_exciting_exchange_energy_scf_iteration.magnitude == approx(-4.39756926e-17)
-    assert sec_scc.section_scf_iteration[11].electronic_kinetic_energy_scf_iteration.magnitude == approx(3.30404896e-16)
+    assert len(sec_scc.scf_iteration) == 12
+    assert sec_scc.scf_iteration[5].x_exciting_valence_charge.magnitude == approx(1.28174131e-18)
+    assert sec_scc.scf_iteration[8].x_exciting_exchange_energy.magnitude == approx(-4.39756926e-17)
+    assert sec_scc.scf_iteration[11].energy_kinetic_electronic.value.magnitude == approx(3.30404896e-16)
     sec_eig = sec_scc.eigenvalues[0]
     assert np.shape(sec_eig.kpoints) == (30, 3)
     assert sec_eig.value[0][9][4].magnitude == approx(2.74680139e-18)
@@ -90,9 +90,9 @@ def test_strucopt(parser):
 
     sec_sccs = archive.section_run[0].section_single_configuration_calculation
     assert len(sec_sccs) == 15
-    assert len(sec_sccs[0].section_scf_iteration) == 19
-    assert sec_sccs[0].section_scf_iteration[10].time_scf_iteration.magnitude == approx(431.84)
-    assert sec_sccs[0].section_scf_iteration[18].x_exciting_effective_potential_convergence_scf_iteration[0].magnitude == approx(4.62350928e-26)
+    assert len(sec_sccs[0].scf_iteration) == 19
+    assert sec_sccs[0].scf_iteration[10].time_calculation.magnitude == approx(431.84)
+    assert sec_sccs[0].scf_iteration[18].x_exciting_effective_potential_convergence[0].magnitude == approx(4.62350928e-26)
     assert sec_sccs[3].x_exciting_maximum_force_magnitude.magnitude == approx(1.64771998e-10)
     assert sec_sccs[6].energy_total.value.magnitude == approx(-3.58415586e-14)
     assert sec_sccs[9].time_calculation.magnitude == approx(724.33)
