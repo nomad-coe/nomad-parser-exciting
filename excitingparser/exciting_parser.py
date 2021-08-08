@@ -21,16 +21,23 @@ import os
 import re
 import logging
 
-from .metainfo import m_env
 from nomad.parsing.parser import FairdiParser
 
 from nomad.units import ureg
 from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
-from nomad.datamodel.metainfo.common_dft import SingleConfigurationCalculation, Run,\
-    ScfIteration, System, Method, XCFunctionals, SamplingMethod, Dos, DosValues,\
-    BandEnergies, ChannelInfo, BandStructure, MethodToMethodRefs,\
-    CalculationToCalculationRefs, FrameSequence, Energy, Forces, Charges, GW,\
-    GWBandEnergies
+from nomad.datamodel.metainfo.run.run import Run, Program
+from nomad.datamodel.metainfo.run.method import (
+    Method, MethodReference, DFT, Electronic, Smearing, XCFunctional, Functional, GW as GWMethod
+)
+from nomad.datamodel.metainfo.run.system import (
+    System, SystemReference, Atoms
+)
+from nomad.datamodel.metainfo.run.calculation import (
+    Calculation, Dos, DosValues, BandStructure, ElectronicStructureInfo, BandEnergies,
+    GW, GWBandEnergies, CalculationReference, Energy, EnergyEntry, Charges,
+    Forces, ForcesEntry, ScfIteration
+)
+from nomad.datamodel.metainfo.workflow import Workflow, GeometryOptimization
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
     x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface,\
@@ -1054,7 +1061,6 @@ class ExcitingParser(FairdiParser):
         super().__init__(
             name='parsers/exciting', code_name='exciting', code_homepage='http://exciting-code.org/',
             mainfile_name_re=r'^.*.OUT(\.[^/]*)?$', mainfile_contents_re=(r'EXCITING.*started'))
-        self._metainfo_env = m_env
         self.info_parser = ExcitingInfoParser()
         self.dos_parser = DOSXMLParser(energy_unit=ureg.hartree)
         self.bandstructure_parser = BandstructureXMLParser(energy_unit=ureg.hartree)
@@ -1076,14 +1082,14 @@ class ExcitingParser(FairdiParser):
             'energy_kinetic_electronic': ['Kinetic energy', 'electronic kinetic'],
             'energy_coulomb': ['Coulomb energy', 'Coulomb'],
             'x_exciting_coulomb_energy': ['Coulomb energy', 'Coulomb'],
-            'energy_X': ['Exchange energy', 'exchange'],
+            'energy_exchange': ['Exchange energy', 'exchange'],
             'x_exciting_exchange_energy': ['Exchange energy', 'exchange'],
-            'energy_C': ['Correlation energy', 'correlation'],
+            'energy_correlation': ['Correlation energy', 'correlation'],
             'x_exciting_correlation_energy': ['Correlation energy', 'correlation'],
             'energy_sum_eigenvalues': ['Sum of eigenvalues', 'sum of eigenvalues'],
             'x_exciting_effective_potential_energy': ['Effective potential energy'],
             'x_exciting_coulomb_potential_energy': ['Coulomb potential energy', 'Coulomb potential'],
-            'energy_XC_potential': ['xc potential energy', 'xc potential'],
+            'energy_xc_potential': ['xc potential energy', 'xc potential'],
             'energy_electrostatic': ['Hartree energy', 'Hartree'],
             'x_exciting_hartree_energy': ['Hartree energy', 'Hartree'],
             'x_exciting_electron_nuclear_energy': ['Electron-nuclear energy', 'electron-nuclear '],
@@ -1161,14 +1167,14 @@ class ExcitingParser(FairdiParser):
 
         # Get fermi energy: it is used to un-shift the DOS to
         # the original scale in which also other energies are reported.
-        energy_fermi = sec_scc.energy_reference_fermi
+        energy_fermi = sec_scc.energy.fermi
         if energy_fermi is None:
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
-        sec_dos = sec_scc.m_create(Dos, SingleConfigurationCalculation.dos_electronic)
+        sec_dos = sec_scc.m_create(Dos, Calculation.dos_electronic)
         sec_dos.n_energies = self.dos_parser.number_of_dos
-        sec_dos.energies = self.dos_parser.energies + energy_fermi[0]
+        sec_dos.energies = self.dos_parser.energies + energy_fermi
         totaldos = self.dos_parser.get('totaldos')
         for spin in range(len(totaldos)):
             sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
@@ -1201,14 +1207,14 @@ class ExcitingParser(FairdiParser):
 
             # Get fermi energy: it is used to un-shift the band structure to
             # the original scale in which also other energies are reported.
-            energy_fermi = sec_scc.energy_reference_fermi
+            energy_fermi = sec_scc.energy.fermi
             if energy_fermi is None:
                 continue
             energy_fermi = energy_fermi.to("hartree")
 
-            sec_k_band = sec_scc.m_create(BandStructure, SingleConfigurationCalculation.band_structure_electronic)
-            sec_energies_info = sec_k_band.m_create(ChannelInfo)
-            sec_energies_info.energy_fermi = energy_fermi[0]
+            sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
+            sec_energies_info = sec_k_band.m_create(ElectronicStructureInfo)
+            sec_energies_info.energy_fermi = energy_fermi
 
             band_k_points = self.bandstructure_parser.get('band_k_points')
             nkpts_segment = self.bandstructure_parser.number_of_k_points_per_segment
@@ -1220,7 +1226,7 @@ class ExcitingParser(FairdiParser):
                 labels_segment = [None] * nkpts_segment[nb]
                 labels_segment[0], labels_segment[-1] = band_seg_labels[nb]
                 sec_k_band_segment.kpoints_labels = labels_segment
-                sec_k_band_segment.value = band_energies[n][nb] + energy_fermi[0]
+                sec_k_band_segment.value = band_energies[n][nb] + energy_fermi
 
     def _parse_eigenvalues(self, sec_scc):
         if self.eigval_parser.get('eigenvalues_occupancies', None) is None:
@@ -1292,7 +1298,7 @@ class ExcitingParser(FairdiParser):
                 return
             return np.reshape(data, (nspin, len(data) // nspin, len(data[0])))
 
-        sec_gw = sec_scc.gw[-1] if sec_scc.gw else sec_scc.m_create(GW)
+        sec_gw = sec_scc.gw if sec_scc.gw else sec_scc.m_create(GW)
 
         sec_gw_eigenvalues = sec_gw.m_create(GWBandEnergies)
         sec_gw_eigenvalues.n_bands = len(eigs_gw[0])
@@ -1301,12 +1307,12 @@ class ExcitingParser(FairdiParser):
 
         sec_gw_eigenvalues.value = reshape(eigs_gw)
         sec_gw_eigenvalues.qp_linearization_prefactor = reshape(get_data('Znk'))
-        sec_gw_eigenvalues.value_X = reshape(get_data('Sx'))
+        sec_gw_eigenvalues.value_exchange = reshape(get_data('Sx'))
         eigs_gw_C = reshape(get_data('Sc'))
         if eigs_gw_C is None:
             eigs_gw_C = reshape(get_data('Re(Sc)'))
-        sec_gw_eigenvalues.value_C = eigs_gw_C
-        sec_gw_eigenvalues.value_XC_potential = reshape(get_data('Vxc'))
+        sec_gw_eigenvalues.value_correlation = eigs_gw_C
+        sec_gw_eigenvalues.value_xc_potential = reshape(get_data('Vxc'))
 
     def _parse_dos_out(self, sec_scc):
         data = self.dos_out_parser.data
@@ -1315,7 +1321,7 @@ class ExcitingParser(FairdiParser):
 
         # Get fermi energy: it is used to un-shift the DOS to
         # the original scale in which also other energies are reported.
-        energy_fermi = sec_scc.energy_reference_fermi
+        energy_fermi = sec_scc.energy.fermi
         if energy_fermi is None:
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
@@ -1324,13 +1330,13 @@ class ExcitingParser(FairdiParser):
         # energy dos_up dos_down
         nspin = self.info_parser.get_number_of_spin_channels()
 
-        sec_dos = sec_scc.m_create(Dos, SingleConfigurationCalculation.dos_electronic)
+        sec_dos = sec_scc.m_create(Dos, Calculation.dos_electronic)
         sec_dos.n_energies = len(data) // nspin
 
         data = np.reshape(data, (nspin, len(data) // nspin, 2))
         data = np.transpose(data, axes=(2, 0, 1))
 
-        sec_dos.energies = data[0][0] * ureg.hartree + energy_fermi[0]
+        sec_dos.energies = data[0][0] * ureg.hartree + energy_fermi
         dos = data[1] * (1 / ureg.hartree)
         for spin in range(len(dos)):
             sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
@@ -1348,14 +1354,14 @@ class ExcitingParser(FairdiParser):
 
         # Get fermi energy: it is used to un-shift the band structure to
         # the original scale in which also other energies are reported.
-        energy_fermi = sec_scc.energy_reference_fermi
+        energy_fermi = sec_scc.energy.fermi
         if energy_fermi is None:
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
-        sec_k_band = sec_scc.m_create(BandStructure, SingleConfigurationCalculation.band_structure_electronic)
-        sec_energies_info = sec_k_band.m_create(ChannelInfo)
-        sec_energies_info.energy_fermi = energy_fermi[0]
+        sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
+        sec_energies_info = sec_k_band.m_create(ElectronicStructureInfo)
+        sec_energies_info.energy_fermi = energy_fermi
 
         band_k_points = self.bandstructure_dat_parser.band_k_points
         nkpts_segment = self.bandstructure_dat_parser.number_of_k_points_per_segment
@@ -1363,7 +1369,7 @@ class ExcitingParser(FairdiParser):
             sec_k_band_segment = sec_k_band.m_create(BandEnergies)
             sec_k_band_segment.n_kpoints = nkpts_segment[nb]
             sec_k_band_segment.kpoints = band_k_points[nb]
-            sec_k_band_segment.value = band_energies[nb] + energy_fermi[0]
+            sec_k_band_segment.value = band_energies[nb] + energy_fermi
 
     def _parse_band_out(self, sec_scc):
         self.band_out_parser._nspin = self.info_parser.get_number_of_spin_channels()
@@ -1374,19 +1380,19 @@ class ExcitingParser(FairdiParser):
 
         # Get fermi energy: it is used to un-shift the band structure to
         # the original scale in which also other energies are reported.
-        energy_fermi = sec_scc.energy_reference_fermi
+        energy_fermi = sec_scc.energy.fermi
         if energy_fermi is None:
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
-        sec_k_band = sec_scc.m_create(BandStructure, SingleConfigurationCalculation.band_structure_electronic)
-        sec_energies_info = sec_k_band.m_create(ChannelInfo)
-        sec_energies_info.energy_fermi = energy_fermi[0]
+        sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
+        sec_energies_info = sec_k_band.m_create(ElectronicStructureInfo)
+        sec_energies_info.energy_fermi = energy_fermi
 
         nkpts_segment = self.band_out_parser.number_of_k_points_per_segment
         for nb in range(len(band_energies)):
             sec_k_band_segment = sec_k_band.m_create(BandEnergies)
             sec_k_band_segment.n_kpoints = nkpts_segment[nb]
-            sec_k_band_segment.value = band_energies + energy_fermi[0]
+            sec_k_band_segment.value = band_energies + energy_fermi
 
     def parse_file(self, name, section):
         # TODO add support for info.xml, wannier.out
@@ -1536,7 +1542,7 @@ class ExcitingParser(FairdiParser):
                 'xs/tetra/tetradf', False)
 
     def _parse_xs_bse(self):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         # TODO read from xml file
         def get_files(name):
@@ -1625,7 +1631,7 @@ class ExcitingParser(FairdiParser):
                     sccs.append(None)
                     continue
                 if quantity == 'EXCITON':
-                    sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+                    sec_scc = sec_run.m_create(Calculation)
                     sccs.append(sec_scc)
                 else:
                     sec_scc = sccs[i]
@@ -1633,7 +1639,7 @@ class ExcitingParser(FairdiParser):
                         # This is the case when there is a mismatch between files
                         self.logger.warn(
                             'Mismatch in EXCITON and file type', data=dict(file=quantity))
-                        sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+                        sec_scc = sec_run.m_create(Calculation)
 
                 if quantity == 'EXCITON':
                     parse_function = parse_exciton
@@ -1651,7 +1657,7 @@ class ExcitingParser(FairdiParser):
                     self.logger.error('Error setting xs data', data=dict(file=quantity))
 
     def _parse_xs_tddft(self):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         fxctype = self.input_xml_parser.get('xs/tddft/fxctype', 'RPA')
 
@@ -1694,7 +1700,7 @@ class ExcitingParser(FairdiParser):
                     continue
 
                 if quantity == 'EPSILON' and ext == 'FXC':
-                    sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+                    sec_scc = sec_run.m_create(Calculation)
                     sec_scc.x_exciting_xs_tddft_number_of_epsilon_values = len(data[0][0][0])
                     sec_scc.x_exciting_xs_tddft_epsilon_energies = data[0][0][0] * ureg.hartree
                     sec_scc.x_exciting_xs_tddft_dielectric_function_local_field = data[1:]
@@ -1715,7 +1721,7 @@ class ExcitingParser(FairdiParser):
                     sec_scc.x_exciting_xs_tddft_sigma_no_local_field = data[1:3]
 
     def parse_xs(self):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         xs_info_files = self.get_exciting_files('INFOXS.OUT')
 
@@ -1726,10 +1732,8 @@ class ExcitingParser(FairdiParser):
         # inconsistency in the naming convention for xs input xml file
         sec_method = sec_run.m_create(Method)
 
-        sec_method_to_method_refs = sec_method.m_create(MethodToMethodRefs)
-        sec_method_ref = self.archive.section_run[-1].section_method[0]
-        sec_method_to_method_refs.method_to_method_ref = sec_method_ref
-        sec_method_to_method_refs.method_to_method_kind = 'starting_point'
+        sec_method_ref = self.archive.run[-1].method[0]
+        sec_method.method_ref.append(MethodReference(value=sec_method_ref, kind='starting_point'))
 
         self.parse_file('input.xml', sec_method)
 
@@ -1745,45 +1749,46 @@ class ExcitingParser(FairdiParser):
             self._parse_xs_tddft()
 
     def _parse_input_gw(self, sec_method):
+        sec_gw = sec_method.m_create(GWMethod)
         gmaxvr = self.info_parser.get_initialization_parameter('x_exciting_gmaxvr', 0)
-        sec_method.gw_core_treatment = self.input_xml_parser.get(
+        sec_gw.core_treatment = self.input_xml_parser.get(
             'gw/coreflag', 'all')
-        sec_method.gw_polarizability_number_of_empty_states = int(
+        sec_gw.polarizability_number_of_empty_states = int(
             self.input_xml_parser.get('gw/nempty', 0))
-        sec_method.gw_ngridq = self.input_xml_parser.get('gw/ngridq', [1, 1, 1])
-        sec_method.gw_basis_set = 'mixed'
-        sec_method.gw_qp_equation_treatment = 'linearization'
-        sec_method.gw_max_frequency = self.input_xml_parser.get(
+        sec_gw.ngridq = self.input_xml_parser.get('gw/ngridq', [1, 1, 1])
+        sec_gw.basis_set = 'mixed'
+        sec_gw.qp_equation_treatment = 'linearization'
+        sec_gw.max_frequency = self.input_xml_parser.get(
             'gw/freqgrid/freqmax', 1.0)
-        sec_method.gw_frequency_grid_type = self.input_xml_parser.get(
+        sec_gw.frequency_grid_type = self.input_xml_parser.get(
             'gw/freqgrid/fgrid', 'gaule2')
-        sec_method.gw_number_of_frequencies = self.input_xml_parser.get(
+        sec_gw.number_of_frequencies = self.input_xml_parser.get(
             'gw/freqgrid/nomeg', 16)
-        sec_method.gw_self_energy_c_number_of_poles = self.input_xml_parser.get(
+        sec_gw.self_energy_c_number_of_poles = self.input_xml_parser.get(
             'gw/selfenergy/npol', 0)
-        sec_method.gw_self_energy_c_number_of_empty_states = self.input_xml_parser.get(
+        sec_gw.self_energy_c_number_of_empty_states = self.input_xml_parser.get(
             'gw/selfenergy/nempty', 0)
-        sec_method.gw_self_energy_singularity_treatment = self.input_xml_parser.get(
+        sec_gw.self_energy_singularity_treatment = self.input_xml_parser.get(
             'gw/selfenergy/singularity', 'mpd')
-        sec_method.gw_self_energy_c_analytical_continuation = self.input_xml_parser.get(
+        sec_gw.self_energy_c_analytical_continuation = self.input_xml_parser.get(
             'gw/selfenergy/actype', 'pade')
-        sec_method.gw_mixed_basis_lmax = self.input_xml_parser.get(
+        sec_gw.mixed_basis_lmax = self.input_xml_parser.get(
             'gw/mixbasis/lmaxmb', 3)
-        sec_method.gw_mixed_basis_tolerance = self.input_xml_parser.get(
+        sec_gw.mixed_basis_tolerance = self.input_xml_parser.get(
             'gw/mixbasis/epsmb', 0.0001)
         gmb = self.input_xml_parser.get('gw/mixbasis/gmb', 1.0)
-        sec_method.gw_mixed_basis_gmax = gmb * gmaxvr
+        sec_gw.mixed_basis_gmax = gmb * gmaxvr
         pwm = self.input_xml_parser.get('gw/barecoul/pwm', 2.0)
-        sec_method.gw_bare_coulomb_gmax = pwm * gmb * gmaxvr
-        sec_method.gw_bare_coulomb_cutofftype = self.input_xml_parser.get(
+        sec_gw.bare_coulomb_gmax = pwm * gmb * gmaxvr
+        sec_gw.bare_coulomb_cutofftype = self.input_xml_parser.get(
             'gw/barecoul/cutofftype', 'none')
-        sec_method.gw_screened_coulomb_volume_average = self.input_xml_parser.get(
+        sec_gw.screened_coulomb_volume_average = self.input_xml_parser.get(
             'gw/scrcoul/sciavtype', 'isotropic')
-        sec_method.gw_screened_Coulomb = self.input_xml_parser.get(
+        sec_gw.screened_Coulomb = self.input_xml_parser.get(
             'gw/scrcoul/scrtype', 'rpa')
 
     def parse_gw(self):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         # two versions of gw info files
         gw_info_files = ['GW_INFO.OUT', 'GWINFO.OUT']
@@ -1797,25 +1802,21 @@ class ExcitingParser(FairdiParser):
             return
 
         sec_method = sec_run.m_create(Method)
-        sec_method.electronic_structure_method = 'G0W0'
-        xc_functional_name = ' '.join(self.info_parser.get_xc_functional_name())
-        sec_method.gw_starting_point = xc_functional_name
-        sec_method_to_method_refs = sec_method.m_create(MethodToMethodRefs)
-        sec_method_ref = self.archive.section_run[-1].section_method[0]
-        sec_method_to_method_refs.method_to_method_ref = sec_method_ref
-        sec_method_to_method_refs.method_to_method_kind = 'starting_point'
+        sec_method_ref = self.archive.run[-1].method[0]
+        sec_method.method_ref.append(MethodReference(value=sec_method_ref, kind='starting_point'))
 
         # parse input xml file, there seems to be two versions, input_gw.xml and input-gw.xml
         for f in ['input_gw.xml', 'input-gw.xml', 'input.xml']:
             self.parse_file(f, sec_method)
 
-        sec_scc = sec_run.m_create(SingleConfigurationCalculation)
-        sec_scc.single_configuration_to_calculation_method_ref = sec_method
-        sec_scc.single_configuration_calculation_to_system_ref = sec_run.section_system[-1]
-        sec_calc_to_calc_refs = sec_scc.m_create(CalculationToCalculationRefs)
-        sec_scc_ref = sec_run.section_single_configuration_calculation[0]
-        sec_calc_to_calc_refs.calculation_to_calculation_ref = sec_scc_ref
-        sec_calc_to_calc_refs.calculation_to_calculation_kind = 'starting_point'
+        xc_functional_name = ' '.join(self.info_parser.get_xc_functional_name())
+        sec_method.gw.starting_point = xc_functional_name
+
+        sec_scc = sec_run.m_create(Calculation)
+        sec_scc.method_ref.append(MethodReference(value=sec_method))
+        sec_scc.system_ref.append(SystemReference(value=sec_run.system[-1]))
+        sec_scc_ref = sec_run.calculation[0]
+        sec_scc.calculation_ref.append(CalculationReference(value=sec_scc_ref, kind='starting_point'))
 
         # parse properties
         gw_info_files = self.get_exciting_files(gw_info_file)
@@ -1829,7 +1830,7 @@ class ExcitingParser(FairdiParser):
         fermi_energy = self.info_gw_parser.get('fermi_energy', None)
         if fermi_energy is not None:
             sec_gw.fermi_energy = fermi_energy
-            sec_scc.energy_reference_fermi = [fermi_energy.to('joule').magnitude]
+            sec_scc.energy = Energy(fermi=fermi_energy)
 
         gw_files = ['EVALQP.DAT', 'EVALQP.TXT', 'TDOS-QP.OUT']
 
@@ -1846,10 +1847,10 @@ class ExcitingParser(FairdiParser):
         frequency_data = self.info_gw_parser.get('frequency_data', None)
         if frequency_data is not None:
             number = frequency_data.get('number')
-            sec_method.gw_number_of_frequencies = len(number)
-            sec_method.gw_frequency_number = number
-            sec_method.gw_frequency_values = frequency_data.get('values')
-            sec_method.gw_frequency_weights = frequency_data.get('weights')
+            sec_method.gw.number_of_frequencies = len(number)
+            sec_method.gw.frequency_number = number
+            sec_method.gw.frequency_values = frequency_data.get('values')
+            sec_method.gw.frequency_weights = frequency_data.get('weights')
 
         fundamental_band_gap = self.info_gw_parser.get('direct_band_gap', None)
         if fundamental_band_gap is None:
@@ -1862,45 +1863,41 @@ class ExcitingParser(FairdiParser):
             sec_gw.optical_gap = optical_band_gap
 
     def parse_miscellaneous(self):
-        sec_run = self.archive.section_run[-1]
-        sec_sampling_method = sec_run.m_create(SamplingMethod)
+        sec_worfklow = self.archive.m_create(Workflow)
 
         # TODO there should be a sampling method single_point_calculation
-        sec_sampling_method.sampling_method = 'geometry_optimization'
+        sec_worfklow.type = 'geometry_optimization'
 
         structure_optimization = self.info_parser.get('structure_optimization')
         if structure_optimization is not None:
+            sec_geometry_opt = sec_worfklow.m_create(GeometryOptimization)
             threshold_force = structure_optimization.get(
                 'optimization_step', [{}])[0].get('force_convergence', [0., 0.])[-1]
-            sec_sampling_method.geometry_optimization_threshold_force = threshold_force
-
-        sec_scc = sec_run.section_single_configuration_calculation
-        sec_frame_sequence = sec_run.m_create(FrameSequence)
-        sec_frame_sequence.number_of_frames_in_sequence = len(sec_scc)
-        sec_frame_sequence.frame_sequence_local_frames_ref = sec_scc
-        sec_frame_sequence.frame_sequence_to_sampling_ref = sec_sampling_method
+            sec_geometry_opt.input_force_maximum_tolerance = threshold_force
 
     def parse_method(self):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
         sec_method = sec_run.m_create(Method)
 
-        sec_method.electronic_structure_method = 'DFT'
+        sec_dft = sec_method.m_create(DFT)
+        sec_electronic = sec_method.m_create(Electronic)
 
         smearing_kind_map = {
             'Gaussian': 'gaussian', 'Methfessel-Paxton': 'methfessel-paxton',
             'Fermi-Dirac': 'fermi', 'Extended': 'tetrahedra'}
 
+        sec_smearing = sec_electronic.m_create(Smearing)
         smearing_kind = self.info_parser.get_initialization_parameter('smearing_kind')
         if smearing_kind is not None:
             if not isinstance(smearing_kind, str):
                 smearing_kind = smearing_kind[0]
             smearing_kind = smearing_kind_map[smearing_kind]
-            sec_method.smearing_kind = smearing_kind
+            sec_smearing.kind = smearing_kind
         smearing_width = self.info_parser.get_initialization_parameter('smearing_width')
         if smearing_width is not None:
             smearing_width = (smearing_width * ureg.hartree).to('joule')
             # TODO smearing with should have units of energy
-            sec_method.smearing_width = smearing_width.magnitude
+            sec_smearing.width = smearing_width.magnitude
 
         for name in self.info_parser._convergence_keys_mapping.keys():
             threshold = self.info_parser.get_scf_threshold(name)
@@ -1924,19 +1921,26 @@ class ExcitingParser(FairdiParser):
                 exchange = self.input_xml_parser.get('libxc/exchange', None)
                 xc_functional_names.append(exchange)
 
+        sec_xc_functional = sec_dft.m_create(XCFunctional)
         for name in xc_functional_names:
             if name is None:
                 continue
-            sec_xc_functional = sec_method.m_create(XCFunctionals)
-            sec_xc_functional.XC_functional_name = name
+            if '_X_' in name:
+                sec_xc_functional.exchange.append(Functional(name=name))
+            elif '_C_' in name:
+                sec_xc_functional.correlation.append(Functional(name=name))
+            elif 'HYB' in name:
+                sec_xc_functional.hybrid.append(Functional(name=name))
+            else:
+                sec_xc_functional.contributions.append(Functional(name=name))
 
-        sec_method.number_of_spin_channels = self.info_parser.get_number_of_spin_channels()
+        sec_electronic.n_spin_channels = self.info_parser.get_number_of_spin_channels()
 
         if self._calculation_type == 'volume_optimization':
             sec_method.x_exciting_volume_optimization = True
 
     def parse_scc(self, section):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         final = section if section.get('energy_total') is not None else section.get('final')
         if final is None:
@@ -1947,14 +1951,14 @@ class ExcitingParser(FairdiParser):
         if final is None:
             return
 
-        sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+        sec_scc = sec_run.m_create(Calculation)
 
         def parse_scf(iteration, msection):
 
             energy_total = iteration.get('energy_total')
+            sec_energy = msection.m_create(Energy)
             if energy_total is not None:
-                msection.m_add_sub_section(
-                    SingleConfigurationCalculation.energy_total, Energy(value=energy_total))
+                sec_energy.total = EnergyEntry(value=energy_total)
 
             x_exciting_dos_fermi = iteration.get('x_exciting_dos_fermi')
             if x_exciting_dos_fermi is not None:
@@ -1971,15 +1975,13 @@ class ExcitingParser(FairdiParser):
                 if val is None:
                     continue
                 if key.startswith('energy_'):
-                    msection.m_add_sub_section(getattr(
-                        SingleConfigurationCalculation, key), Energy(value=val))
+                    sec_energy.m_add_sub_section(getattr(
+                        Energy, key.replace('energy_', '')), EnergyEntry(value=val))
                 else:
                     setattr(msection, key, val)
 
                 if key == 'x_exciting_fermi_energy':
-                    key = 'energy_reference_fermi'
-                    val = ([val.magnitude] * self.info_parser.get_number_of_spin_channels()) * ureg.hartree
-                    setattr(msection, key, val)
+                    sec_energy.fermi = val
 
             # charge contributions
             charge_contributions = iteration.get('charge_contributions', {})
@@ -2050,8 +2052,8 @@ class ExcitingParser(FairdiParser):
         # forces
         forces = section.get('forces')
         if forces is not None:
-            sec_scc.m_add_sub_section(SingleConfigurationCalculation.forces_total, Forces(
-                value=forces))
+            sec_forces = sec_scc.m_create(Forces)
+            sec_forces.total = ForcesEntry(value=forces)
 
         # scf iterations
         scf_iterations = section.get('scf_iteration', [])
@@ -2062,7 +2064,7 @@ class ExcitingParser(FairdiParser):
         return sec_scc
 
     def parse_system(self, section):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         positions = self.info_parser.get_atom_positions(section.get('atomic_positions', {}))
         lattice_vectors = self.info_parser.get_initialization_parameter('lattice_vectors')
@@ -2095,18 +2097,18 @@ class ExcitingParser(FairdiParser):
 
         sec_system = sec_run.m_create(System)
 
-        sec_system.atom_positions = positions
-        sec_system.atom_labels = atom_labels
-        sec_system.configuration_periodic_dimensions = [True] * 3
+        sec_atoms = sec_system.m_create(Atoms)
+        sec_atoms.positions = positions
+        sec_atoms.labels = atom_labels
+        sec_atoms.periodic = [True] * 3
         # TODO confirm no cell optimization in exciting
-        sec_system.lattice_vectors = lattice_vectors
-        sec_system.simulation_cell = lattice_vectors
+        sec_atoms.lattice_vectors = lattice_vectors
 
         lattice_vectors_reciprocal = self.info_parser.get_initialization_parameter(
             'lattice_vectors_reciprocal')
-        sec_system.lattice_vectors_reciprocal = lattice_vectors_reciprocal
+        sec_atoms.lattice_vectors_reciprocal = lattice_vectors_reciprocal
 
-        if len(sec_run.section_system) > 1:
+        if len(sec_run.system) > 1:
             return sec_system
 
         for name in self.info_parser._system_keys_mapping.keys():
@@ -2160,7 +2162,7 @@ class ExcitingParser(FairdiParser):
         return sec_system
 
     def parse_configurations(self):
-        sec_run = self.archive.section_run[-1]
+        sec_run = self.archive.run[-1]
 
         def parse_configuration(section):
             if not section:
@@ -2172,9 +2174,9 @@ class ExcitingParser(FairdiParser):
 
             sec_system = self.parse_system(section)
             if sec_system is not None:
-                sec_scc.single_configuration_calculation_to_system_ref = sec_system
+                sec_scc.system_ref.append(SystemReference(value=sec_system))
 
-            sec_scc.single_configuration_to_calculation_method_ref = sec_run.section_method[-1]
+            sec_scc.method_ref.append(MethodReference(value=sec_run.method[-1]))
 
             return sec_scc
 
@@ -2228,9 +2230,9 @@ class ExcitingParser(FairdiParser):
             info_volume = self.get_exciting_files('run_dir%s/INFO.OUT' % str(volume_index).rjust(2, '0'))
             if not info_volume:
                 break
-            sec_calc_to_calc_refs = sec_scc.m_create(CalculationToCalculationRefs)
-            sec_calc_to_calc_refs.calculation_to_calculation_external_url = info_volume[0]
-            sec_calc_to_calc_refs.calculation_to_calculation_kind = 'source_calculation'
+            sec_calc_to_calc_refs = sec_scc.m_create(CalculationReference)
+            sec_calc_to_calc_refs.external_url = info_volume[0]
+            sec_calc_to_calc_refs.kind = 'source_calculation'
             self._calculation_type = 'volume_optimization'
 
     def init_parser(self):
@@ -2267,10 +2269,8 @@ class ExcitingParser(FairdiParser):
 
         sec_run = self.archive.m_create(Run)
 
-        sec_run.program_name = 'exciting'
-        program_version = self.info_parser.get('program_version', '').strip()
-        sec_run.program_version = program_version
-        sec_run.program_basis_set_type = '(L)APW+lo'
+        sec_run.program = Program(
+            name='exciting', version=self.info_parser.get('program_version', '').strip())
 
         # method goes first since reference needed for sec_scc
         self.parse_method()
