@@ -1298,7 +1298,7 @@ class ExcitingParser(FairdiParser):
                 return
             return np.reshape(data, (nspin, len(data) // nspin, len(data[0])))
 
-        sec_gw = sec_scc.gw if sec_scc.gw else sec_scc.m_create(GW)
+        sec_gw = sec_scc.gw[0] if sec_scc.gw else sec_scc.m_create(GW)
 
         sec_gw_eigenvalues = sec_gw.m_create(GWBandEnergies)
         sec_gw_eigenvalues.n_bands = len(eigs_gw[0])
