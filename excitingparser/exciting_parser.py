@@ -1226,7 +1226,7 @@ class ExcitingParser(FairdiParser):
                 labels_segment = [None] * nkpts_segment[nb]
                 labels_segment[0], labels_segment[-1] = band_seg_labels[nb]
                 sec_k_band_segment.kpoints_labels = labels_segment
-                sec_k_band_segment.value = band_energies[n][nb] + energy_fermi
+                sec_k_band_segment.energies = band_energies[n][nb] + energy_fermi
 
     def _parse_eigenvalues(self, sec_scc):
         if self.eigval_parser.get('eigenvalues_occupancies', None) is None:
@@ -1248,7 +1248,7 @@ class ExcitingParser(FairdiParser):
         sec_eigenvalues = sec_scc.m_create(BandEnergies)
         sec_eigenvalues.kpoints = self.eigval_parser.get('k_points')
         sec_eigenvalues.occupations = get_data('occupancies')
-        sec_eigenvalues.value = get_data('eigenvalues')
+        sec_eigenvalues.energies = get_data('eigenvalues')
 
     def _parse_fermisurface(self, sec_scc):
         fermi_surface = self.fermisurf_parser.get('fermi_surface', [None])[0]
@@ -1305,7 +1305,7 @@ class ExcitingParser(FairdiParser):
         sec_gw_eigenvalues.n_kpoints = len(eigs_gw)
         sec_gw_eigenvalues.kpoints = get_data('k_points')
 
-        sec_gw_eigenvalues.value = reshape(eigs_gw)
+        sec_gw_eigenvalues.energies = reshape(eigs_gw)
         sec_gw_eigenvalues.qp_linearization_prefactor = reshape(get_data('Znk'))
         sec_gw_eigenvalues.value_exchange = reshape(get_data('Sx'))
         eigs_gw_C = reshape(get_data('Sc'))
@@ -1369,7 +1369,7 @@ class ExcitingParser(FairdiParser):
             sec_k_band_segment = sec_k_band.m_create(BandEnergies)
             sec_k_band_segment.n_kpoints = nkpts_segment[nb]
             sec_k_band_segment.kpoints = band_k_points[nb]
-            sec_k_band_segment.value = band_energies[nb] + energy_fermi
+            sec_k_band_segment.energies = band_energies[nb] + energy_fermi
 
     def _parse_band_out(self, sec_scc):
         self.band_out_parser._nspin = self.info_parser.get_number_of_spin_channels()
@@ -1881,6 +1881,7 @@ class ExcitingParser(FairdiParser):
 
         sec_dft = sec_method.m_create(DFT)
         sec_electronic = sec_method.m_create(Electronic)
+        sec_electronic.method = 'DFT'
 
         smearing_kind_map = {
             'Gaussian': 'gaussian', 'Methfessel-Paxton': 'methfessel-paxton',
