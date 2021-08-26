@@ -108,11 +108,11 @@ def test_dos_spinpol(parser):
 
     assert np.shape(sec_dos.total[0].value) == (500,)
     assert sec_dos.energies[79].magnitude == approx(-1.70772016e-18)
-    assert sec_dos.total[0].value[126].magnitude == approx(4.77822157e+18)
-    assert sec_dos.total[1].value[136].magnitude == approx(4.83767713e+17)
+    assert sec_dos.total[0].value[126].magnitude == approx(1.89251269e-10)
+    assert sec_dos.total[1].value[136].magnitude == approx(1.91606129e-11)
     assert sec_dos.energies[240].magnitude == approx(1.09995544e-18)
-    assert sec_dos.total[0].value[220].magnitude == approx(1.42367532e+19)
-    assert sec_dos.total[1].value[78].magnitude == approx(1.09414637e+19)
+    assert sec_dos.total[0].value[220].magnitude == approx(5.63875822e-10)
+    assert sec_dos.total[1].value[78].magnitude == approx(4.3335912e-10)
 
     assert len(sec_dos.atom_projected) == 150
     assert np.shape(sec_dos.atom_projected[149].value) == (500,)

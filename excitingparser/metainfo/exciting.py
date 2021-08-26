@@ -25,6 +25,9 @@ from nomad.metainfo import (  # pylint: disable=unused-import
 from nomad.datamodel.metainfo import run
 
 
+m_package = Package()
+
+
 class x_exciting_section_geometry_optimization(MSection):
     '''
     section for geometry optimization

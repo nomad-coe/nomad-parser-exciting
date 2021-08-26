@@ -27,7 +27,8 @@ from nomad.units import ureg
 from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
 from nomad.datamodel.metainfo.run.run import Run, Program
 from nomad.datamodel.metainfo.run.method import (
-    Method, MethodReference, DFT, Electronic, Smearing, XCFunctional, Functional, GW as GWMethod
+    Method, MethodReference, DFT, Electronic, Smearing, XCFunctional, Functional,
+    GW as GWMethod, Scf, BasisSet
 )
 from nomad.datamodel.metainfo.run.system import (
     System, SystemReference, Atoms
@@ -1050,7 +1051,7 @@ class ExcitingInfoParser(TextParser):
         return n_spin
 
     def get_unit_cell_volume(self):
-        return self.get('initialization', {}).get('x_exciting_unit_cell_volume', 1.0)
+        return self.get('initialization', {}).get('x_exciting_unit_cell_volume', 1.0 * ureg.bohr ** 3)
 
     def get_initialization_parameter(self, key, default=None):
         return self.get('initialization', {}).get(key, default)
@@ -1175,7 +1176,8 @@ class ExcitingParser(FairdiParser):
         sec_dos = sec_scc.m_create(Dos, Calculation.dos_electronic)
         sec_dos.n_energies = self.dos_parser.number_of_dos
         sec_dos.energies = self.dos_parser.energies + energy_fermi
-        totaldos = self.dos_parser.get('totaldos')
+        volume = self.info_parser.get_unit_cell_volume()
+        totaldos = self.dos_parser.get('totaldos') * volume.to('m**3').magnitude
         for spin in range(len(totaldos)):
             sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
             sec_dos_values.spin = spin
@@ -1337,7 +1339,8 @@ class ExcitingParser(FairdiParser):
         data = np.transpose(data, axes=(2, 0, 1))
 
         sec_dos.energies = data[0][0] * ureg.hartree + energy_fermi
-        dos = data[1] * (1 / ureg.hartree)
+        volume = self.info_parser.get_unit_cell_volume()
+        dos = data[1] * (1 / ureg.hartree) * volume.to('m**3').magnitude
         for spin in range(len(dos)):
             sec_dos_values = sec_dos.m_create(DosValues, Dos.total)
             sec_dos_values.spin = spin
@@ -1879,6 +1882,7 @@ class ExcitingParser(FairdiParser):
         sec_run = self.archive.run[-1]
         sec_method = sec_run.m_create(Method)
 
+        sec_method.basis_set.append(BasisSet(type='(L)APW+lo'))
         sec_dft = sec_method.m_create(DFT)
         sec_electronic = sec_method.m_create(Electronic)
         sec_electronic.method = 'DFT'
@@ -1909,7 +1913,7 @@ class ExcitingParser(FairdiParser):
             setattr(sec_method, metainfo_name, threshold)
             # additionally, set threshold to global metainfo. This is killing me!
             if metainfo_name == 'x_exciting_scf_threshold_energy_change':
-                setattr(sec_method, metainfo_name.lstrip('x_exciting_'), threshold)
+                sec_method.scf = Scf(threshold_energy_change=threshold)
 
         xc_functional_names = self.info_parser.get_xc_functional_name()
         if not xc_functional_names:
