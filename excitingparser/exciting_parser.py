@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from nomad.metainfo.metainfo import Section
 import numpy as np
 import os
 import re
@@ -25,17 +26,17 @@ from nomad.parsing.parser import FairdiParser
 
 from nomad.units import ureg
 from nomad.parsing.file_parser import TextParser, Quantity, XMLParser, DataTextParser
-from nomad.datamodel.metainfo.run.run import Run, Program
-from nomad.datamodel.metainfo.run.method import (
-    Method, MethodReference, DFT, Electronic, Smearing, XCFunctional, Functional,
+from nomad.datamodel.metainfo.simulation.run import Run, Program
+from nomad.datamodel.metainfo.simulation.method import (
+    Method, DFT, Electronic, Smearing, XCFunctional, Functional,
     GW as GWMethod, Scf, BasisSet
 )
-from nomad.datamodel.metainfo.run.system import (
-    System, SystemReference, Atoms
+from nomad.datamodel.metainfo.simulation.system import (
+    System, Atoms
 )
-from nomad.datamodel.metainfo.run.calculation import (
-    Calculation, Dos, DosValues, BandStructure, ElectronicStructureInfo, BandEnergies,
-    GW, GWBandEnergies, CalculationReference, Energy, EnergyEntry, Charges,
+from nomad.datamodel.metainfo.simulation.calculation import (
+    Calculation, Dos, DosValues, BandStructure, ChannelInfo, BandEnergies,
+    GW, GWBandEnergies, Energy, EnergyEntry, Charges,
     Forces, ForcesEntry, ScfIteration
 )
 from nomad.datamodel.metainfo.workflow import Workflow, GeometryOptimization
@@ -1215,7 +1216,7 @@ class ExcitingParser(FairdiParser):
             energy_fermi = energy_fermi.to("hartree")
 
             sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
-            sec_energies_info = sec_k_band.m_create(ElectronicStructureInfo)
+            sec_energies_info = sec_k_band.m_create(ChannelInfo)
             sec_energies_info.energy_fermi = energy_fermi
 
             band_k_points = self.bandstructure_parser.get('band_k_points')
@@ -1225,9 +1226,7 @@ class ExcitingParser(FairdiParser):
                 sec_k_band_segment = sec_k_band.m_create(BandEnergies)
                 sec_k_band_segment.n_kpoints = nkpts_segment[nb]
                 sec_k_band_segment.kpoints = band_k_points[nb]
-                labels_segment = [None] * nkpts_segment[nb]
-                labels_segment[0], labels_segment[-1] = band_seg_labels[nb]
-                sec_k_band_segment.kpoints_labels = labels_segment
+                sec_k_band_segment.endpoints_labels = band_seg_labels[nb]
                 sec_k_band_segment.energies = band_energies[n][nb] + energy_fermi
 
     def _parse_eigenvalues(self, sec_scc):
@@ -1363,7 +1362,7 @@ class ExcitingParser(FairdiParser):
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
-        sec_energies_info = sec_k_band.m_create(ElectronicStructureInfo)
+        sec_energies_info = sec_k_band.m_create(ChannelInfo)
         sec_energies_info.energy_fermi = energy_fermi
 
         band_k_points = self.bandstructure_dat_parser.band_k_points
@@ -1388,7 +1387,7 @@ class ExcitingParser(FairdiParser):
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
         sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
-        sec_energies_info = sec_k_band.m_create(ElectronicStructureInfo)
+        sec_energies_info = sec_k_band.m_create(ChannelInfo)
         sec_energies_info.energy_fermi = energy_fermi
 
         nkpts_segment = self.band_out_parser.number_of_k_points_per_segment
@@ -1736,7 +1735,8 @@ class ExcitingParser(FairdiParser):
         sec_method = sec_run.m_create(Method)
 
         sec_method_ref = self.archive.run[-1].method[0]
-        sec_method.method_ref.append(MethodReference(value=sec_method_ref, kind='starting_point'))
+        sec_method.starting_method_ref = sec_method_ref
+        sec_method.methods_ref = [sec_method_ref]
 
         self.parse_file('input.xml', sec_method)
 
@@ -1806,7 +1806,8 @@ class ExcitingParser(FairdiParser):
 
         sec_method = sec_run.m_create(Method)
         sec_method_ref = self.archive.run[-1].method[0]
-        sec_method.method_ref.append(MethodReference(value=sec_method_ref, kind='starting_point'))
+        sec_method.starting_method_ref = sec_method_ref
+        sec_method.methods_ref = [sec_method_ref]
 
         # parse input xml file, there seems to be two versions, input_gw.xml and input-gw.xml
         for f in ['input_gw.xml', 'input-gw.xml', 'input.xml']:
@@ -1816,10 +1817,11 @@ class ExcitingParser(FairdiParser):
         sec_method.gw.starting_point = xc_functional_name
 
         sec_scc = sec_run.m_create(Calculation)
-        sec_scc.method_ref.append(MethodReference(value=sec_method))
-        sec_scc.system_ref.append(SystemReference(value=sec_run.system[-1]))
+        sec_scc.method_ref = sec_method
+        sec_scc.system_ref = sec_run.system[-1]
         sec_scc_ref = sec_run.calculation[0]
-        sec_scc.calculation_ref.append(CalculationReference(value=sec_scc_ref, kind='starting_point'))
+        sec_scc.starting_calculation_ref = sec_scc_ref
+        sec_scc.calculations_ref = [sec_scc_ref]
 
         # parse properties
         gw_info_files = self.get_exciting_files(gw_info_file)
@@ -2179,9 +2181,9 @@ class ExcitingParser(FairdiParser):
 
             sec_system = self.parse_system(section)
             if sec_system is not None:
-                sec_scc.system_ref.append(SystemReference(value=sec_system))
+                sec_scc.system_ref = sec_system
 
-            sec_scc.method_ref.append(MethodReference(value=sec_run.method[-1]))
+            sec_scc.method_ref = sec_run.method[-1]
 
             return sec_scc
 
@@ -2235,10 +2237,7 @@ class ExcitingParser(FairdiParser):
             info_volume = self.get_exciting_files('run_dir%s/INFO.OUT' % str(volume_index).rjust(2, '0'))
             if not info_volume:
                 break
-            sec_calc_to_calc_refs = sec_scc.m_create(CalculationReference)
-            sec_calc_to_calc_refs.external_url = info_volume[0]
-            sec_calc_to_calc_refs.kind = 'source_calculation'
-            self._calculation_type = 'volume_optimization'
+            sec_scc.calculations_path.append(info_volume[0])
 
     def init_parser(self):
         self.info_parser.mainfile = self.filepath
