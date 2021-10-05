@@ -1753,6 +1753,7 @@ class ExcitingParser(FairdiParser):
 
     def _parse_input_gw(self, sec_method):
         sec_gw = sec_method.m_create(GWMethod)
+        sec_gw.type = 'G0W0'
         gmaxvr = self.info_parser.get_initialization_parameter('x_exciting_gmaxvr', 0)
         sec_gw.core_treatment = self.input_xml_parser.get(
             'gw/coreflag', 'all')
