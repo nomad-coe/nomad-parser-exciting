@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from nomad.metainfo.metainfo import Section
 import numpy as np
 import os
 import re
@@ -42,7 +41,7 @@ from nomad.datamodel.metainfo.simulation.calculation import (
 from nomad.datamodel.metainfo.workflow import Workflow, GeometryOptimization
 
 from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_section_MT_moment_atom,\
-    x_exciting_section_spin, x_exciting_section_xc, x_exciting_section_fermi_surface,\
+    x_exciting_section_spin, x_exciting_section_fermi_surface,\
     x_exciting_section_atoms_group
 
 
@@ -752,8 +751,7 @@ class ExcitingInfoParser(TextParser):
             'x_exciting_valence_states': ('Total number of valence states', None),
             'x_exciting_hamiltonian_size': ('Maximum Hamiltonian size', None),
             'x_exciting_pw': (r'Maximum number of plane\-waves', None),
-            'x_exciting_lo': (r'Total number of local\-orbitals', None),
-            'x_exciting_xc_functional': (r'Exchange\-correlation type', None)}
+            'x_exciting_lo': (r'Total number of local\-orbitals', None)}
 
         self._method_keys_mapping = {
             'smearing_kind': ('Smearing scheme', None),
@@ -811,6 +809,20 @@ class ExcitingInfoParser(TextParser):
             'potential_mixing', r'Using ([\w ]+) potential mixing', repeats=False, flatten=False)
         )
 
+        initialization_quantities.append(Quantity(
+            'xc_functional', r'(Exchange-correlation type[\s\S]+?\n *\n)',
+            sub_parser=TextParser(quantities=[
+                Quantity('type', r'Exchange-correlation type +: +(\S+)'),
+                Quantity(
+                    'name_reference',
+                    r'\n *(.+?,.+)',
+                    str_operation=lambda x: [v.strip() for v in x.split(':')]),
+                Quantity(
+                    'parameters',
+                    r'\n *(.+?:.+)', repeats=True,
+                    str_operation=lambda x: [v.strip() for v in x.split(':')])]))
+        )
+
         self._quantities.append(Quantity(
             'initialization',
             r'(?:All units are atomic|Starting initialization)([\s\S]+?)(?:Using|Ending initialization)', repeats=False,
@@ -861,32 +873,34 @@ class ExcitingInfoParser(TextParser):
                 name, r'%s\s*\:*\s*([\(\)\d\.\-\+Ee ]+)' % key_unit[0],
                 str_operation=str_to_quantity_tolerances, unit=key_unit[1], repeats=False))
 
+        module_quantities = [
+            Quantity(
+                'scf_iteration', r'(?:I| i)teration number :([\s\S]+?)(?:\n *\n\+{10}|\+\-{10})',
+                sub_parser=TextParser(quantities=scf_quantities), repeats=True),
+            Quantity(
+                'final',
+                r'(?:Convergence targets achieved\. Performing final SCF iteration|Reached self-consistent loops maximum)([\s\S]+?)(\n *\n\+{10})',
+                sub_parser=TextParser(quantities=scf_quantities), repeats=False),
+            Quantity(
+                'atomic_positions',
+                r'(Atomic positions\s*\([\s\S]+?)\n\n',
+                sub_parser=TextParser(quantities=[
+                    Quantity(
+                        'positions_format', r'Atomic positions\s*\(([a-z]+)\)'),
+                    Quantity(
+                        'symbols', r'atom\s*\d+\s*(\w+)', repeats=True, dtype=str),
+                    Quantity(
+                        'positions', r'\s*:\s*([\d\.\-]+\s*[\d\.\-]+\s*[\d\.\-]+)',
+                        repeats=True, dtype=float)])),
+            Quantity(
+                'forces', r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
+                repeats=False, str_operation=str_to_array, dtype=float, unit=ureg.hartree / ureg.bohr)
+        ]
+
         self._quantities.append(Quantity(
             'groundstate',
             r'(?:Self\-consistent loop started|Groundstate module started)([\s\S]+?)Groundstate module stopped',
-            sub_parser=TextParser(quantities=[
-                Quantity(
-                    'scf_iteration', r'(?:I|SCF i)teration number :([\s\S]+?)(?:\n *\n\+{10}|\+\-{10})',
-                    sub_parser=TextParser(quantities=scf_quantities), repeats=True),
-                Quantity(
-                    'final',
-                    r'(?:Convergence targets achieved\. Performing final SCF iteration|Reached self-consistent loops maximum)([\s\S]+?)(\n *\n\+{10})',
-                    sub_parser=TextParser(quantities=scf_quantities), repeats=False),
-                Quantity(
-                    'atomic_positions',
-                    r'(Atomic positions\s*\([\s\S]+?)\n\n',
-                    sub_parser=TextParser(quantities=[
-                        Quantity(
-                            'positions_format', r'Atomic positions\s*\(([a-z]+)\)'),
-                        Quantity(
-                            'symbols', r'atom\s*\d+\s*(\w+)', repeats=True, dtype=str),
-                        Quantity(
-                            'positions', r'\s*:\s*([\d\.\-]+\s*[\d\.\-]+\s*[\d\.\-]+)',
-                            repeats=True, dtype=float)])),
-                Quantity(
-                    'forces', r'Total atomic forces including IBS \(\w+\)\s*\:(\s*atom[\-\s\w\.\:]*?)\n *Atomic',
-                    repeats=False, str_operation=str_to_array, dtype=float, unit=ureg.hartree / ureg.bohr)
-            ]), repeats=False))
+            sub_parser=TextParser(quantities=module_quantities), repeats=False))
 
         optimization_quantities = [
             Quantity(
@@ -955,6 +969,12 @@ class ExcitingInfoParser(TextParser):
                     repeats=False, str_operation=str_to_array, dtype=float, unit=ureg.hartree / ureg.bohr),
             ]), repeats=False))
 
+        self._quantities.append(Quantity(
+            'hybrids',
+            r'Hybrids module started([\s\S]+?)Hybrids module stopped',
+            sub_parser=TextParser(quantities=module_quantities)
+        ))
+
     def get_atom_labels(self, section):
         labels = section.get('symbols')
 
@@ -1001,7 +1021,8 @@ class ExcitingInfoParser(TextParser):
         return positions * ureg.bohr
 
     def get_scf_threshold(self, name):
-        return self.get('groundstate', {}).get('scf_iteration', [{}])[-1].get(
+        reference = self.get('groundstate', self.get('hybrids', {}))
+        return reference.get('scf_iteration', [{}])[-1].get(
             name, [None, None])[-1]
 
     def get_scf_quantity(self, name):
@@ -1031,13 +1052,14 @@ class ExcitingInfoParser(TextParser):
             26: ['GGA_C_PBE', 'GGA_X_WC'],
             30: ['GGA_C_AM05', 'GGA_C_AM05'],
             300: ['GGA_C_BGCP', 'GGA_X_PBE'],
-            406: ['HYB_GGA_XC_PBEH']}
+            406: ['HYB_GGA_XC_PBEH'],
+            408: ['HYB_GGA_XC_HSE03']}
 
-        xc_functional = self.get('initialization', {}).get('x_exciting_xc_functional', None)
+        xc_functional = self.get('initialization', {}).get('xc_functional', None)
         if xc_functional is None:
             return []
 
-        name = xc_functional_map.get(xc_functional, [])
+        name = xc_functional_map.get(xc_functional.type, [])
 
         return name
 
@@ -1819,7 +1841,8 @@ class ExcitingParser(FairdiParser):
 
         sec_scc = sec_run.m_create(Calculation)
         sec_scc.method_ref = sec_method
-        sec_scc.system_ref = sec_run.system[-1]
+        if sec_run.system:
+            sec_scc.system_ref = sec_run.system[-1]
         sec_scc_ref = sec_run.calculation[0]
         sec_scc.starting_calculation_ref = sec_scc_ref
         sec_scc.calculations_ref = [sec_scc_ref]
@@ -1942,6 +1965,13 @@ class ExcitingParser(FairdiParser):
             else:
                 sec_xc_functional.contributions.append(Functional(name=name))
 
+        if not xc_functional_names:
+            # simply write parameters
+            xc_functional = self.info_parser.get('initialization', {}).get('xc_functional')
+            if xc_functional is not None:
+                sec_xc_functional.name = xc_functional.get('name_reference', [None, None])[0]
+                sec_xc_functional.reference = xc_functional.get('name_reference', [None, None])[1]
+
         sec_electronic.n_spin_channels = self.info_parser.get_number_of_spin_channels()
 
         if self._calculation_type == 'volume_optimization':
@@ -1955,7 +1985,6 @@ class ExcitingParser(FairdiParser):
             # get it from last scf_iteration or optimization_step
             final = section.get('scf_iteration', [None])[-1]
             final = section.get('optimization_step', [None])[-1] if final is None else final
-
         if final is None:
             return
 
@@ -2077,7 +2106,6 @@ class ExcitingParser(FairdiParser):
         positions = self.info_parser.get_atom_positions(section.get('atomic_positions', {}))
         lattice_vectors = self.info_parser.get_initialization_parameter('lattice_vectors')
         atom_labels = self.info_parser.get_atom_labels(section.get('atomic_positions', {}))
-
         input_file = self.get_exciting_files('input.xml')
 
         if positions is None:
@@ -2127,9 +2155,6 @@ class ExcitingParser(FairdiParser):
             if name == 'x_exciting_spin_treatment':
                 sub_sec = sec_system.m_create(x_exciting_section_spin)
                 sub_sec.x_exciting_spin_treatment = val
-            elif name == 'x_exciting_xc_functional':
-                sub_sec = sec_system.m_create(x_exciting_section_xc)
-                sub_sec.x_exciting_xc_functional = val
             elif name == 'x_exciting_species_rtmin':
                 setattr(sec_system, name, ' '.join([str(v) for v in val]))
             else:
@@ -2188,9 +2213,11 @@ class ExcitingParser(FairdiParser):
 
             return sec_scc
 
-        # groundstate calculation
-        sec_scc = parse_configuration(self.info_parser.get('groundstate'))
-        if sec_scc is not None:
+        # groundstate and hybrids calculation
+        for module in ['groundstate', 'hybrids']:
+            sec_scc = parse_configuration(self.info_parser.get(module))
+            if sec_scc is None:
+                continue
             # add data to scc
             # TODO add support for more output files and properties
             exciting_files = ['EIGVAL.OUT', 'FERMISURF.bxsf', 'FS.bxsf']
