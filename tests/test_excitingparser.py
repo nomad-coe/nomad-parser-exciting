@@ -259,3 +259,15 @@ def test_dos_gw_silicon(silicon_gw):
         highest_occupied_index = lowest_unoccupied_index - 1
         gap = energies[lowest_unoccupied_index] - energies[highest_occupied_index]
         assert gap == approx(gap_assumed)
+
+
+def test_hybrids(parser):
+    archive = EntryArchive()
+    parser.parse('tests/data/PbI_hybrids/INFO.OUT', archive, None)
+
+    method = archive.section_run[-1].section_method[0]
+    assert method.section_XC_functionals[0].XC_functional_name == 'HYB_GGA_XC_HSE03'
+
+    calc = archive.section_run[-1].section_single_configuration_calculation[0]
+    assert len(calc.section_scf_iteration) == 4
+    assert calc.energy_total.magnitude == approx(-1.5345852e-13)
