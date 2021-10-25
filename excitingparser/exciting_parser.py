@@ -34,7 +34,7 @@ from nomad.datamodel.metainfo.simulation.system import (
     System, Atoms
 )
 from nomad.datamodel.metainfo.simulation.calculation import (
-    Calculation, Dos, DosValues, BandStructure, ChannelInfo, BandEnergies,
+    Calculation, Dos, DosValues, BandStructure, BandEnergies,
     GW, GWBandEnergies, Energy, EnergyEntry, Charges,
     Forces, ForcesEntry, ScfIteration
 )
@@ -1238,8 +1238,7 @@ class ExcitingParser(FairdiParser):
             energy_fermi = energy_fermi.to("hartree")
 
             sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
-            sec_energies_info = sec_k_band.m_create(ChannelInfo)
-            sec_energies_info.energy_fermi = energy_fermi
+            sec_k_band.energy_fermi = energy_fermi
 
             band_k_points = self.bandstructure_parser.get('band_k_points')
             nkpts_segment = self.bandstructure_parser.number_of_k_points_per_segment
@@ -1384,8 +1383,7 @@ class ExcitingParser(FairdiParser):
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
 
         sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
-        sec_energies_info = sec_k_band.m_create(ChannelInfo)
-        sec_energies_info.energy_fermi = energy_fermi
+        sec_k_band.energy_fermi = energy_fermi
 
         band_k_points = self.bandstructure_dat_parser.band_k_points
         nkpts_segment = self.bandstructure_dat_parser.number_of_k_points_per_segment
@@ -1409,8 +1407,7 @@ class ExcitingParser(FairdiParser):
             return
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
         sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
-        sec_energies_info = sec_k_band.m_create(ChannelInfo)
-        sec_energies_info.energy_fermi = energy_fermi
+        sec_k_band.energy_fermi = energy_fermi
 
         nkpts_segment = self.band_out_parser.number_of_k_points_per_segment
         for nb in range(len(band_energies)):
