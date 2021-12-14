@@ -235,7 +235,7 @@ def test_dos_gw_silicon(silicon_gw):
     for gap_assumed, scc in zip(gaps, sccs):
         dos = scc.dos_electronic[0]
         energies = dos.energies.to(ureg.electron_volt).magnitude
-        values = np.array([d.value for d in dos.total])
+        values = np.array([d.value.magnitude for d in dos.total])
 
         # Check that an energy reference is reported
         energy_reference = scc.energy.fermi

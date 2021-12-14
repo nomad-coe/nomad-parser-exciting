@@ -45,6 +45,9 @@ from .metainfo.exciting import x_exciting_section_MT_charge_atom, x_exciting_sec
     x_exciting_section_atoms_group
 
 
+re_float = r'[-+]?\d+\.\d*(?:[Ee][-+]\d+)?'
+
+
 class GWInfoParser(TextParser):
     def __init__(self):
         super().__init__(None)
@@ -69,7 +72,7 @@ class GWInfoParser(TextParser):
 
         self._quantities.append(
             Quantity(
-                'fermi_energy', r'\-\s*G0W0\s*\-\s*\-+\s*[\s\S]*?Fermi energy\s*\:(\s*-?[\d\.]+)\s',
+                'fermi_energy', r'\-\s*G0W0.+\-\s*\-+\s*[\s\S]*?Fermi [Ee]nergy\s*[:=](\s*-?[\d\.]+)\s',
                 unit=ureg.hartree, repeats=False)
         )
 
@@ -769,41 +772,24 @@ class ExcitingInfoParser(TextParser):
                     name, r'%s\s*:\s*([\s\S]*?)\n' % key_unit[0], unit=key_unit[1], repeats=False)
             )
 
-        def get_species_prop(val_in):
-            val = val_in.strip().split('\n')
-            val = [v.split() for v in val]
-            prop = dict()
-            prop['number'] = int(val[0][0])
-            prop['symbol'] = val[0][1]
-            prop['file'] = val[0][2]
-            prop['name'] = val[0][3]
-            prop['nuclear_charge'] = float(val[0][4]) * ureg.elementary_charge
-            prop['electronic_charge'] = float(val[0][5]) * ureg.elementary_charge
-            prop['atomic_mass'] = float(val[0][6]) * ureg.electron_mass
-            prop['muffin_tin_radius'] = float(val[0][7]) * ureg.bohr
-            prop['radial_points'] = int(val[0][8])
-            prop['positions_format'] = val[0][9].lstrip('(').rstrip(')')
-
-            positions = np.zeros((len(val) - 1, 3), dtype=float)
-            for i in range(1, len(val)):
-                positions[i - 1] = val[i][2:5]
-
-            prop['positions'] = positions
-
-            return prop
-
-        species_prop = [
-            'parameters loaded from', 'name', 'nuclear charge', 'electronic charge',
-            'atomic mass', r'muffin\-tin radius', r'[number#]* of radial points in muffin\-tin']
-
-        species_pattern = r'Species\s*:(\s*\d+\s*)\((\w+)\)\s*' + ''.join(
-            [r'%s\s*:(\s*[\s\S]*?)\n *' % p for p in species_prop]
-        ) + r'\s*atomic positions( \(\w+\))\s*[\, \w\(\)]*:(\s*[0-9\-\:\.\s]+)'
-
         initialization_quantities.append(Quantity(
-            'species', species_pattern, str_operation=get_species_prop, repeats=True,
-            convert=False)
-        )
+            'species',
+            rf'(Species : *\d+ *\(\w+\)[\s\S]+?{re_float} *{re_float} *{re_float}\n\s*\n)',
+            repeats=True, sub_parser=TextParser(quantities=[
+                Quantity('number', r'Species : *(\d+)', dtype=np.int32),
+                Quantity('symbol', r'\((\w+)\)'),
+                Quantity('file', r'parameters loaded from *: *(.+)'),
+                Quantity('name', r'name *: *(.+)'),
+                Quantity('nuclear_charge', rf'nuclear charge *: *({re_float})', dtype=np.float64, unit=ureg.elementary_charge),
+                Quantity('electronic_charge', rf'electronic charge *: *({re_float})', dtype=np.float64, unit=ureg.elementary_charge),
+                Quantity('atomic_mass', rf'atomic mass *: *({re_float})', dtype=np.float64, unit=ureg.electron_mass),
+                Quantity('muffin_tin_radius', rf'muffin-tin radius *: *({re_float})', dtype=np.float64, unit=ureg.bohr),
+                Quantity('radial_points', rf'radial points in muffin-tin *: *({re_float})', dtype=np.int32),
+                Quantity('positions_format', r'atomic positions \((.+)\) :'),
+                Quantity(
+                    'positions',
+                    rf'\d+ : *({re_float}) *({re_float}) *({re_float})',
+                    repeats=True, dtype=np.dtype(np.float64))])))
 
         initialization_quantities.append(Quantity(
             'potential_mixing', r'Using ([\w ]+) potential mixing', repeats=False, flatten=False)
@@ -1402,9 +1388,9 @@ class ExcitingParser(FairdiParser):
 
         # Get fermi energy: it is used to un-shift the band structure to
         # the original scale in which also other energies are reported.
-        energy_fermi = sec_scc.energy.fermi
-        if energy_fermi is None:
-            return
+        energy_fermi = 0.0 * ureg.hartree
+        if sec_scc.energy is not None:
+            energy_fermi = sec_scc.energy.fermi
         energy_fermi = (energy_fermi.magnitude * ureg.joule).to('hartree')
         sec_k_band = sec_scc.m_create(BandStructure, Calculation.band_structure_electronic)
         sec_k_band.energy_fermi = energy_fermi
@@ -1413,7 +1399,7 @@ class ExcitingParser(FairdiParser):
         for nb in range(len(band_energies)):
             sec_k_band_segment = sec_k_band.m_create(BandEnergies)
             sec_k_band_segment.n_kpoints = nkpts_segment[nb]
-            sec_k_band_segment.value = band_energies + energy_fermi
+            sec_k_band_segment.value = band_energies[nb] + energy_fermi
 
     def parse_file(self, name, section):
         # TODO add support for info.xml, wannier.out
@@ -1785,18 +1771,18 @@ class ExcitingParser(FairdiParser):
             'gw/freqgrid/freqmax', 1.0)
         sec_gw.frequency_grid_type = self.input_xml_parser.get(
             'gw/freqgrid/fgrid', 'gaule2')
-        sec_gw.number_of_frequencies = self.input_xml_parser.get(
-            'gw/freqgrid/nomeg', 16)
-        sec_gw.self_energy_c_number_of_poles = self.input_xml_parser.get(
-            'gw/selfenergy/npol', 0)
-        sec_gw.self_energy_c_number_of_empty_states = self.input_xml_parser.get(
-            'gw/selfenergy/nempty', 0)
+        sec_gw.number_of_frequencies = int(self.input_xml_parser.get(
+            'gw/freqgrid/nomeg', 16))
+        sec_gw.self_energy_c_number_of_poles = int(self.input_xml_parser.get(
+            'gw/selfenergy/npol', 0))
+        sec_gw.self_energy_c_number_of_empty_states = int(self.input_xml_parser.get(
+            'gw/selfenergy/nempty', 0))
         sec_gw.self_energy_singularity_treatment = self.input_xml_parser.get(
             'gw/selfenergy/singularity', 'mpd')
         sec_gw.self_energy_c_analytical_continuation = self.input_xml_parser.get(
             'gw/selfenergy/actype', 'pade')
-        sec_gw.mixed_basis_lmax = self.input_xml_parser.get(
-            'gw/mixbasis/lmaxmb', 3)
+        sec_gw.mixed_basis_lmax = int(self.input_xml_parser.get(
+            'gw/mixbasis/lmaxmb', 3))
         sec_gw.mixed_basis_tolerance = self.input_xml_parser.get(
             'gw/mixbasis/epsmb', 0.0001)
         gmb = self.input_xml_parser.get('gw/mixbasis/gmb', 1.0)
@@ -2116,8 +2102,9 @@ class ExcitingParser(FairdiParser):
 
                 if positions is None or lattice_vectors is None or species is None:
                     continue
+                lattice_vectors = np.array(lattice_vectors, dtype=float)
                 lattice_vectors *= self.input_xml_parser.get('structure/crystal/scale', 1.0)
-                positions = np.dot(positions, lattice_vectors), * ureg.bohr
+                positions = np.dot(positions, lattice_vectors) * ureg.bohr
                 lattice_vectors = lattice_vectors * ureg.bohr
 
                 atoms = self.input_xml_parser.get('structure/species/atom')
@@ -2155,7 +2142,10 @@ class ExcitingParser(FairdiParser):
             elif name == 'x_exciting_species_rtmin':
                 setattr(sec_system, name, ' '.join([str(v) for v in val]))
             else:
-                setattr(sec_system, name, val)
+                try:
+                    setattr(sec_system, name, val)
+                except Exception:
+                    self.logger.warn('Error setting metainfo.')
 
         # species
         species = self.info_parser.get_initialization_parameter('species', [])
