@@ -1750,7 +1750,7 @@ class ExcitingParser(FairdiParser):
         if not input_file:
             return
         self.input_xml_parser.mainfile = input_file[0]
-        xstype = self.input_xml_parser.get('xs/xstype', None)
+        xstype = self.input_xml_parser.get('xs/xstype', '')
         if xstype.lower() == 'bse':
             self._parse_xs_bse()
         elif xstype.lower() == 'tddft':
