@@ -785,7 +785,7 @@ class ExcitingInfoParser(TextParser):
                 Quantity('atomic_mass', rf'atomic mass *: *({re_float})', dtype=np.float64, unit=ureg.electron_mass),
                 Quantity('muffin_tin_radius', rf'muffin-tin radius *: *({re_float})', dtype=np.float64, unit=ureg.bohr),
                 Quantity('radial_points', rf'radial points in muffin-tin *: *({re_float})', dtype=np.int32),
-                Quantity('positions_format', r'atomic positions \((.+)\) :'),
+                Quantity('positions_format', r'atomic positions \((.+?)\)', flatten=False),
                 Quantity(
                     'positions',
                     rf'\d+ : *({re_float}) *({re_float}) *({re_float})',
