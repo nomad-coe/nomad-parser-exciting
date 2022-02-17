@@ -1877,11 +1877,11 @@ class ExcitingParser(FairdiParser):
     def parse_miscellaneous(self):
         sec_worfklow = self.archive.m_create(Workflow)
 
-        # TODO there should be a sampling method single_point_calculation
-        sec_worfklow.type = 'geometry_optimization'
+        sec_worfklow.type = 'single_point'
 
         structure_optimization = self.info_parser.get('structure_optimization')
         if structure_optimization is not None:
+            sec_worfklow.type = 'geometry_optimization'
             sec_geometry_opt = sec_worfklow.m_create(GeometryOptimization)
             threshold_force = structure_optimization.get(
                 'optimization_step', [{}])[0].get('force_convergence', [0., 0.])[-1]
